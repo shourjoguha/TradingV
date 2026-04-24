@@ -1,27 +1,40 @@
-# TradingView Webhook Service
+# TradingView Analysis Platform
 
-Lean backend for catching TradingView alerts.
+FastAPI backend that ingests TradingView alerts and (in-flight) runs Kronos candlestick models against selected tickers + timeframes. Modular: each feature is an independent package under `app/`.
 
-## Files
+## Entry points
+- App: `app.main:app`
+- Local: `uvicorn app.main:app --reload` (venv activated, env set)
+- Deploy: Railway. `Procfile` → `release: alembic upgrade head` + `web: uvicorn app.main:app ...`.
 
-- `main.py`: FastAPI app. Has `/webhook` (save) and `/alerts` (read) routes. Uses async SQLAlchemy.
-- `config.py`: Loads `DATABASE_URL`, `API_KEY`, `PORT` via `pydantic-settings`.
-- `requirements.txt`: Python deps (FastAPI, SQLAlchemy, asyncpg, etc.).
-- `Procfile`: Start command for Railway (`web: uvicorn main:app ...`).
-- `railway.toml`: Railway config.
+## `.claude/` — read these when working on a specific area
 
-## Setup (Local)
+| You're touching... | Read |
+|---|---|
+| Anything — always skim this first | [.claude/architecture.md](.claude/architecture.md) |
+| `app/core/` (config, db, auth) | [.claude/core.md](.claude/core.md) |
+| `/webhook` or `/alerts` | [.claude/alerts.md](.claude/alerts.md) |
+| `/v1/tickers*` or symbol registry | [.claude/tickers.md](.claude/tickers.md) |
+| `/v1/ohlcv`, `/v1/intervals`, OHLCV cache, providers | [.claude/market_data.md](.claude/market_data.md) |
+| `/v1/models`, `/v1/timeframes`, `/v1/eligibility`, Kronos validator/adapter | [.claude/kronos.md](.claude/kronos.md) |
+| `/v1/analysis/*`, job orchestration, fan-out, 429 gate | [.claude/analysis.md](.claude/analysis.md) |
+| `/v1/sync/*`, outbox, peer ticker replication, dual-backend | [.claude/sync.md](.claude/sync.md) |
+| DB schema changes / new migration | [.claude/migrations.md](.claude/migrations.md) |
+| Writing or debugging tests | [.claude/testing.md](.claude/testing.md) |
 
-1. Create venv: `python -m venv venv`
-2. Activate: `source venv/bin/activate`
-3. Install: `pip install -r requirements.txt`
-4. Set env vars: `DATABASE_URL` and `API_KEY`.
-5. Run: `uvicorn main:app --reload`
+Read only what you need. Each file is < 1 screen and describes one concern: the module's purpose, its schema, the decisions that aren't obvious from code, and the known gaps. When in doubt, `architecture.md` has the map.
+
+## Setup (local)
+1. `python3 -m venv venv && source venv/bin/activate`
+2. `pip install -r requirements.txt`
+3. Export `DATABASE_URL` (Postgres or `sqlite+aiosqlite:///./dev.db`) and `API_KEY`.
+4. `alembic upgrade head` (or rely on `create_all` in the lifespan for first boot).
+5. `uvicorn app.main:app --reload`
+6. Tests: `python -m pytest`.
+
+For the **laptop (primary) backend** with dockerized Postgres on 5439 + peer sync to Railway, see [docs/laptop-setup.md](docs/laptop-setup.md).
 
 ## Setup (Railway)
-
-1. Create Railway project.
-2. Add Postgres plugin.
-3. Deploy this repo.
-4. Set `API_KEY` in Railway vars.
-5. Railway auto-sets `DATABASE_URL` and `PORT`.
+1. New project → add Postgres plugin → deploy repo.
+2. Set `API_KEY` env var. `DATABASE_URL`/`PORT` are auto-injected.
+3. Alembic runs via `release:` in the Procfile.

@@ -1,0 +1,65 @@
+# Kronos model registry. HAND-AUTHORED, now reconciled against upstream code.
+#
+# Upstream: https://github.com/shiyu-coder/Kronos (clone read 2026-04-24).
+#
+# Verified from code (model/kronos.py):
+# - Required dataframe columns: ['open', 'high', 'low', 'close']
+#   (volume / amount auto-filled with zeros if missing — still recommended)
+# - KronosPredictor.max_context: 512 for small/base, 2048 for mini
+# - Timestamps are required (minute/hour/weekday/day/month features extracted)
+# - No built-in asset-class or interval constraint: the model is sequence-based
+#   and trained on 45 global exchanges across stocks/ETFs/crypto (per paper)
+#
+# Still unverified and intentionally conservative here:
+# - Exact list of intervals the training mix covered (paper gives 5m and 1d
+#   examples; broader intervals likely work but are not validated)
+# - Upper bound on pred_len: autoregressive beyond max_context degrades;
+#   we cap max_horizon_bars well below max_context to be safe.
+#
+# `unverified: true` stays on all entries until user signs off per model.
+
+models:
+  - id: kronos_base
+    display_name: "Kronos-base (102M)"
+    params_millions: 102.3
+    context_length: 512
+    hf_tokenizer: "NeoQuasar/Kronos-Tokenizer-base"
+    hf_model: "NeoQuasar/Kronos-base"
+    supported_intervals: ["5m", "15m", "30m", "1h", "1d", "1w"]
+    supported_asset_classes: ["stock", "etf", "crypto"]
+    required_features: ["open", "high", "low", "close"]
+    min_history_bars: 400   # paper example uses 400; < max_context (512) by design
+    max_horizon_bars: 120
+    default_horizon_bars: 30
+    unverified: true
+    notes: "Primary model. Volume/amount optional but improve accuracy."
+
+  - id: kronos_small
+    display_name: "Kronos-small (24.7M)"
+    params_millions: 24.7
+    context_length: 512
+    hf_tokenizer: "NeoQuasar/Kronos-Tokenizer-base"
+    hf_model: "NeoQuasar/Kronos-small"
+    supported_intervals: ["5m", "15m", "30m", "1h", "1d", "1w"]
+    supported_asset_classes: ["stock", "etf", "crypto"]
+    required_features: ["open", "high", "low", "close"]
+    min_history_bars: 400
+    max_horizon_bars: 120
+    default_horizon_bars: 30
+    unverified: true
+    notes: "Smaller sibling of base. Same tokenizer."
+
+  - id: kronos_mini
+    display_name: "Kronos-mini (4.1M)"
+    params_millions: 4.1
+    context_length: 2048
+    hf_tokenizer: "NeoQuasar/Kronos-Tokenizer-2k"
+    hf_model: "NeoQuasar/Kronos-mini"
+    supported_intervals: ["5m", "15m", "30m", "1h", "1d", "1w"]
+    supported_asset_classes: ["stock", "etf", "crypto"]
+    required_features: ["open", "high", "low", "close"]
+    min_history_bars: 1600  # well under max_context (2048) buffer
+    max_horizon_bars: 240
+    default_horizon_bars: 60
+    unverified: true
+    notes: "Longest context (2048), tiniest model. Uses the 2k tokenizer."
