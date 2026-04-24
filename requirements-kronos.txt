@@ -1,0 +1,10 @@
+# Optional — install on the worker host when KRONOS_ENABLED=true.
+# Versions pinned to upstream Kronos repo's own requirements.txt.
+# Base requirements.txt is sufficient for the API / stub adapter.
+
+torch>=2.0.0
+huggingface_hub==0.33.1
+einops==0.8.1
+safetensors==0.6.2
+# pandas already in base requirements; Kronos pins 2.2.2 — leave floating
+# unless we hit a compat issue.
