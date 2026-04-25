@@ -27,6 +27,18 @@ Run the full TradingView analysis backend on the M3 MacBook. Paired with the Rai
    alembic upgrade head
    ```
 
+## Kronos weights (one-time, ~531MB)
+
+```bash
+source venv/bin/activate
+pip install -r requirements-kronos.txt
+HF_HUB_CACHE="$PWD/hf-cache" python3 -c "from huggingface_hub import snapshot_download; \
+  [snapshot_download(r) for r in ['NeoQuasar/Kronos-Tokenizer-base','NeoQuasar/Kronos-base', \
+  'NeoQuasar/Kronos-Tokenizer-2k','NeoQuasar/Kronos-small','NeoQuasar/Kronos-mini']]"
+```
+
+Cached in `./hf-cache/` (gitignored). `.env.laptop` sets `HF_HUB_CACHE="/Users/shourjosmac/Documents/Claude/TradingView /hf-cache"` (absolute path, so uvicorn reuses regardless of launch CWD). Re-run only if upstream NeoQuasar pushes new weights.
+
 ## Daily boot
 
 ```bash
