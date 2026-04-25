@@ -21,6 +21,8 @@ FastAPI backend that ingests TradingView alerts and (in-flight) runs Kronos cand
 | `/v1/sync/*`, outbox, peer ticker replication, dual-backend | [.claude/sync.md](.claude/sync.md) |
 | DB schema changes / new migration | [.claude/migrations.md](.claude/migrations.md) |
 | Writing or debugging tests | [.claude/testing.md](.claude/testing.md) |
+| Deploying / debugging Railway | [.claude/railway-deployment.md](.claude/railway-deployment.md) |
+| Laptop (primary) backend setup | [.claude/laptop-setup.md](.claude/laptop-setup.md) |
 
 Read only what you need. Each file is < 1 screen and describes one concern: the module's purpose, its schema, the decisions that aren't obvious from code, and the known gaps. When in doubt, `architecture.md` has the map.
 
@@ -32,7 +34,7 @@ Read only what you need. Each file is < 1 screen and describes one concern: the 
 5. `uvicorn app.main:app --reload`
 6. Tests: `python -m pytest`.
 
-For the **laptop (primary) backend** with dockerized Postgres on 5439 + peer sync to Railway, see [docs/laptop-setup.md](docs/laptop-setup.md).
+For the **laptop (primary) backend** with dockerized Postgres on 5439 + peer sync to Railway, see [.claude/laptop-setup.md](.claude/laptop-setup.md).
 
 ## Setup (Railway)
 1. New project → add Postgres plugin → deploy repo.
