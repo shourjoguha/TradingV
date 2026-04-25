@@ -27,8 +27,8 @@ KRONOS_ENABLED          — true
 DEBUG_STUB              — false
 MAX_CONCURRENT_JOBS     — 1
 HF_HUB_CACHE            — /data/hf-cache (points at the volume, see below)
-PEER_API_KEY            — laptop's API_KEY (so Railway can authenticate TO laptop)
-PEER_API_URL            — laptop tunnel URL (omit until tunnel exists; sync no-ops without it)
+PEER_API_KEY            — laptop's API_KEY (so Railway can authenticate TO laptop). v1: leave blank (see backlog).
+PEER_API_URL            — laptop tunnel URL. v1: intentionally blank — Railway → laptop sync deferred (see .claude/backlog.md).
 ```
 
 `PEER_*` vars describe the OTHER backend, not yourself.
