@@ -14,3 +14,9 @@ pytest
 pytest-asyncio
 aiosqlite
 pyyaml
+
+# Kronos runtime (always installed; KRONOS_ENABLED toggles use, not install).
+torch>=2.0.0
+huggingface_hub==0.33.1
+einops==0.8.1
+safetensors==0.6.2
