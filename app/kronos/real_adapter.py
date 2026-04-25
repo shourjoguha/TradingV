@@ -52,8 +52,9 @@ def _import_runtime():
         )
     except ImportError as e:  # pragma: no cover - exercised only when extras missing
         raise ConstraintSpecMissingError(
-            "Kronos runtime deps not installed. "
-            "Install requirements-kronos.txt on the worker host."
+            f"Kronos runtime import failed: {type(e).__name__}: {e}. "
+            "Ensure requirements.txt installed (torch/einops/safetensors/huggingface_hub) "
+            "and app/kronos/_vendor/kronos_model is present."
         ) from e
     return Kronos, KronosTokenizer, KronosPredictor
 
