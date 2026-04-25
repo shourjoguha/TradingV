@@ -126,6 +126,51 @@ async def test_list_outbox_filters_by_status(client, monkeypatch):
     assert [row["symbol"] for row in r.json()["rows"]] == ["MSFT"]
 
 
+@pytest.mark.asyncio
+async def test_enqueue_result_creates_result_row(client, monkeypatch):
+    payload = {
+        "schema_version": 1,
+        "origin": "laptop",
+        "job": {"id": "abc-123", "status": "done", "inputs_json": {}, "task_count": 0,
+                "submitted_at": "2026-04-25T10:00:00+00:00", "finished_at": None},
+        "tasks": [],
+    }
+    n = await sync_service.enqueue_result(payload)
+    assert n == 1
+
+    async with _db.SessionLocal() as session:
+        row = (await session.execute(select(SyncOutbox))).scalar_one()
+        assert row.kind == "result"
+        assert row.symbol is None
+        assert row.payload_json["job"]["id"] == "abc-123"
+
+
+@pytest.mark.asyncio
+async def test_drain_routes_result_rows_to_push_result(client, monkeypatch):
+    ticker_calls: list[tuple] = []
+    result_calls: list[dict] = []
+
+    async def fake_push_ticker(*, peer_url, api_key, symbol, asset_class):
+        ticker_calls.append((symbol, asset_class))
+        return True, None
+
+    async def fake_push_result(*, peer_url, api_key, payload):
+        result_calls.append(payload)
+        return True, None
+
+    monkeypatch.setattr(peer_client, "push_ticker", fake_push_ticker)
+    monkeypatch.setattr(peer_client, "push_result", fake_push_result)
+
+    await sync_service.enqueue([("AAPL", "stock")])
+    await sync_service.enqueue_result({"schema_version": 1, "job": {"id": "j1"}, "tasks": []})
+
+    stats = await sync_service.drain_outbox()
+    assert stats == {"ok": 2, "failed": 0, "scanned": 2}
+    assert ticker_calls == [("AAPL", "stock")]
+    assert len(result_calls) == 1
+    assert result_calls[0]["job"]["id"] == "j1"
+
+
 def test_backoff_schedule_exponential():
     assert (sync_service._backoff(1) - sync_service._now()).total_seconds() > 25
     assert (sync_service._backoff(2) - sync_service._now()).total_seconds() > 55

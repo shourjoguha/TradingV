@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.analysis import concurrency
 from app.analysis.models import AnalysisJob, AnalysisTask
 from app.core import db as _db
+from app.core.config import SETTINGS
 from app.kronos import service as kservice
 from app.kronos.adapter import get_adapter
 from app.kronos.registry import load_models
@@ -132,6 +133,7 @@ async def _process_job(job_id: str, *, horizon_bars: Optional[int]) -> None:
         await _process_task(task_id, horizon_bars=horizon_bars)
 
     pairs: list[tuple[str, str]] = []
+    snapshot: dict | None = None
     async with _db.SessionLocal() as session:
         job = await session.get(AnalysisJob, job_id)
         if job is not None:
@@ -143,16 +145,125 @@ async def _process_job(job_id: str, *, horizon_bars: Optional[int]) -> None:
                 t = await tickers_svc.get_ticker(session, sym)
                 asset_class = t.asset_class if t else "unknown"
                 pairs.append((sym, asset_class))
+            # Only replicate jobs that originated locally — never bounce
+            # back imported jobs to their source backend.
+            if (job.origin or "self") == "self":
+                snapshot = _serialize_job_snapshot(job)
 
     # Fire-and-forget sync to peer backend.
-    if pairs:
+    from app.sync import service as sync_service
+
+    if (pairs or snapshot is not None) and sync_service.peer_configured():
         import asyncio
 
-        from app.sync import service as sync_service
-
-        if sync_service.peer_configured():
+        if pairs:
             await sync_service.enqueue(pairs)
-            asyncio.create_task(sync_service.drain_outbox())
+        if snapshot is not None:
+            await sync_service.enqueue_result(snapshot)
+        asyncio.create_task(sync_service.drain_outbox())
+
+
+def _serialize_job_snapshot(job: AnalysisJob) -> dict:
+    """Build the JSON payload sent to peer ``/v1/analysis/import``."""
+    return {
+        "schema_version": 1,
+        "origin": SETTINGS.INSTANCE_NAME,
+        "job": {
+            "id": job.id,
+            "status": job.status,
+            "inputs_json": job.inputs_json,
+            "task_count": job.task_count,
+            "submitted_at": _iso(job.submitted_at),
+            "finished_at": _iso(job.finished_at),
+        },
+        "tasks": [
+            {
+                "id": t.id,
+                "ticker": t.ticker,
+                "interval": t.interval,
+                "model_id": t.model_id,
+                "status": t.status,
+                "result_json": t.result_json,
+                "ineligible_reason": t.ineligible_reason,
+                "ineligible_message": t.ineligible_message,
+                "error": t.error,
+                "started_at": _iso(t.started_at),
+                "finished_at": _iso(t.finished_at),
+            }
+            for t in (job.tasks or [])
+        ],
+    }
+
+
+def _iso(dt: Optional[datetime.datetime]) -> Optional[str]:
+    return dt.isoformat() if dt is not None else None
+
+
+def _parse_iso(s: Optional[str]) -> Optional[datetime.datetime]:
+    if not s:
+        return None
+    return datetime.datetime.fromisoformat(s)
+
+
+class ImportConflictError(ValueError):
+    """Raised on schema mismatch during import. Caller maps to 400."""
+
+
+async def import_job(payload: dict) -> tuple[str, str]:
+    """Idempotently insert a peer-originated job.
+
+    Returns (job_id, status) where status is 'imported' (new row) or
+    'duplicate' (already existed — no-op). Raises ImportConflictError on
+    malformed payload.
+    """
+    if not isinstance(payload, dict):
+        raise ImportConflictError("payload must be a JSON object")
+    if payload.get("schema_version") != 1:
+        raise ImportConflictError(
+            f"unsupported schema_version: {payload.get('schema_version')!r}"
+        )
+    job_blob = payload.get("job") or {}
+    tasks_blob = payload.get("tasks") or []
+    job_id = job_blob.get("id")
+    if not isinstance(job_id, str) or not job_id:
+        raise ImportConflictError("payload.job.id required")
+
+    async with _db.SessionLocal() as session:
+        existing = await session.get(AnalysisJob, job_id)
+        if existing is not None:
+            return job_id, "duplicate"
+
+        job = AnalysisJob(
+            id=job_id,
+            status=job_blob.get("status", "done"),
+            inputs_json=job_blob.get("inputs_json") or {},
+            task_count=int(job_blob.get("task_count") or len(tasks_blob)),
+            origin="peer",
+            submitted_at=_parse_iso(job_blob.get("submitted_at")) or _now(),
+            finished_at=_parse_iso(job_blob.get("finished_at")),
+        )
+        session.add(job)
+
+        for t in tasks_blob:
+            session.add(
+                AnalysisTask(
+                    id=t.get("id"),
+                    job_id=job_id,
+                    ticker=t.get("ticker", ""),
+                    interval=t.get("interval", ""),
+                    model_id=t.get("model_id", ""),
+                    status=t.get("status", "done"),
+                    result_json=t.get("result_json"),
+                    ineligible_reason=t.get("ineligible_reason"),
+                    ineligible_message=t.get("ineligible_message"),
+                    error=t.get("error"),
+                    started_at=_parse_iso(t.get("started_at")),
+                    finished_at=_parse_iso(t.get("finished_at")),
+                )
+            )
+
+        await session.commit()
+    return job_id, "imported"
 
 
 async def _process_task(task_id: str, *, horizon_bars: Optional[int]) -> None:

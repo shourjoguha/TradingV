@@ -53,4 +53,10 @@ class AnalysisJobResponse(BaseModel):
     task_count: int
     submitted_at: datetime.datetime
     finished_at: Optional[datetime.datetime] = None
+    origin: Optional[str] = None
     tasks: List[AnalysisTaskResponse]
+
+
+class AnalysisImportResponse(BaseModel):
+    job_id: str
+    status: str  # "imported" | "duplicate"

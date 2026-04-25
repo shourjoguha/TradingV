@@ -1,6 +1,10 @@
 # Sync
 
-Ticker catalog replication to a peer backend (dual-backend topology: laptop + Railway). After a job finishes, the running backend pushes the tickers it touched to the peer so both DBs keep a historic ticker list. OHLCV is NOT synced — each backend refetches live.
+Replication to a peer backend (dual-backend topology: laptop + Railway). After a job finishes, the running backend pushes:
+1. The **tickers** it touched (so both DBs keep a historic catalog).
+2. A **full job snapshot** (job + tasks + forecasts) — so prediction history is mirrored on both DBs regardless of which backend ran it.
+
+OHLCV is NOT synced — each backend refetches live.
 
 ## Topology
 
@@ -20,21 +24,39 @@ Ticker catalog replication to a peer backend (dual-backend topology: laptop + Ra
 
 ## Outbox pattern
 
-Durable queue. Completed analysis jobs enqueue one `sync_outbox` row per (symbol, asset_class). A fire-and-forget `drain_outbox()` runs after each job + once on startup + on manual trigger.
+Durable queue with two row kinds. Completed analysis jobs enqueue:
+- one `kind='ticker'` row per (symbol, asset_class), AND
+- one `kind='result'` row carrying a snapshot of the entire job (job + tasks + forecasts).
+
+A fire-and-forget `drain_outbox()` runs after each job + once on startup + on manual trigger.
 
 ### Schema
 ```
-sync_outbox(id, peer_url, symbol, asset_class,
+sync_outbox(id, peer_url, kind, symbol, asset_class, payload_json,
             attempts, last_error,
             next_retry_at, created_at, completed_at)
 ```
+- `kind`: `ticker` | `result`. Default `ticker` (back-compat).
+- `symbol`/`asset_class`: populated for `ticker` kind, NULL for `result`.
+- `payload_json`: populated for `result` kind, NULL for `ticker`.
+
 Index: `(completed_at, next_retry_at)` — drain scan uses both.
 
 ### Retry policy
 Exponential backoff: `30s × 2^(attempts-1)`, capped at 1h. On success: `completed_at=now, last_error=None`. On failure: `attempts+=1, next_retry_at=backoff(attempts), last_error=msg`.
 
 ### Peer receive
-Peer upserts via existing `POST /v1/tickers` — reuses `tickers_svc.upsert_ticker`. Payload is `{symbol, asset_class}` only. Idempotent, so retries are safe.
+- **ticker rows** → peer `POST /v1/tickers` (reuses `tickers_svc.upsert_ticker`). Payload `{symbol, asset_class}`.
+- **result rows** → peer `POST /v1/analysis/import`. Payload:
+  ```
+  {schema_version: 1, origin: "<INSTANCE_NAME>",
+   job: {id, status, inputs_json, task_count, submitted_at, finished_at},
+   tasks: [{id, ticker, interval, model_id, status, result_json, ...}, ...]}
+  ```
+  Receiver inserts the job tagged `origin='peer'` (idempotent on `job.id` — duplicates return 200 without re-inserting).
+
+### Loop avoidance
+Imported jobs are tagged `origin='peer'` and SKIPPED by the post-job replication hook (only `origin='self'` triggers sync). Prevents A→B→A bounce.
 
 ## Routes (`/v1/sync/*`)
 

@@ -11,6 +11,7 @@ from app.alerts import models as _alert_models  # noqa: F401
 from app.tickers import models as _ticker_models  # noqa: F401
 from app.market_data import models as _ohlcv_models  # noqa: F401
 from app.analysis import models as _analysis_models  # noqa: F401
+from app.sync import models as _sync_models  # noqa: F401
 
 config = context.config
 
