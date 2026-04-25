@@ -78,7 +78,11 @@ Peer push is skipped when `PEER_API_URL` or `PEER_API_KEY` is empty (`peer_confi
 
 `app/analysis/concurrency.py` owns an `asyncio.Lock + counter` (not `Semaphore` — TOCTOU-safe). `submit_run` acquires a slot BEFORE any DB writes; on contention raises `AtCapacityError` → route returns **429 `{"detail": "at_capacity"}`**. Prevents orphan job rows on rejection.
 
+## v1 direction stance
+
+- **Laptop → Railway**: live and verified end-to-end. Both `kind='ticker'` and `kind='result'` rows drain successfully against Railway's public URL.
+- **Railway → Laptop**: intentionally **no-op for v1**. Railway's `PEER_API_URL` is left unset, so its outbox `enqueue()` / `enqueue_result()` short-circuit. Reverse direction needs a tunnel (Tailscale or Cloudflared) — see [backlog.md](backlog.md) for the deferred decision.
+
 ## Known gaps
-- No cleanup of completed rows (table grows unbounded — add a 7-day purge task later).
-- No public tunnel yet — Railway → laptop pushes fail until user opens one; outbox retries cover the gap.
-- `asset_class="unknown"` on peer upsert is not reconciled later if source backend learns the real class.
+- No cleanup of completed rows (see [backlog.md](backlog.md) — sync_outbox cleanup task).
+- `asset_class="unknown"` on peer upsert is not reconciled later if source backend learns the real class (see [backlog.md](backlog.md)).
