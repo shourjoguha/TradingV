@@ -23,6 +23,7 @@ FastAPI backend that ingests TradingView alerts and (in-flight) runs Kronos cand
 | Writing or debugging tests | [.claude/testing.md](.claude/testing.md) |
 | Deploying / debugging Railway | [.claude/railway-deployment.md](.claude/railway-deployment.md) |
 | Laptop (primary) backend setup | [.claude/laptop-setup.md](.claude/laptop-setup.md) |
+| Deferred decisions / known gaps | [.claude/backlog.md](.claude/backlog.md) |
 
 Read only what you need. Each file is < 1 screen and describes one concern: the module's purpose, its schema, the decisions that aren't obvious from code, and the known gaps. When in doubt, `architecture.md` has the map.
 
