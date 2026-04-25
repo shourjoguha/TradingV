@@ -1,23 +1,23 @@
 """Sync outbox orchestration.
 
-Flow:
-1. Completed analysis jobs call `enqueue(tickers)` — one outbox row per
-   unique ticker.
-2. `drain_outbox()` runs in the background (fire-and-forget task at end
-   of job, plus once on startup, plus on manual trigger). It picks up
-   rows with `next_retry_at <= now()` and completed_at IS NULL.
-3. For each row: call peer_client.push_ticker. On success mark complete.
-   On failure bump `attempts`, record error, push `next_retry_at` out by
-   exponential backoff (30s * 2^attempts, capped at 1 hour).
+Two row kinds share one queue:
 
-The peer receives via existing `POST /v1/tickers` (reused), but we mark
-locally that these rows were emitted so ops can inspect.
+- ``kind='ticker'`` — pushes (symbol, asset_class) to peer ``/v1/tickers``.
+  Enqueued by :func:`enqueue` after each completed analysis job.
+- ``kind='result'`` — pushes a full job snapshot to peer ``/v1/analysis/import``.
+  Enqueued by :func:`enqueue_result` after each completed analysis job.
+
+``drain_outbox()`` picks up rows where ``next_retry_at <= now()`` and
+``completed_at IS NULL``, dispatches by kind, and applies the same
+exponential-backoff retry policy on failure (30s × 2^attempts, capped 1h).
+
+The receiver is idempotent for both kinds — duplicate pushes are safe.
 """
 from __future__ import annotations
 
 import datetime
 import logging
-from typing import Iterable
+from typing import Any, Iterable
 
 from sqlalchemy import select
 
@@ -47,9 +47,12 @@ def peer_configured() -> bool:
 
 
 async def enqueue(tickers: Iterable[tuple[str, str]]) -> int:
-    """Insert outbox rows for (symbol, asset_class) pairs. Returns count."""
+    """Insert ``kind='ticker'`` rows for (symbol, asset_class) pairs.
+
+    Returns count enqueued. No-op if peer not configured.
+    """
     if not peer_configured():
-        logger.debug("sync: peer not configured, skipping enqueue")
+        logger.debug("sync: peer not configured, skipping ticker enqueue")
         return 0
 
     peer_url = SETTINGS.PEER_API_URL
@@ -58,6 +61,7 @@ async def enqueue(tickers: Iterable[tuple[str, str]]) -> int:
         rows.append(
             SyncOutbox(
                 peer_url=peer_url,
+                kind="ticker",
                 symbol=symbol,
                 asset_class=asset_class,
             )
@@ -70,10 +74,41 @@ async def enqueue(tickers: Iterable[tuple[str, str]]) -> int:
     return len(rows)
 
 
+async def enqueue_result(payload: dict[str, Any]) -> int:
+    """Insert one ``kind='result'`` row carrying a full job snapshot.
+
+    ``payload`` shape::
+
+        {
+          "schema_version": 1,
+          "origin": "<INSTANCE_NAME>",
+          "job": {... AnalysisJob serialised ...},
+          "tasks": [... AnalysisTask serialised ...],
+        }
+
+    Returns 1 on enqueue, 0 if peer not configured.
+    """
+    if not peer_configured():
+        logger.debug("sync: peer not configured, skipping result enqueue")
+        return 0
+
+    row = SyncOutbox(
+        peer_url=SETTINGS.PEER_API_URL,
+        kind="result",
+        payload_json=payload,
+    )
+    async with _db.SessionLocal() as session:
+        session.add(row)
+        await session.commit()
+    return 1
+
+
 async def drain_outbox(*, max_rows: int = 100) -> dict[str, int]:
     """Attempt to push every pending row whose next_retry_at has passed.
 
-    Returns counters: {"ok": n, "failed": n, "scanned": n}.
+    Branches on ``kind``: ticker rows → :func:`peer_client.push_ticker`;
+    result rows → :func:`peer_client.push_result`. Returns counters:
+    ``{"ok", "failed", "scanned"}``.
     """
     if not peer_configured():
         return {"ok": 0, "failed": 0, "scanned": 0}
@@ -93,12 +128,23 @@ async def drain_outbox(*, max_rows: int = 100) -> dict[str, int]:
         stats["scanned"] = len(pending)
 
         for row in pending:
-            ok, err = await peer_client.push_ticker(
-                peer_url=row.peer_url,
-                api_key=api_key,
-                symbol=row.symbol,
-                asset_class=row.asset_class,
-            )
+            kind = row.kind or "ticker"
+            if kind == "ticker":
+                ok, err = await peer_client.push_ticker(
+                    peer_url=row.peer_url,
+                    api_key=api_key,
+                    symbol=row.symbol or "",
+                    asset_class=row.asset_class or "unknown",
+                )
+            elif kind == "result":
+                ok, err = await peer_client.push_result(
+                    peer_url=row.peer_url,
+                    api_key=api_key,
+                    payload=row.payload_json or {},
+                )
+            else:
+                ok, err = False, f"unknown_kind: {kind}"
+
             row.attempts += 1
             if ok:
                 row.completed_at = _now()

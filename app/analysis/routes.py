@@ -4,8 +4,13 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from typing import Any, Dict
+
+from fastapi import Body
+
 from app.analysis import concurrency, service
 from app.analysis.schemas import (
+    AnalysisImportResponse,
     AnalysisJobResponse,
     AnalysisJobSummary,
     AnalysisRunRequest,
@@ -57,5 +62,25 @@ async def get_job(job_id: str, _api_key: str = Depends(verify_api_key)):
         task_count=job.task_count,
         submitted_at=job.submitted_at,
         finished_at=job.finished_at,
+        origin=job.origin,
         tasks=[AnalysisTaskResponse.model_validate(t) for t in job.tasks],
     )
+
+
+@router.post("/import", response_model=AnalysisImportResponse)
+async def import_job(
+    payload: Dict[str, Any] = Body(...),
+    _api_key: str = Depends(verify_api_key),
+):
+    """Idempotent receiver for peer-replicated jobs.
+
+    Accepts a snapshot produced by ``_serialize_job_snapshot`` on the
+    sending backend. Inserts the job + tasks tagged ``origin='peer'``;
+    duplicates (same ``job.id``) return without error so the sender can
+    safely retry. NEVER triggers downstream sync (origin != 'self').
+    """
+    try:
+        job_id, status = await service.import_job(payload)
+    except service.ImportConflictError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return AnalysisImportResponse(job_id=job_id, status=status)
