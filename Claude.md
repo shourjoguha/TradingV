@@ -19,6 +19,7 @@ FastAPI backend that ingests TradingView alerts and (in-flight) runs Kronos cand
 | `/v1/models`, `/v1/timeframes`, `/v1/eligibility`, Kronos validator/adapter | [.claude/kronos.md](.claude/kronos.md) |
 | `/v1/analysis/*`, job orchestration, fan-out, 429 gate | [.claude/analysis.md](.claude/analysis.md) |
 | `/v1/sync/*`, outbox, peer ticker replication, dual-backend | [.claude/sync.md](.claude/sync.md) |
+| `/v1/watchlist*`, daily-run target set | [.claude/watchlist.md](.claude/watchlist.md) |
 | DB schema changes / new migration | [.claude/migrations.md](.claude/migrations.md) |
 | Writing or debugging tests | [.claude/testing.md](.claude/testing.md) |
 | Deploying / debugging Railway | [.claude/railway-deployment.md](.claude/railway-deployment.md) |
