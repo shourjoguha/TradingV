@@ -51,6 +51,62 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ---
 
+---
+
+## Railway-fallback inference when laptop down
+
+**What:** If the daily prediction push from laptop hasn't landed on Railway by a configured deadline (e.g. 06:00 UTC), Railway runs the models itself against its own data.
+
+**Status:** Open.
+
+**Trigger to revisit:** When laptop uptime becomes unreliable, OR when frontend operators expect predictions even on laptop-down days.
+
+**Implementation pointers:**
+- Add `last_received_prediction_at` column on Railway-side schedule_config (or derive from `analysis_jobs` max(submitted_at) where origin='peer').
+- Lifespan task on Railway: every 30 min after configured deadline, check; if stale → submit_run() locally with watchlist symbols replicated from laptop.
+- Requires watchlist replication (also currently laptop-only — see entry below).
+
+---
+
+## Watchlist + schedule_config + labels replication to Railway
+
+**What:** v1 keeps these laptop-only. Railway has no view of them.
+
+**Status:** Open.
+
+**Trigger to revisit:** When Railway-fallback inference activates, OR when frontend needs a Railway endpoint for read-only watchlist views (e.g. when laptop is closed).
+
+**Implementation pointers:**
+- Extend `sync_outbox` with new `kind` values: `'watchlist'`, `'schedule_config'`, `'ticker_label'`.
+- Receiver endpoints on Railway: `/v1/watchlist/import`, `/v1/schedule/import`, `/v1/labels/import` — idempotent upserts.
+- Trigger enqueue on every CRUD on these resources.
+
+---
+
+## Completion-trigger queue (replace 5-min retry poll)
+
+**What:** Today, scheduled runs that hit `AtCapacityError` retry every 5 minutes. Instead, the in-flight job's `_process_job` end could check for "scheduled run pending" flag and fire immediately.
+
+**Status:** Hybrid-approach already partially in Phase 2 plan — completion-trigger included alongside 5-min poll.
+
+**Trigger to revisit:** If 5-min poll becomes a real bottleneck (i.e. operator triggers many manual jobs, scheduled run keeps deferring beyond 30 min).
+
+**Implementation:** Replace poll loop with a proper task queue (asyncio Queue or persistent queue table). Multi-job sequencing.
+
+---
+
+## Trading-day filter per asset_class
+
+**What:** v1 scheduler skips weekends (`weekday() >= 5`). Crypto trades 24/7; would be skipped wrongly when the watchlist contains crypto.
+
+**Status:** Open.
+
+**Trigger to revisit:** When watchlist gains crypto tickers.
+
+**Implementation:** Per-asset_class trading-day predicate in `app/market_data/calendar.py` (new). Scheduler partitions watchlist by asset class, runs only the eligible-today subset.
+
+---
+
 ## How to add an entry
 
 Use the same structure: **What** / **Status** / **Why deferred** (or **Open**) / **Trigger to revisit** / **Implementation pointers**. Include the key files involved so future-you doesn't have to re-derive context.
