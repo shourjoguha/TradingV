@@ -65,7 +65,8 @@ For watchlist/schedule/label: the `apply_imported_*` service helpers bypass the 
 ## Routes (`/v1/sync/*`)
 
 - `POST /v1/sync/retry` — drains eligible rows now. Returns `{scanned, ok, failed}`.
-- `GET /v1/sync/outbox?status=pending|completed|failed&limit=200` — visibility.
+- `GET /v1/sync/outbox?status=pending|completed|failed&limit=200&include_payload=false` — visibility.
+- `DELETE /v1/sync/outbox/{id}` — surgical cleanup of a single row regardless of state. Use when a row was enqueued with a misconfigured `peer_url` and would retry forever after backoff. The retention purge only targets COMPLETED rows.
 
 ## Config
 
