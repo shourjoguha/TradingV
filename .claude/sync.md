@@ -20,7 +20,7 @@ OHLCV is NOT synced — each backend refetches live.
 
 - Laptop runs inference by default. Railway stays idle, receives TV webhooks.
 - Frontend toggles backend per job. The non-running backend receives tickers after completion.
-- LAN-only for v1. Tunnel (Cloudflare/Tailscale) added when frontend ships.
+- Network: laptop is reachable from Railway via Tailscale (userspace networking + HTTP CONNECT proxy on `localhost:1055` inside the Railway container). Outbound httpx calls auto-route through `HTTP_PROXY` env var set by `tailscale-entrypoint.sh`. See [railway-deployment.md](railway-deployment.md) for the network model + setup.
 
 ## Outbox pattern
 

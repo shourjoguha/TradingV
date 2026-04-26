@@ -76,13 +76,29 @@ The Kronos model code lives in `app/kronos/_vendor/kronos_model/`. Upstream Kron
 
 ## Tailscale tunnel (for Railway → laptop sync)
 
-The container joins the operator's tailnet on boot so it can reach the laptop's `localhost:8000` via tailnet IP / MagicDNS, without exposing the laptop publicly.
+The container joins the operator's tailnet on boot so it can reach the laptop privately, without exposing the laptop publicly.
+
+### Network model: HTTP CONNECT proxy, NOT kernel routing
+
+Railway containers can't get `CAP_NET_ADMIN`, so we run `tailscaled --tun=userspace-networking`. **In userspace mode, tailscaled does NOT install kernel routes** — packets the app sends directly to a tailnet IP go to Railway's default gateway and fail with `ConnectError: Name or service not known` (for MagicDNS) or `Connection timed out` (for raw `100.x.y.z` IPs).
+
+Fix: tailscaled exposes an outbound **HTTP CONNECT proxy** (and SOCKS5 fallback) on `:1055`. The entrypoint script exports `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` so all app traffic routes through it. httpx (and requests, curl, etc.) auto-honour these env vars — no app code changes needed.
+
+`NO_PROXY` excludes:
+- `localhost`, `127.0.0.1` (any in-process loopback)
+- `postgres.railway.internal`, `.railway.internal`, `.railway.app` (the DB connection + any Railway-internal lookups)
+
+Without the `NO_PROXY` exemption, `asyncpg` would tunnel through tailscaled and fail on the Railway-internal Postgres host.
 
 ### How it's wired
 
 - `Dockerfile` installs Tailscale's official Debian package.
-- `tailscale-entrypoint.sh` runs `tailscaled --tun=userspace-networking` (no `/dev/net/tun` / `CAP_NET_ADMIN` needed) then `tailscale up --authkey=$TS_AUTHKEY --hostname=tradingv-railway --ephemeral`. After that it execs `alembic upgrade head && uvicorn ...`.
-- If `TS_AUTHKEY` is empty, the script SKIPS Tailscale and boots the app normally. Safe default — pushing the container without provisioning the key won't break anything.
+- `tailscale-entrypoint.sh`:
+  1. Runs `tailscaled --tun=userspace-networking --outbound-http-proxy-listen=:1055 --socks5-server=:1055`.
+  2. `tailscale up --authkey=$TS_AUTHKEY --hostname=tradingv-railway --ephemeral`.
+  3. Exports `HTTP_PROXY=http://127.0.0.1:1055`, `HTTPS_PROXY=http://127.0.0.1:1055`, `ALL_PROXY=socks5://127.0.0.1:1055`, `NO_PROXY=localhost,127.0.0.1,postgres.railway.internal,.railway.internal,.railway.app`.
+  4. Execs `alembic upgrade head && uvicorn ...` (the Dockerfile CMD).
+- If `TS_AUTHKEY` is empty, the script SKIPS Tailscale entirely (no proxy exports either) and boots the app normally. Safe default — pushing the container without provisioning the key won't break anything.
 
 ### Operator setup (one-time)
 
@@ -102,16 +118,31 @@ The container joins the operator's tailnet on boot so it can reach the laptop's 
 
 Once Tailscale is joined, set on Railway:
 ```
-PEER_API_URL=http://<laptop-magicdns>:8000
+PEER_API_URL=http://<laptop-tailnet-ip-or-hostname>:8000
 PEER_API_KEY=<laptop's API_KEY>
 ```
-where `<laptop-magicdns>` is what `tailscale status` shows on your laptop (e.g. `shourjos-mbp.tailxxxxx.ts.net`). Test with: trigger a small job on Railway, then `curl localhost:8000/v1/analysis/jobs?origin=peer` on laptop and confirm the job appears with `origin='peer'`.
+Either form works because the HTTP proxy resolves names + IPs through tailscaled:
+- **Tailnet IP** (recommended for stability): `tailscale ip -4` on laptop → `http://100.x.y.z:8000`. IPs don't change unless you reset the device.
+- **MagicDNS hostname**: `tailscale status` row → `http://laptop-name.tailxxxxx.ts.net:8000`. Slightly more readable; works because the HTTP proxy does its own DNS resolution.
+
+Test from inside the running container (Railway → service → shell):
+```
+curl -sv http://<laptop-tailnet-ip>:8000/health
+# Should return {"status":"ok"} via the proxy. NO env var change needed —
+# HTTP_PROXY is already exported by the entrypoint.
+```
+
+End-to-end test: trigger a small job on Railway, then `curl http://localhost:8000/v1/analysis/jobs` on laptop. Job should appear with `origin='peer'` within ~30s. Railway-side `/v1/sync/outbox?status=completed&limit=5` should show the push as completed (`completed_at` set, `last_error: null`).
 
 ### Diagnosing Tailscale issues
 
-- Container logs `[entrypoint] tailscaled failed to start` → check `/tmp/tailscaled.log` via `railway logs`. Most common cause: bad auth key.
+- `[entrypoint]` lines missing from runtime logs → Dockerfile ENTRYPOINT bypassed. Don't set `[deploy].startCommand` in `railway.toml`; that overrides ENTRYPOINT. The CMD ENTRYPOINT chain in the Dockerfile is what runs the script.
+- `[entrypoint] tailscaled failed to start` → check `/tmp/tailscaled.log` via `railway logs`. Most common cause: bad auth key.
 - `tailscale status` on Railway shows "expired" → key rotated. Generate new key, update Railway env.
-- Laptop can't reach Railway via tailnet → confirm laptop is in the same tailnet (`tailscale status` should list `tradingv-railway`).
+- `ConnectError: Name or service not known` in `sync_outbox.last_error` → HTTP_PROXY env var didn't get exported (entrypoint didn't run, OR it crashed before the export step). Check runtime logs for `HTTP(S)_PROXY=...` line.
+- `ConnectError: Connection timed out` to `100.x.y.z` → tailscaled is up but the HTTP proxy listener isn't bound. Check `/tmp/tailscaled.log` for `outbound-http-proxy-listen` errors; ensure `--outbound-http-proxy-listen=:1055` is on the tailscaled command.
+- Postgres connection fails after Tailscale is added → `NO_PROXY` doesn't include the Postgres host. The entrypoint sets `postgres.railway.internal,.railway.internal` — don't strip those.
+- Laptop can't see Railway in `tailscale status` → Railway never joined. Means the entrypoint didn't run OR `tailscale up` failed. Check Railway runtime logs.
 
 ## What NOT to do
 
