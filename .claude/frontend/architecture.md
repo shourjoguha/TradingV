@@ -46,13 +46,9 @@ frontend/
   package.json
 ```
 
-## Local vs Magic Patterns divergence
+## Magic Patterns: abandoned
 
-`pages/PredictionsByTarget.tsx` differs:
-- **Local**: lightweight-charts candlesticks + N prediction-line overlays colour-coded by `days_ago`.
-- **MP preview**: inline SVG line chart (single series). MP bundler doesn't ship lightweight-charts. Patched MP-side via `send_prompt`; local code is the real one.
-
-This is the only intentional divergence. If MP ever needs to match local, manually port the MP-side simpler chart back. Otherwise keep local rich.
+MP was used to bootstrap the initial UI (editor `tvwawai8bwsqvsgygvaque`) but is no longer the source of truth. MP's bundler doesn't ship `lightweight-charts` and doesn't expose `import.meta.env` the way Vite does — keeping it in sync isn't worth it. Local `frontend/` is canonical; preview via `npm run dev` and Chrome at `http://localhost:3000`.
 
 ## CORS / dev proxy
 
