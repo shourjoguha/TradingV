@@ -80,6 +80,19 @@ curl -H "X-API-Key: $API_KEY" "http://localhost:8000/v1/sync/outbox?status=pendi
 curl -X POST -H "X-API-Key: $API_KEY" http://localhost:8000/v1/sync/retry
 ```
 
+## Frontend (optional)
+
+The Vite + React UI lives in `frontend/`. With the backend running on `:8000`:
+
+```bash
+cd "/Users/shourjosmac/Documents/Claude/TradingView /frontend"
+cp .env.example .env.local       # fill in VITE_LAPTOP_KEY + VITE_RAILWAY_KEY (first time only)
+npm install                      # first time only
+npm run dev                      # http://localhost:3000
+```
+
+Vite proxies `/v1` and `/health` to `localhost:8000` (no CORS hassle). See [frontend/README.md](frontend/README.md) for the full doc tree, [frontend/dev-workflow.md](frontend/dev-workflow.md) for daily commands.
+
 ## Known constraints
 
 - Railway → laptop push won't work until you add a public tunnel (Cloudflare/Tailscale) — LAN IPs aren't routable from Railway. Laptop → Railway works today.
