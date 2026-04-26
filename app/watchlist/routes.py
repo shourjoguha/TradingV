@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
 from app.core.auth import verify_api_key
+from app.labels import service as labels_svc
 from app.watchlist import service
 from app.watchlist.schemas import (
     WatchlistEntryCreate,
@@ -20,9 +21,18 @@ router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 async def list_watchlist(
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
+    labels: Optional[str] = Query(
+        None,
+        description="Filter by labels: 'sector:tech,capsize:large'. ALL must match.",
+    ),
     _api_key: str = Depends(verify_api_key),
 ):
     entries = await service.list_entries(limit=limit, offset=offset)
+    if labels:
+        pairs = labels_svc.parse_labels_filter(labels)
+        if pairs:
+            allowed = await labels_svc.filter_symbols_by_labels(pairs)
+            entries = [e for e in entries if e.symbol in allowed]
     return WatchlistListResponse(
         entries=[WatchlistEntryRead.model_validate(e) for e in entries],
         count=len(entries),
