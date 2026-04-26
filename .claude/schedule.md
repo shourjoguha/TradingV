@@ -52,4 +52,23 @@ This is what makes the comparison endpoints (Phase 5) meaningful — actuals for
 First-iteration of the loop computes `next_run_at` if missing. If it's already in the past (laptop was off through the scheduled time), the loop fires immediately on startup.
 
 ## Sync to Railway
-Schedule config is laptop-only for v1 — see [backlog.md](backlog.md).
+Schedule config replicates to peer via outbox (`kind='schedule'`) on every PUT — see [sync.md](sync.md). Receiver preserves runtime-only fields (`pending_run`, `last_run_*`, `next_run_at`).
+
+## Railway-fallback inference (opt-in)
+
+If the laptop fails to push today's predictions, Railway runs them itself. Off by default; enable on Railway with `RAILWAY_FALLBACK_ENABLED=true` env var (set + redeploy).
+
+How it works:
+- `start()` spawns a second asyncio task `_fallback_loop()` only when `INSTANCE_NAME='railway'` AND `RAILWAY_FALLBACK_ENABLED=true`.
+- Loop ticks every 30 min. Each tick:
+  - Compute deadline = most-recent-past `run_at_local` instant + `fallback_offset_hours` (default 6h, configurable on `schedule_config`).
+  - If `now < deadline`: skip (still within the laptop's window).
+  - Else, scan watchlist symbols. For each, check `prediction_points` for any row with `made_on >= candidate_run.date()`.
+    - Already populated → skip ticker (laptop got there first, OR a prior fallback tick covered it).
+    - Missing → include in the fallback fire list.
+  - If fire list non-empty → call `submit_run(...)` on Railway with that subset.
+
+Edge cases:
+- If laptop comes online AFTER Railway's fallback fires: laptop's run will produce a duplicate. Per-day dedupe is best-effort — accepted v1 limitation. Frontend can filter by `origin` for clarity.
+- If `enabled=false` on schedule_config: fallback also skipped (config gates everything).
+- `fallback_offset_hours` is configurable per backend; tune if 6h is too tight for a slow laptop boot or too loose for an outage response.

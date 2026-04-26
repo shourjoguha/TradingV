@@ -18,6 +18,7 @@ class ScheduleConfigRead(BaseModel):
     retry_minutes: int
     collect_actuals: bool
     skip_weekends: bool
+    fallback_offset_hours: int
     pending_run: bool
     last_run_at: Optional[datetime.datetime] = None
     last_run_status: Optional[str] = None
@@ -38,3 +39,4 @@ class ScheduleConfigUpdate(BaseModel):
     retry_minutes: Optional[int] = Field(None, ge=1, le=120)
     collect_actuals: Optional[bool] = None
     skip_weekends: Optional[bool] = None
+    fallback_offset_hours: Optional[int] = Field(None, ge=0, le=24)
