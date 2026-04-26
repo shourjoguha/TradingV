@@ -85,3 +85,17 @@ async def remove_from_watchlist(symbol: str, _api_key: str = Depends(verify_api_
     if not removed:
         raise HTTPException(status_code=404, detail=f"'{symbol}' not on watchlist")
     return None
+
+
+# ----------------------------------------------------------------------
+# Replication receiver. NOT for human use — called by the peer's outbox
+# drain. Idempotent. Bypasses the replication enqueue path to avoid loops.
+# ----------------------------------------------------------------------
+
+@router.post("/import", response_model=dict)
+async def import_watchlist_change(
+    payload: dict = Body(...),
+    _api_key: str = Depends(verify_api_key),
+):
+    result = await service.apply_imported_change(payload)
+    return {"result": result}

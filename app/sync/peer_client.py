@@ -34,6 +34,73 @@ async def push_ticker(
         return False, f"{type(e).__name__}: {e}"
 
 
+async def _post_json(
+    *, peer_url: str, path: str, api_key: str, payload: dict[str, Any],
+    timeout: httpx.Timeout,
+) -> Tuple[bool, str | None]:
+    url = peer_url.rstrip("/") + path
+    headers = {"X-API-Key": api_key}
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, json=payload, headers=headers)
+        if 200 <= resp.status_code < 300:
+            return True, None
+        return False, f"http_{resp.status_code}: {resp.text[:200]}"
+    except httpx.HTTPError as e:
+        return False, f"{type(e).__name__}: {e}"
+
+
+async def push_watchlist(
+    *, peer_url: str, api_key: str, payload: dict[str, Any]
+) -> Tuple[bool, str | None]:
+    """POST watchlist diff to ``{peer_url}/v1/watchlist/import``.
+
+    Payload shape::
+
+        {"action": "upsert" | "delete",
+         "symbol": "AAPL",
+         "notes": "...",     # only on upsert
+         "added_at": "ISO"}  # only on upsert; receiver may ignore
+    """
+    return await _post_json(
+        peer_url=peer_url, path="/v1/watchlist/import",
+        api_key=api_key, payload=payload, timeout=_TICKER_TIMEOUT,
+    )
+
+
+async def push_schedule(
+    *, peer_url: str, api_key: str, payload: dict[str, Any]
+) -> Tuple[bool, str | None]:
+    """POST schedule_config snapshot to ``{peer_url}/v1/schedule/import``.
+
+    Payload is the full singleton-row dict (last-write-wins). Receiver
+    overwrites everything except its own runtime-only fields
+    (``pending_run``, ``last_run_*``, ``next_run_at``).
+    """
+    return await _post_json(
+        peer_url=peer_url, path="/v1/schedule/import",
+        api_key=api_key, payload=payload, timeout=_TICKER_TIMEOUT,
+    )
+
+
+async def push_label(
+    *, peer_url: str, api_key: str, payload: dict[str, Any]
+) -> Tuple[bool, str | None]:
+    """POST a single label change to ``{peer_url}/v1/labels/import``.
+
+    Payload shape::
+
+        {"action": "upsert" | "delete",
+         "symbol": "AAPL",
+         "key": "sector",
+         "value": <any JSON>}   # only on upsert
+    """
+    return await _post_json(
+        peer_url=peer_url, path="/v1/labels/import",
+        api_key=api_key, payload=payload, timeout=_TICKER_TIMEOUT,
+    )
+
+
 async def push_result(
     *, peer_url: str, api_key: str, payload: dict[str, Any]
 ) -> Tuple[bool, str | None]:

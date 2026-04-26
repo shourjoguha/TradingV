@@ -62,7 +62,11 @@ async def get_config() -> ScheduleConfig:
 
 
 async def update_config(**fields) -> ScheduleConfig:
-    """Partial update. Only non-None fields applied. Returns fresh row."""
+    """Partial update. Only non-None fields applied. Returns fresh row.
+
+    Enqueues a replication push so the peer backend stays in sync. Skipped
+    when called via :func:`apply_imported_config` (which writes directly).
+    """
     await ensure_config()
     async with _db.SessionLocal() as session:
         cfg = await session.get(ScheduleConfig, SINGLETON_ID)
@@ -76,7 +80,78 @@ async def update_config(**fields) -> ScheduleConfig:
             cfg.next_run_at = compute_next_run_at(cfg)
         await session.commit()
         await session.refresh(cfg)
-        return cfg
+
+    await _enqueue_replication(cfg)
+    return cfg
+
+
+# ----------------------------------------------------------------------
+# Replication
+# ----------------------------------------------------------------------
+
+# Fields the peer should NOT clobber on import — these are runtime state
+# specific to whichever backend is actually doing the runs.
+_LOCAL_ONLY_FIELDS = {
+    "pending_run", "last_run_at", "last_run_status", "last_run_error",
+    "next_run_at", "id",
+}
+
+
+def _serialize_for_replication(cfg: ScheduleConfig) -> dict:
+    """Snapshot of config-only fields (no runtime state) for the peer."""
+    return {
+        "enabled": cfg.enabled,
+        "tz_name": cfg.tz_name,
+        "run_at_local": cfg.run_at_local.isoformat() if cfg.run_at_local else None,
+        "intervals": list(cfg.intervals or []),
+        "horizon_bars": cfg.horizon_bars,
+        "model_ids": list(cfg.model_ids or []),
+        "retry_minutes": cfg.retry_minutes,
+        "collect_actuals": cfg.collect_actuals,
+        "skip_weekends": cfg.skip_weekends,
+    }
+
+
+async def _enqueue_replication(cfg: ScheduleConfig) -> None:
+    try:
+        from app.sync import service as sync_svc
+
+        await sync_svc.enqueue_kind("schedule", _serialize_for_replication(cfg))
+    except Exception:  # pragma: no cover - defensive
+        logger.exception("schedule: replication enqueue failed")
+
+
+async def apply_imported_config(payload: dict) -> str:
+    """Apply a peer-pushed schedule config. Last-write-wins on shared fields.
+
+    Local-only runtime fields (``pending_run``, ``last_run_*``, ``next_run_at``)
+    are preserved — each backend has its own runtime state. Returns
+    ``'updated'`` or ``'noop'``.
+    """
+    import datetime as _dt
+
+    if not isinstance(payload, dict):
+        return "noop"
+    await ensure_config()
+    async with _db.SessionLocal() as session:
+        cfg = await session.get(ScheduleConfig, SINGLETON_ID)
+        if cfg is None:
+            return "noop"
+
+        for key, value in payload.items():
+            if key in _LOCAL_ONLY_FIELDS:
+                continue
+            if value is None:
+                continue
+            if key == "run_at_local" and isinstance(value, str):
+                value = _dt.time.fromisoformat(value)
+            setattr(cfg, key, value)
+
+        # Recompute next_run_at locally — it's our timeline, not theirs.
+        cfg.next_run_at = compute_next_run_at(cfg)
+        await session.commit()
+        await session.refresh(cfg)
+    return "updated"
 
 
 async def set_pending(value: bool) -> None:
