@@ -37,6 +37,14 @@ class ScheduleConfig(Base):
     retry_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     collect_actuals: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     skip_weekends: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Railway-fallback inference (only used on Railway; harmless on laptop).
+    # If no `origin='peer'` job lands by run_at_local + fallback_offset_hours,
+    # Railway runs the models itself against its own watchlist. Per-ticker
+    # dedupe via `prediction_points`. Disabled by default — flip
+    # ``RAILWAY_FALLBACK_ENABLED=true`` env on Railway to opt in.
+    fallback_offset_hours: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=6, server_default="6"
+    )
 
     # Set when a scheduled run hits AtCapacityError (429); the runner
     # retries every retry_minutes until cleared. Also set on

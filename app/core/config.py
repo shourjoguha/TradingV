@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     # ("https://your-app.lovable.dev,https://app.example.com"). Empty
     # falls back to the local-dev defaults below.
     FRONTEND_ORIGIN: str = ""
+    # Railway-fallback inference: when enabled AND INSTANCE_NAME='railway',
+    # the schedule runner spawns a second loop that fires submit_run() if
+    # the laptop hasn't pushed today's predictions by run_at_local +
+    # fallback_offset_hours. Off by default — explicit opt-in.
+    RAILWAY_FALLBACK_ENABLED: bool = False
 
 
 SETTINGS = Settings()

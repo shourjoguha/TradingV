@@ -53,18 +53,9 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ---
 
-## Railway-fallback inference when laptop down
+## Railway-fallback inference when laptop down  ✅ RESOLVED
 
-**What:** If the daily prediction push from laptop hasn't landed on Railway by a configured deadline (e.g. 06:00 UTC), Railway runs the models itself against its own data.
-
-**Status:** Open.
-
-**Trigger to revisit:** When laptop uptime becomes unreliable, OR when frontend operators expect predictions even on laptop-down days.
-
-**Implementation pointers:**
-- Add `last_received_prediction_at` column on Railway-side schedule_config (or derive from `analysis_jobs` max(submitted_at) where origin='peer').
-- Lifespan task on Railway: every 30 min after configured deadline, check; if stale → submit_run() locally with watchlist symbols replicated from laptop.
-- Requires watchlist replication (also currently laptop-only — see entry below).
+**Resolution:** Phase B4. Lifespan task `_fallback_loop()` in `app/schedule/runner.py` ticks every 30 min on Railway when `RAILWAY_FALLBACK_ENABLED=true`. Per-symbol dedupe via `prediction_points`. Configurable `fallback_offset_hours` on `schedule_config` (default 6h). Tested in `tests/test_schedule_fallback.py`.
 
 ---
 

@@ -21,6 +21,7 @@ import datetime
 import logging
 from typing import Optional
 
+from app.core.config import SETTINGS
 from app.schedule import service as schedule_svc
 from app.watchlist import service as watchlist_svc
 
@@ -31,10 +32,15 @@ logger = logging.getLogger(__name__)
 # waits this long for an enable to take effect).
 _IDLE_POLL_SECONDS = 30
 
+# Fallback loop check cadence. We don't need sub-minute precision —
+# the deadline math is in hours.
+_FALLBACK_POLL_SECONDS = 30 * 60  # 30 min
+
 # External wake-up event. analysis.service flips this when a manual job
 # completes so a 429-deferred scheduled run can fire immediately.
 _wake_event: Optional[asyncio.Event] = None
 _run_task: Optional[asyncio.Task] = None
+_fallback_task: Optional[asyncio.Task] = None
 
 
 def _now_utc() -> datetime.datetime:
@@ -189,21 +195,145 @@ async def _loop() -> None:
 
 
 def start() -> None:
-    """Start the runner task. Idempotent — safe to call multiple times."""
-    global _run_task
-    if _run_task is not None and not _run_task.done():
-        return
-    _run_task = asyncio.create_task(_loop(), name="schedule-runner")
+    """Start the runner task(s). Idempotent — safe to call multiple times."""
+    global _run_task, _fallback_task
+    if _run_task is None or _run_task.done():
+        _run_task = asyncio.create_task(_loop(), name="schedule-runner")
+
+    # Railway-fallback loop: only on Railway (or any backend with the
+    # explicit env opt-in). Skipped on laptop by default since the laptop
+    # IS the source of truth.
+    if (
+        SETTINGS.RAILWAY_FALLBACK_ENABLED
+        and SETTINGS.INSTANCE_NAME == "railway"
+        and (_fallback_task is None or _fallback_task.done())
+    ):
+        _fallback_task = asyncio.create_task(
+            _fallback_loop(), name="schedule-fallback"
+        )
 
 
 async def stop() -> None:
-    """Cancel the runner task. Used from tests + shutdown."""
-    global _run_task, _wake_event
-    if _run_task is not None:
-        _run_task.cancel()
-        try:
-            await _run_task
-        except (asyncio.CancelledError, Exception):
-            pass
-        _run_task = None
+    """Cancel the runner task(s). Used from tests + shutdown."""
+    global _run_task, _fallback_task, _wake_event
+    for task_ref in (_run_task, _fallback_task):
+        if task_ref is not None:
+            task_ref.cancel()
+            try:
+                await task_ref
+            except (asyncio.CancelledError, Exception):
+                pass
+    _run_task = None
+    _fallback_task = None
     _wake_event = None
+
+
+# ----------------------------------------------------------------------
+# Fallback loop (Railway only)
+# ----------------------------------------------------------------------
+
+async def _fallback_loop() -> None:
+    """Periodic check: if laptop hasn't pushed today's predictions by the
+    configured deadline, run them locally on Railway.
+
+    Loop runs every _FALLBACK_POLL_SECONDS. Each iteration:
+    1. Load config. If disabled, sleep + retry.
+    2. Compute deadline = today's run_at_local (in cfg.tz_name) + fallback_offset_hours, in UTC.
+    3. If now < deadline → sleep + retry.
+    4. List watchlist symbols.
+    5. For each symbol, check if a prediction made TODAY (any model, any
+       origin) already exists in prediction_points. If yes → skip. If no
+       → include in fallback fire list.
+    6. If list non-empty → submit_run(symbols=list, ...).
+    """
+    logger.info("scheduler: fallback loop starting (Railway opt-in)")
+    while True:
+        try:
+            await _fallback_tick()
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("scheduler: fallback tick crashed; sleeping")
+        try:
+            await asyncio.sleep(_FALLBACK_POLL_SECONDS)
+        except asyncio.CancelledError:
+            raise
+
+
+async def _fallback_tick() -> None:
+    """One iteration of the fallback loop. Public-ish for tests."""
+    from app.analysis import concurrency, service as analysis_svc
+    from app.predictions.models import PredictionPoint
+    from sqlalchemy import select
+
+    cfg = await schedule_svc.get_config()
+    if not cfg.enabled:
+        return
+
+    now = _now_utc()
+    tz = schedule_svc.resolve_tz(cfg.tz_name)
+    local_now = now.astimezone(tz)
+    today_local = local_now.date()
+
+    # Most-recent-past instance of run_at_local. If today's run-time is
+    # still in the future (e.g. now=12:00, run_at_local=23:30), step back
+    # to yesterday's run instance — that's the one whose predictions we
+    # were waiting for.
+    candidate_local = datetime.datetime.combine(
+        today_local, cfg.run_at_local
+    ).replace(tzinfo=tz)
+    if candidate_local > local_now:
+        candidate_local -= datetime.timedelta(days=1)
+
+    deadline_local = candidate_local + datetime.timedelta(
+        hours=cfg.fallback_offset_hours
+    )
+    deadline_utc = deadline_local.astimezone(datetime.timezone.utc)
+
+    if now < deadline_utc:
+        return  # Still within the laptop's window.
+
+    symbols = await watchlist_svc.list_symbols()
+    if not symbols:
+        return
+
+    # Dedupe horizon: skip a ticker if it has any prediction made on or
+    # after the candidate run instance's UTC date. Catches both
+    # laptop-pushed (origin='peer') and our own prior fallback runs.
+    dedupe_made_on = candidate_local.astimezone(datetime.timezone.utc).date()
+
+    # Per-symbol dedupe: skip any symbol that already has a prediction
+    # row made today (regardless of which backend produced it).
+    from app.core import db as _db
+
+    fire_for: list[str] = []
+    async with _db.SessionLocal() as session:
+        for sym in symbols:
+            existing = await session.scalar(
+                select(PredictionPoint.id)
+                .where(PredictionPoint.ticker == sym)
+                .where(PredictionPoint.made_on >= dedupe_made_on)
+                .limit(1)
+            )
+            if existing is None:
+                fire_for.append(sym)
+
+    if not fire_for:
+        logger.info("fallback: all watchlist symbols have today's forecast — skipping")
+        return
+
+    logger.info(
+        "fallback: deadline passed, %d/%d symbols missing — firing local run",
+        len(fire_for), len(symbols),
+    )
+    try:
+        await analysis_svc.submit_run(
+            tickers=fire_for,
+            intervals=list(cfg.intervals),
+            model_ids=list(cfg.model_ids),
+            horizon_bars=cfg.horizon_bars,
+        )
+    except concurrency.AtCapacityError:
+        logger.info("fallback: at capacity, retrying next cycle")
+    except Exception:  # pragma: no cover - defensive
+        logger.exception("fallback: submit_run failed")

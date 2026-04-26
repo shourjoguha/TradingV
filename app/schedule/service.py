@@ -31,6 +31,7 @@ _DEFAULTS = dict(
     retry_minutes=5,
     collect_actuals=True,
     skip_weekends=True,
+    fallback_offset_hours=6,
     pending_run=False,
 )
 
@@ -109,6 +110,7 @@ def _serialize_for_replication(cfg: ScheduleConfig) -> dict:
         "retry_minutes": cfg.retry_minutes,
         "collect_actuals": cfg.collect_actuals,
         "skip_weekends": cfg.skip_weekends,
+        "fallback_offset_hours": cfg.fallback_offset_hours,
     }
 
 
