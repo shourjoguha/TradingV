@@ -82,21 +82,27 @@ tailscale --socket="$TS_SOCKET" status || true
 # so any in-app subprocess that calls `tailscale ...` finds it.
 ln -sf "$TS_SOCKET" /var/run/tailscale/tailscaled.sock 2>/dev/null || true
 
-# Route app outbound traffic through tailscaled's local proxy.
-# httpx + requests + curl all honour these env vars.
-# NO_PROXY exemptions: loopback (any local-only thing), Railway's
+# Route app outbound traffic through tailscaled's local HTTP CONNECT proxy.
+# httpx + requests + curl all honour HTTP_PROXY / HTTPS_PROXY (and the
+# lowercase variants). The proxy itself is HTTP CONNECT, which handles
+# both http:// and https:// targets — no SOCKS5 client needed.
+#
+# NOT setting ALL_PROXY: httpx interprets that as a SOCKS5 URL and tries
+# to import the `socksio` extras, which we don't ship. tailscaled does
+# also expose SOCKS5 on the same port (--socks5-server) for tools that
+# specifically prefer it (e.g. curl --socks5), but the app uses HTTP.
+#
+# NO_PROXY exemptions: loopback (anything local-only), Railway's
 # internal Postgres hostname pattern, and Railway's own service domains.
 # Without these the DB connection (asyncpg → postgres.railway.internal)
 # would be tunneled through tailscaled and fail.
 export HTTP_PROXY="http://127.0.0.1:${TS_PROXY_PORT}"
 export HTTPS_PROXY="http://127.0.0.1:${TS_PROXY_PORT}"
-export ALL_PROXY="socks5://127.0.0.1:${TS_PROXY_PORT}"
 export NO_PROXY="localhost,127.0.0.1,postgres.railway.internal,.railway.internal,.railway.app"
 # Lowercase variants — some libraries (notably httpx) check both cases
 # but exporting both is the safest belt-and-braces.
 export http_proxy="$HTTP_PROXY"
 export https_proxy="$HTTPS_PROXY"
-export all_proxy="$ALL_PROXY"
 export no_proxy="$NO_PROXY"
 
 echo "[entrypoint] HTTP(S)_PROXY=$HTTP_PROXY  NO_PROXY=$NO_PROXY"

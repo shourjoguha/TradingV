@@ -82,7 +82,9 @@ The container joins the operator's tailnet on boot so it can reach the laptop pr
 
 Railway containers can't get `CAP_NET_ADMIN`, so we run `tailscaled --tun=userspace-networking`. **In userspace mode, tailscaled does NOT install kernel routes** — packets the app sends directly to a tailnet IP go to Railway's default gateway and fail with `ConnectError: Name or service not known` (for MagicDNS) or `Connection timed out` (for raw `100.x.y.z` IPs).
 
-Fix: tailscaled exposes an outbound **HTTP CONNECT proxy** (and SOCKS5 fallback) on `:1055`. The entrypoint script exports `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` so all app traffic routes through it. httpx (and requests, curl, etc.) auto-honour these env vars — no app code changes needed.
+Fix: tailscaled exposes an outbound **HTTP CONNECT proxy** on `:1055` (with SOCKS5 also bound to the same port for tools that prefer it). The entrypoint script exports `HTTP_PROXY` / `HTTPS_PROXY` so all app traffic routes through it. httpx (and requests, curl, etc.) auto-honour these env vars — no app code changes needed.
+
+**Don't set `ALL_PROXY`.** httpx interprets `ALL_PROXY=socks5://...` as a SOCKS5 hint and refuses to start unless `socksio` is installed (we don't ship it). HTTP_PROXY/HTTPS_PROXY (HTTP CONNECT) handle both http:// and https:// targets just fine.
 
 `NO_PROXY` excludes:
 - `localhost`, `127.0.0.1` (any in-process loopback)
@@ -96,7 +98,7 @@ Without the `NO_PROXY` exemption, `asyncpg` would tunnel through tailscaled and 
 - `tailscale-entrypoint.sh`:
   1. Runs `tailscaled --tun=userspace-networking --outbound-http-proxy-listen=:1055 --socks5-server=:1055`.
   2. `tailscale up --authkey=$TS_AUTHKEY --hostname=tradingv-railway --ephemeral`.
-  3. Exports `HTTP_PROXY=http://127.0.0.1:1055`, `HTTPS_PROXY=http://127.0.0.1:1055`, `ALL_PROXY=socks5://127.0.0.1:1055`, `NO_PROXY=localhost,127.0.0.1,postgres.railway.internal,.railway.internal,.railway.app`.
+  3. Exports `HTTP_PROXY=http://127.0.0.1:1055`, `HTTPS_PROXY=http://127.0.0.1:1055`, `NO_PROXY=localhost,127.0.0.1,postgres.railway.internal,.railway.internal,.railway.app`. ALL_PROXY intentionally NOT set — see note above.
   4. Execs `alembic upgrade head && uvicorn ...` (the Dockerfile CMD).
 - If `TS_AUTHKEY` is empty, the script SKIPS Tailscale entirely (no proxy exports either) and boots the app normally. Safe default — pushing the container without provisioning the key won't break anything.
 
@@ -142,6 +144,7 @@ End-to-end test: trigger a small job on Railway, then `curl http://localhost:800
 - `ConnectError: Name or service not known` in `sync_outbox.last_error` → HTTP_PROXY env var didn't get exported (entrypoint didn't run, OR it crashed before the export step). Check runtime logs for `HTTP(S)_PROXY=...` line.
 - `ConnectError: Connection timed out` to `100.x.y.z` → tailscaled is up but the HTTP proxy listener isn't bound. Check `/tmp/tailscaled.log` for `outbound-http-proxy-listen` errors; ensure `--outbound-http-proxy-listen=:1055` is on the tailscaled command.
 - Postgres connection fails after Tailscale is added → `NO_PROXY` doesn't include the Postgres host. The entrypoint sets `postgres.railway.internal,.railway.internal` — don't strip those.
+- `ImportError: Using SOCKS proxy, but the 'socksio' package is not installed` → `ALL_PROXY=socks5://...` got exported. Don't set ALL_PROXY (HTTP_PROXY/HTTPS_PROXY are sufficient — see note above), or `pip install httpx[socks]`.
 - Laptop can't see Railway in `tailscale status` → Railway never joined. Means the entrypoint didn't run OR `tailscale up` failed. Check Railway runtime logs.
 
 ## What NOT to do
