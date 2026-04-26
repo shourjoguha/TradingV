@@ -12,6 +12,7 @@ from app.tickers import models as _ticker_models  # noqa: F401
 from app.market_data import models as _ohlcv_models  # noqa: F401
 from app.analysis import models as _analysis_models  # noqa: F401
 from app.sync import models as _sync_models  # noqa: F401
+from app.predictions import models as _predictions_models  # noqa: F401
 from app.schedule import models as _schedule_models  # noqa: F401
 from app.watchlist import models as _watchlist_models  # noqa: F401
 

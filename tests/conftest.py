@@ -5,6 +5,7 @@ os.environ.setdefault("API_KEY", "test-key")
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 import app.core.db as core_db
@@ -18,6 +19,7 @@ from app.analysis import models as _analysis_models  # noqa: F401, E402
 from app.market_data import models as _market_data_models  # noqa: F401, E402
 from app.sync import models as _sync_models  # noqa: F401, E402
 from app.tickers import models as _tickers_models  # noqa: F401, E402
+from app.predictions import models as _predictions_models  # noqa: F401, E402
 from app.schedule import models as _schedule_models  # noqa: F401, E402
 from app.watchlist import models as _watchlist_models  # noqa: F401, E402
 
@@ -26,6 +28,15 @@ from app.watchlist import models as _watchlist_models  # noqa: F401, E402
 async def client():
     # Override engine with an in-memory SQLite per test.
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+
+    # SQLite doesn't enforce FK by default; turn it on so ON DELETE
+    # CASCADE behaves like Postgres in prod.
+    @event.listens_for(engine.sync_engine, "connect")
+    def _enable_sqlite_fk(dbapi_connection, _):  # noqa: ANN001
+        cur = dbapi_connection.cursor()
+        cur.execute("PRAGMA foreign_keys=ON")
+        cur.close()
+
     session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
     core_db.engine = engine
