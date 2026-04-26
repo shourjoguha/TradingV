@@ -21,6 +21,7 @@ import datetime
 import logging
 from typing import Optional
 
+from app.core import db as _db
 from app.core.config import SETTINGS
 from app.schedule import service as schedule_svc
 from app.watchlist import service as watchlist_svc
@@ -95,16 +96,34 @@ async def _tick() -> None:
     local_now = now.astimezone(tz)
     next_after_run = schedule_svc.compute_next_run_at(cfg, now=now + datetime.timedelta(minutes=1))
 
-    # Weekend guard.
-    if cfg.skip_weekends and local_now.weekday() >= 5 and not cfg.pending_run:
-        await schedule_svc.record_run(status="skipped_weekend", advance_to=next_after_run)
-        return
-
     # Watchlist empty guard.
     symbols = await watchlist_svc.list_symbols()
     if not symbols:
         await schedule_svc.record_run(status="skipped_empty", advance_to=next_after_run)
         return
+
+    # Per-asset-class trading-day filter. Lets a crypto ticker run on
+    # weekends while skipping stocks. Replaces the old single-flag
+    # ``skip_weekends`` guard — but ``cfg.skip_weekends=False`` still
+    # bypasses the filter entirely (operator override).
+    if cfg.skip_weekends and not cfg.pending_run:
+        from app.market_data.calendar import is_trading_day
+        from app.tickers import service as tickers_svc
+
+        eligible: list[str] = []
+        async with _db.SessionLocal() as session:
+            for sym in symbols:
+                t = await tickers_svc.get_ticker(session, sym)
+                ac = t.asset_class if t else None
+                if is_trading_day(ac, local_now.date()):
+                    eligible.append(sym)
+
+        if not eligible:
+            await schedule_svc.record_run(
+                status="skipped_weekend", advance_to=next_after_run
+            )
+            return
+        symbols = eligible
 
     # Run.
     from app.analysis import concurrency, service as analysis_svc

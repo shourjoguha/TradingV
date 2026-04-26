@@ -364,6 +364,76 @@ async def test_actuals_failure_does_not_fail_scheduled_run(client, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_tick_runs_crypto_on_weekend_when_skip_weekends_true(
+    client, monkeypatch
+):
+    """Per-asset-class filter: stocks skipped on Sat, crypto runs."""
+    submit_calls = []
+
+    class FakeJob:
+        id = "fake"
+        task_count = 1
+
+    async def fake_submit(**kwargs):
+        submit_calls.append(kwargs)
+        return FakeJob()
+
+    from app.analysis import service as analysis_svc
+
+    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+
+    # Force the local clock to a Saturday.
+    saturday = datetime.datetime(2026, 4, 25, 14, 0, tzinfo=datetime.timezone.utc)
+    monkeypatch.setattr(runner, "_now_utc", lambda: saturday)
+
+    # Add an equity (stock) and a crypto. Mock asset_class on the registry.
+    await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "AAPL"})
+    await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "BTC-USD"})
+    await client.patch(
+        "/v1/tickers/AAPL", headers=HEADERS, json={"asset_class": "stock"}
+    )
+    await client.patch(
+        "/v1/tickers/BTC-USD", headers=HEADERS, json={"asset_class": "crypto"}
+    )
+    await schedule_svc.update_config(enabled=True, skip_weekends=True)
+
+    await runner._tick()
+    cfg = await schedule_svc.get_config()
+    assert cfg.last_run_status == "succeeded"
+    assert len(submit_calls) == 1
+    # Only crypto fired — AAPL skipped because Saturday.
+    assert submit_calls[0]["tickers"] == ["BTC-USD"]
+
+
+@pytest.mark.asyncio
+async def test_tick_skipped_weekend_when_only_stocks_present(
+    client, monkeypatch
+):
+    submit_calls = []
+
+    async def fake_submit(**kwargs):
+        submit_calls.append(kwargs)
+
+    from app.analysis import service as analysis_svc
+
+    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+
+    saturday = datetime.datetime(2026, 4, 25, 14, 0, tzinfo=datetime.timezone.utc)
+    monkeypatch.setattr(runner, "_now_utc", lambda: saturday)
+
+    await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "AAPL"})
+    await client.patch(
+        "/v1/tickers/AAPL", headers=HEADERS, json={"asset_class": "stock"}
+    )
+    await schedule_svc.update_config(enabled=True, skip_weekends=True)
+
+    await runner._tick()
+    cfg = await schedule_svc.get_config()
+    assert cfg.last_run_status == "skipped_weekend"
+    assert submit_calls == []
+
+
+@pytest.mark.asyncio
 async def test_request_wake_safe_when_runner_not_started():
     runner._wake_event = None
     runner.request_wake()  # must not raise

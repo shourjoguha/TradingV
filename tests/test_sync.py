@@ -171,6 +171,65 @@ async def test_drain_routes_result_rows_to_push_result(client, monkeypatch):
     assert result_calls[0]["job"]["id"] == "j1"
 
 
+@pytest.mark.asyncio
+async def test_asset_class_upgrade_enqueues_replication(client, monkeypatch):
+    """Phase C3: upserting a new asset_class onto an 'unknown' ticker
+    enqueues a kind='ticker' sync row so the peer learns the class."""
+    monkeypatch.setattr(sync_service, "peer_configured", lambda: True)
+    monkeypatch.setattr(
+        sync_service.SETTINGS, "PEER_API_URL", "http://peer", raising=False
+    )
+
+    from app.tickers import service as tickers_svc
+    from app.tickers.models import Ticker
+
+    # Seed a ticker with asset_class='unknown'.
+    async with _db.SessionLocal() as session:
+        session.add(Ticker(symbol="XYZ", asset_class="unknown", source="alert"))
+        await session.commit()
+
+    # Now upsert with the real class — should enqueue.
+    async with _db.SessionLocal() as session:
+        await tickers_svc.upsert_ticker(
+            session, "XYZ", source="manual", asset_class="stock"
+        )
+        await session.commit()
+
+    async with _db.SessionLocal() as session:
+        rows = (await session.execute(select(SyncOutbox))).scalars().all()
+    ticker_rows = [r for r in rows if r.kind == "ticker" and r.symbol == "XYZ"]
+    assert len(ticker_rows) == 1
+    assert ticker_rows[0].asset_class == "stock"
+
+
+@pytest.mark.asyncio
+async def test_asset_class_no_replication_when_unchanged(client, monkeypatch):
+    """Re-upserting the SAME class on an already-classified ticker is a no-op."""
+    monkeypatch.setattr(sync_service, "peer_configured", lambda: True)
+    monkeypatch.setattr(
+        sync_service.SETTINGS, "PEER_API_URL", "http://peer", raising=False
+    )
+
+    from app.tickers import service as tickers_svc
+    from app.tickers.models import Ticker
+
+    async with _db.SessionLocal() as session:
+        session.add(Ticker(symbol="AAPL", asset_class="stock", source="manual"))
+        await session.commit()
+
+    async with _db.SessionLocal() as session:
+        await tickers_svc.upsert_ticker(
+            session, "AAPL", source="manual", asset_class="stock"
+        )
+        await session.commit()
+
+    async with _db.SessionLocal() as session:
+        rows = (await session.execute(select(SyncOutbox))).scalars().all()
+    # No upgrade enqueued — class didn't change.
+    ticker_rows = [r for r in rows if r.kind == "ticker"]
+    assert ticker_rows == []
+
+
 def test_backoff_schedule_exponential():
     assert (sync_service._backoff(1) - sync_service._now()).total_seconds() > 25
     assert (sync_service._backoff(2) - sync_service._now()).total_seconds() > 55

@@ -4,7 +4,9 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 AssetClass = Literal["stock", "etf", "crypto"]
-TickerSource = Literal["alert", "manual", "analysis", "peer_sync"]
+TickerSource = Literal[
+    "alert", "manual", "analysis", "peer_sync", "watchlist", "labels"
+]
 
 
 class TickerResponse(BaseModel):
