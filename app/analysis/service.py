@@ -364,6 +364,43 @@ async def _process_task(task_id: str, *, horizon_bars: Optional[int]) -> None:
             logger.exception("prediction_points explode failed for task %s", task_id)
 
 
+async def abort_job(job_id: str) -> Optional[AnalysisJob]:
+    """Force a stuck job to terminal state.
+
+    Marks any ``running`` (or ``pending``) tasks as ``error`` with a clear
+    "aborted" message, then sets the job to ``done`` so listings stop
+    showing it as in-flight. Use only when a previous container died
+    mid-Kronos and left an orphan row.
+
+    Returns the refreshed job, or None if not found. Idempotent.
+    """
+    from sqlalchemy import select
+
+    async with _db.SessionLocal() as session:
+        job = await session.get(AnalysisJob, job_id)
+        if job is None:
+            return None
+
+        result = await session.execute(
+            select(AnalysisTask).where(AnalysisTask.job_id == job_id)
+        )
+        tasks = list(result.scalars().all())
+        for t in tasks:
+            if t.status in ("pending", "running"):
+                t.status = "error"
+                t.error = "aborted: container restarted mid-run"
+                t.finished_at = _now()
+
+        if job.status != "done":
+            job.status = "done"
+            if job.finished_at is None:
+                job.finished_at = _now()
+
+        await session.commit()
+        await session.refresh(job)
+        return job
+
+
 async def get_job(job_id: str) -> Optional[AnalysisJob]:
     async with _db.SessionLocal() as session:
         return await session.get(AnalysisJob, job_id)

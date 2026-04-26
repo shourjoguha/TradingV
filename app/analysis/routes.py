@@ -67,6 +67,23 @@ async def get_job(job_id: str, _api_key: str = Depends(verify_api_key)):
     )
 
 
+@router.post("/jobs/{job_id}/abort", response_model=AnalysisJobResponse)
+async def abort_job(job_id: str, _api_key: str = Depends(verify_api_key)):
+    """Force a stuck job to terminal state. See :func:`service.abort_job`."""
+    job = await service.abort_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"job '{job_id}' not found")
+    return AnalysisJobResponse(
+        id=job.id,
+        status=job.status,
+        task_count=job.task_count,
+        submitted_at=job.submitted_at,
+        finished_at=job.finished_at,
+        origin=job.origin,
+        tasks=[AnalysisTaskResponse.model_validate(t) for t in job.tasks],
+    )
+
+
 @router.post("/import", response_model=AnalysisImportResponse)
 async def import_job(
     payload: Dict[str, Any] = Body(...),
