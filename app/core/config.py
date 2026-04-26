@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     PEER_API_URL: str = ""
     PEER_API_KEY: str = ""
     MAX_CONCURRENT_JOBS: int = 1
+    # CORS allow-list. Comma-separated absolute origins
+    # ("https://your-app.lovable.dev,https://app.example.com"). Empty
+    # falls back to the local-dev defaults below.
+    FRONTEND_ORIGIN: str = ""
 
 
 SETTINGS = Settings()

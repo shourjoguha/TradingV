@@ -2,8 +2,10 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
+from app.core.config import SETTINGS
 from app.core.db import Base, engine
 
 # Ensure models are imported so Base.metadata knows about them.
@@ -58,6 +60,36 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, title="TradingView Analysis Platform")
+
+
+def _cors_origins() -> list[str]:
+    """Allow-list for the browser-side frontend.
+
+    Production: set ``FRONTEND_ORIGIN`` to one or more comma-separated
+    absolute origins (the deployed Lovable / Vercel URLs).
+
+    Local dev: when ``FRONTEND_ORIGIN`` is empty we fall back to the
+    common Vite (5173) and Next.js (3000) ports so a developer on the
+    laptop can hit the API from a browser without env config.
+    """
+    raw = (SETTINGS.FRONTEND_ORIGIN or "").strip()
+    if raw:
+        return [o.strip() for o in raw.split(",") if o.strip()]
+    return [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(api_router)
 
 
