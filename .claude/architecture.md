@@ -113,3 +113,7 @@ The `app.main` lifespan starts:
 4. **`schedule.runner.start()`** — single asyncio task running the daily-forecast loop. Idle until `schedule_config.enabled=true`.
 
 All four are tolerant of missing config (drain no-ops without `PEER_API_URL`; scheduler stays asleep if disabled).
+
+## Frontend
+
+`frontend/` is a Vite + React + TypeScript SPA that talks to this backend over `X-API-Key`. Single-user, no SSR. Local dev uses a Vite proxy to sidestep CORS (`/v1` + `/health` → `localhost:8000`); the Railway toggle in the browser needs `CORSMiddleware` on the backend (deferred — see [backlog.md](backlog.md)). For stack, layout, and per-area docs see [frontend/README.md](frontend/README.md).

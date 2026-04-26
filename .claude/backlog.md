@@ -107,6 +107,22 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ---
 
+## CORS middleware for browser-side Railway toggle
+
+**What:** Add `CORSMiddleware` to `app/main.py` so the deployed frontend can call Railway from a public origin (Vercel, Lovable, etc.) without a server-side proxy.
+
+**Status:** Deferred. Local dev sidesteps CORS via the Vite dev proxy in `frontend/vite.config.ts` (proxies `/v1` and `/health` → `localhost:8000`). The Railway radio in the backend toggle currently fails in the browser because Railway has no CORS headers.
+
+**Trigger to revisit:** When the frontend deploys to a public host (Vercel/Lovable) and needs to call Railway directly from the user's browser.
+
+**Implementation pointers:**
+- `app/main.py` — add `from fastapi.middleware.cors import CORSMiddleware` then `app.add_middleware(CORSMiddleware, allow_origins=[<frontend origin>], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])`.
+- Add the deployed frontend origin as an env var (e.g. `FRONTEND_ORIGIN`) so it's not hardcoded.
+- Push commit; Railway auto-rebuilds.
+- Reference: frontend brief `/Users/shourjosmac/.claude/plans/use-claude-design-to-lovely-babbage.md` §14.
+
+---
+
 ## How to add an entry
 
 Use the same structure: **What** / **Status** / **Why deferred** (or **Open**) / **Trigger to revisit** / **Implementation pointers**. Include the key files involved so future-you doesn't have to re-derive context.
