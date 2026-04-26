@@ -43,6 +43,10 @@ After the parent transitions to `done`, `_process_job`:
 
 Both hooks skipped for `origin='peer'` jobs (loop avoidance).
 
+## Operator cleanup (`POST /v1/analysis/jobs/{id}/abort`)
+
+Force a stuck job to terminal state. Flips any `pending` / `running` tasks to `status='error'` with `"aborted: container restarted mid-run"` in the error message; sets the job to `done`. Already-`done` tasks are preserved as-is. Idempotent. Use only when a Railway redeploy killed the process mid-Kronos and left orphan `running` rows.
+
 ## Peer import (`POST /v1/analysis/import`)
 
 Idempotent receiver for snapshots pushed from the peer. Schema:
