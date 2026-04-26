@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.auth import verify_api_key
 from app.sync import service
@@ -13,6 +13,15 @@ router = APIRouter(prefix="/sync", tags=["sync"])
 async def retry_outbox(_api_key: str = Depends(verify_api_key)):
     stats = await service.drain_outbox()
     return RetryResponse(**stats)
+
+
+@router.delete("/outbox/{row_id}", status_code=204)
+async def delete_outbox_row(row_id: str, _api_key: str = Depends(verify_api_key)):
+    """Surgical cleanup. See :func:`service.delete_row`."""
+    removed = await service.delete_row(row_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail=f"outbox row '{row_id}' not found")
+    return None
 
 
 @router.get("/outbox", response_model=OutboxListResponse)

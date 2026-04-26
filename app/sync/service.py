@@ -244,6 +244,24 @@ async def purge_loop(*, interval_seconds: int = 3600) -> None:
             raise
 
 
+async def delete_row(row_id: str) -> bool:
+    """Surgically remove a single ``sync_outbox`` row by id.
+
+    Use case: a row was enqueued with a misconfigured ``peer_url`` and
+    will keep retrying forever after backoff caps. The retention purge
+    only removes COMPLETED rows; this is the only way to clear a stuck
+    pending one without database access.
+    """
+    from sqlalchemy import delete
+
+    async with _db.SessionLocal() as session:
+        result = await session.execute(
+            delete(SyncOutbox).where(SyncOutbox.id == row_id)
+        )
+        await session.commit()
+        return (result.rowcount or 0) > 0
+
+
 async def list_outbox(*, status: str = "pending", limit: int = 200) -> list[SyncOutbox]:
     """status = pending | completed | failed (pending w/ attempts > 0)."""
     async with _db.SessionLocal() as session:
