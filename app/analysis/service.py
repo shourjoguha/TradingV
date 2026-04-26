@@ -162,6 +162,15 @@ async def _process_job(job_id: str, *, horizon_bars: Optional[int]) -> None:
             await sync_service.enqueue_result(snapshot)
         asyncio.create_task(sync_service.drain_outbox())
 
+    # Completion-trigger: wake the daily scheduler in case it was deferred
+    # by AtCapacityError on its last attempt. No-op when scheduler not running.
+    try:
+        from app.schedule import runner as _schedule_runner
+
+        _schedule_runner.request_wake()
+    except Exception:  # pragma: no cover - never let scheduler crash analysis
+        logger.exception("scheduler wake hook failed")
+
 
 def _serialize_job_snapshot(job: AnalysisJob) -> dict:
     """Build the JSON payload sent to peer ``/v1/analysis/import``."""
