@@ -6,6 +6,7 @@ from app.kronos.routes import router as kronos_router
 from app.market_data.routes import router as market_data_router
 from app.sync.routes import router as sync_router
 from app.tickers.routes import router as tickers_router
+from app.schedule.routes import router as schedule_router
 from app.watchlist.routes import router as watchlist_router
 
 api_router = APIRouter()
@@ -20,4 +21,5 @@ v1_router.include_router(kronos_router)
 v1_router.include_router(analysis_router)
 v1_router.include_router(sync_router)
 v1_router.include_router(watchlist_router)
+v1_router.include_router(schedule_router)
 api_router.include_router(v1_router)

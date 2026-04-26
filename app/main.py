@@ -12,6 +12,8 @@ from app.tickers import models as _ticker_models  # noqa: F401
 from app.market_data import models as _ohlcv_models  # noqa: F401
 from app.analysis import models as _analysis_models  # noqa: F401
 from app.sync import models as _sync_models  # noqa: F401
+from app.schedule import models as _schedule_models  # noqa: F401
+from app.watchlist import models as _watchlist_models  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,7 +40,16 @@ async def lifespan(_app: FastAPI):
         if _sync_service.peer_configured():
             asyncio.create_task(_sync_service.drain_outbox())
 
+        # Daily forecast scheduler (idle until enabled via PUT /v1/schedule).
+        from app.schedule import runner as _schedule_runner
+
+        _schedule_runner.start()
+
         yield
+
+        # Clean shutdown.
+        await _schedule_runner.stop()
+
     except Exception as e:
         logger.error("startup error: %s", e)
         raise
