@@ -4,26 +4,23 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ---
 
-## Reverse-direction sync: Railway → Laptop
+## Reverse-direction sync: Railway → Laptop  ✅ RESOLVED
 
-**What:** When the model runs on Railway, push the resulting job snapshot back to the laptop DB so both backends mirror history.
+**Resolution:** Phase B1+B2 of backlog rollout. Tailscale chosen (Option A from the original three).
 
-**Status:** Deferred (Option C). Forward direction (Laptop → Railway) is live and verified end-to-end. Reverse direction is no-op: Railway's `PEER_API_URL` is intentionally unset, so its outbox skips enqueue.
+How it works in production:
+- `Dockerfile` installs Tailscale; `tailscale-entrypoint.sh` runs `tailscaled --tun=userspace-networking --outbound-http-proxy-listen=:1055`, then `tailscale up` joins the operator's tailnet as ephemeral host `tradingv-railway-N`.
+- Container exports `HTTP_PROXY=http://127.0.0.1:1055` + `HTTPS_PROXY=http://127.0.0.1:1055` + `NO_PROXY=localhost,127.0.0.1,postgres.railway.internal,.railway.internal,.railway.app`. httpx + urllib + requests auto-route through tailscaled.
+- `PEER_API_URL=http://<laptop-tailnet-ip>:8000` (note port — see lessons below).
+- `PEER_API_KEY=<laptop's API_KEY>`.
 
-**Why deferred:** Reverse direction needs the laptop reachable from Railway. Three paths considered:
+Verified: Railway-originated job pushes both `kind='ticker'` and `kind='result'` outbox rows; laptop receives the imported job (origin='peer'), explodes prediction_points; comparison endpoints on laptop see the data.
 
-| Option | Security | Railway-side work | Laptop-side work | Verdict |
-|---|---|---|---|---|
-| A — Tailscale on Railway (init script installs `tailscaled`, joins tailnet) | Strongest. Laptop unreachable to anyone outside tailnet. | ~30 min: Dockerfile/start script + `TS_AUTHKEY` env var | `tailscale up` (already easy) | **Preferred when revisited** |
-| B — Cloudflared `trycloudflare` quick tunnel | Public URL, gated only by `API_KEY`. Brute-force infeasible but URL leak = recon target. | None | `cloudflared tunnel --url localhost:8000` | Acceptable interim |
-| C — Skip (current) | n/a | n/a | n/a | Chosen for v1 |
-
-**Trigger to revisit:** When the frontend ships and operator wants to inference on Railway as primary path (e.g. laptop closed). Or when Railway-originated TradingView webhooks should sync history back.
-
-**Implementation pointers (when ready):**
-- Forward direction already wired: `app/analysis/service.py::_process_job` enqueues both `kind='ticker'` and `kind='result'` rows.
-- Receiver `POST /v1/analysis/import` already deployed on both backends — idempotent, tagged `origin='peer'`, loop-avoidant.
-- Only blocker is network reachability + setting `PEER_API_URL` on Railway.
+**Lessons learned during rollout** (worth a re-read if anyone touches the tunnel):
+1. `[deploy].startCommand` in `railway.toml` BYPASSES the Docker ENTRYPOINT — the entrypoint script never ran. Removed startCommand to let ENTRYPOINT chain into CMD.
+2. `tailscaled --tun=userspace-networking` does NOT install kernel routes — direct connection to `100.x.y.z` hangs. Must use the HTTP proxy.
+3. `ALL_PROXY=socks5://...` makes httpx import `socksio` (not in requirements). Don't set ALL_PROXY; HTTP_PROXY/HTTPS_PROXY cover both protocols.
+4. `PEER_API_URL` MUST include the port (`:8000`); without it requests go to port 80 and 502 from the proxy.
 
 ---
 

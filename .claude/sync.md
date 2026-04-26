@@ -82,10 +82,12 @@ Peer push is skipped when `PEER_API_URL` or `PEER_API_KEY` is empty (`peer_confi
 
 `app/analysis/concurrency.py` owns an `asyncio.Lock + counter` (not `Semaphore` — TOCTOU-safe). `submit_run` acquires a slot BEFORE any DB writes; on contention raises `AtCapacityError` → route returns **429 `{"detail": "at_capacity"}`**. Prevents orphan job rows on rejection.
 
-## v1 direction stance
+## Direction stance — both ways live
 
-- **Laptop → Railway**: live and verified end-to-end. Both `kind='ticker'` and `kind='result'` rows drain successfully against Railway's public URL.
-- **Railway → Laptop**: intentionally **no-op for v1**. Railway's `PEER_API_URL` is left unset, so its outbox `enqueue()` / `enqueue_result()` short-circuit. Reverse direction needs a tunnel (Tailscale or Cloudflared) — see [backlog.md](backlog.md) for the deferred decision.
+- **Laptop → Railway**: drains against Railway's public URL.
+- **Railway → Laptop**: drains via Tailscale (userspace networking + HTTP CONNECT proxy on container :1055). Set up per [railway-deployment.md](railway-deployment.md).
+
+Either backend can run a job and the other side will hold an `origin='peer'` copy with the same forecast.
 
 ## Known gaps
 - No cleanup of completed rows (see [backlog.md](backlog.md) — sync_outbox cleanup task).
