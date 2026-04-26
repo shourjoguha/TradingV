@@ -2,8 +2,11 @@
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
+# IMPORTANT: do NOT set [deploy].startCommand here.
+# Railway's startCommand replaces the container CMD AND (in our experience)
+# bypasses ENTRYPOINT, which means tailscale-entrypoint.sh never runs and
+# the tailnet never joins. The Dockerfile's ENTRYPOINT + CMD do the right
+# thing already (alembic + uvicorn AFTER tailscale up).
+
 [deploy]
-# startCommand is also the CMD inside the Dockerfile; this exists so
-# Railway's UI surfaces it cleanly.
-startCommand = "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 restartPolicyType = "ON_FAILURE"
