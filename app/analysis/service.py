@@ -272,6 +272,17 @@ async def import_job(payload: dict) -> tuple[str, str]:
             )
 
         await session.commit()
+
+    # Materialise prediction_points from the imported snapshot. Side-effect
+    # only — failure here doesn't roll back the import (the JSON is the
+    # canonical record; flat rows are a queryable view).
+    try:
+        from app.predictions import service as _predictions_svc
+
+        await _predictions_svc.explode_imported_tasks(payload)
+    except Exception:  # pragma: no cover - defensive
+        logger.exception("prediction_points explode failed for imported job %s", job_id)
+
     return job_id, "imported"
 
 
@@ -339,7 +350,18 @@ async def _process_task(task_id: str, *, horizon_bars: Optional[int]) -> None:
             task.status = "error"
             task.error = f"{type(e).__name__}: {e}"
 
+        terminal_status = task.status
         await session.commit()
+
+    # Materialise prediction_points outside the writer session so a
+    # failure here can't roll the task commit back. Best-effort only.
+    if terminal_status == "done":
+        try:
+            from app.predictions import service as _predictions_svc
+
+            await _predictions_svc.explode_task(task_id)
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("prediction_points explode failed for task %s", task_id)
 
 
 async def get_job(job_id: str) -> Optional[AnalysisJob]:
