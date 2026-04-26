@@ -1,6 +1,12 @@
-"""Ticker labels CRUD."""
+"""Ticker labels CRUD.
+
+Replication: every external CRUD enqueues a ``kind='label'`` outbox row so
+the peer backend stays in sync. ``apply_imported_change`` writes directly
+without enqueueing — used by ``POST /v1/labels/import`` to avoid loops.
+"""
 from __future__ import annotations
 
+import logging
 from typing import Any, Optional
 
 from sqlalchemy import and_, delete, select
@@ -8,6 +14,17 @@ from sqlalchemy import and_, delete, select
 from app.core import db as _db
 from app.labels.models import TickerLabel
 from app.tickers import service as tickers_svc
+
+logger = logging.getLogger(__name__)
+
+
+async def _enqueue_replication(payload: dict[str, Any]) -> None:
+    try:
+        from app.sync import service as sync_svc
+
+        await sync_svc.enqueue_kind("label", payload)
+    except Exception:  # pragma: no cover - defensive
+        logger.exception("labels: replication enqueue failed")
 
 
 async def list_labels(symbol: str) -> list[TickerLabel]:
@@ -52,13 +69,19 @@ async def upsert_label(symbol: str, key: str, value: Any) -> TickerLabel:
             existing.value = value
             await session.commit()
             await session.refresh(existing)
+            await _enqueue_replication(
+                {"action": "upsert", "symbol": sym, "key": key, "value": value}
+            )
             return existing
 
         row = TickerLabel(symbol=sym, key=key, value=value)
         session.add(row)
         await session.commit()
         await session.refresh(row)
-        return row
+    await _enqueue_replication(
+        {"action": "upsert", "symbol": sym, "key": key, "value": value}
+    )
+    return row
 
 
 async def bulk_upsert(symbol: str, labels: dict[str, Any]) -> list[TickerLabel]:
@@ -87,6 +110,13 @@ async def bulk_upsert(symbol: str, labels: dict[str, Any]) -> list[TickerLabel]:
             .order_by(TickerLabel.key)
         )
         out = list(rows.scalars().all())
+
+    # Replicate each key as its own outbox row — keeps the receiver simple
+    # (one upsert per row) and lets replication be partial-progress safe.
+    for key, value in labels.items():
+        await _enqueue_replication(
+            {"action": "upsert", "symbol": sym, "key": key, "value": value}
+        )
     return out
 
 
@@ -99,7 +129,54 @@ async def delete_label(symbol: str, key: str) -> bool:
             )
         )
         await session.commit()
-        return result.rowcount > 0
+        deleted = result.rowcount > 0
+    if deleted:
+        await _enqueue_replication(
+            {"action": "delete", "symbol": sym, "key": key}
+        )
+    return deleted
+
+
+async def apply_imported_change(payload: dict[str, Any]) -> str:
+    """Apply a peer-pushed label change. Skips replication enqueue.
+
+    Returns ``'upsert'`` | ``'delete'`` | ``'noop'``.
+    """
+    action = payload.get("action")
+    symbol = payload.get("symbol")
+    key = payload.get("key")
+    if not action or not symbol or not key:
+        return "noop"
+    sym = tickers_svc.normalize(symbol)
+
+    async with _db.SessionLocal() as session:
+        if action == "delete":
+            result = await session.execute(
+                delete(TickerLabel).where(
+                    and_(TickerLabel.symbol == sym, TickerLabel.key == key)
+                )
+            )
+            await session.commit()
+            return "delete" if result.rowcount > 0 else "noop"
+
+        if action == "upsert":
+            value = payload.get("value")
+            await tickers_svc.upsert_ticker(session, sym, source="labels")
+            existing = (
+                await session.execute(
+                    select(TickerLabel).where(
+                        and_(TickerLabel.symbol == sym, TickerLabel.key == key)
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                existing.value = value
+            else:
+                session.add(TickerLabel(symbol=sym, key=key, value=value))
+            await session.commit()
+            return "upsert"
+
+    return "noop"
 
 
 async def filter_symbols_by_labels(

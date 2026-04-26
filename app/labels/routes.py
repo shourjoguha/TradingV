@@ -1,11 +1,14 @@
 """Ticker label CRUD.
 
 Mounted at ``/v1/tickers/{symbol}/labels`` to keep the URL hierarchy
-consistent with other ticker-scoped data.
+consistent with other ticker-scoped data. The replication receiver lives
+at ``/v1/labels/import`` (top-level — symbol is in the body, not path).
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Any, Dict
+
+from fastapi import APIRouter, Body, Depends, HTTPException
 
 from app.core.auth import verify_api_key
 from app.labels import service
@@ -17,6 +20,17 @@ from app.labels.schemas import (
 )
 
 router = APIRouter(prefix="/tickers/{symbol}/labels", tags=["labels"])
+import_router = APIRouter(prefix="/labels", tags=["labels"])
+
+
+@import_router.post("/import", response_model=dict)
+async def import_label_change(
+    payload: Dict[str, Any] = Body(...),
+    _api_key: str = Depends(verify_api_key),
+):
+    """Replication receiver. Bypasses the replication enqueue path."""
+    result = await service.apply_imported_change(payload)
+    return {"result": result}
 
 
 @router.get("", response_model=LabelsListResponse)

@@ -74,6 +74,27 @@ async def enqueue(tickers: Iterable[tuple[str, str]]) -> int:
     return len(rows)
 
 
+async def enqueue_kind(kind: str, payload: dict[str, Any]) -> int:
+    """Insert one outbox row of the given ``kind`` carrying ``payload``.
+
+    Used for ``watchlist`` / ``schedule`` / ``label`` replication where the
+    payload is small and fits naturally in ``payload_json``.
+    """
+    if not peer_configured():
+        logger.debug("sync: peer not configured, skipping %s enqueue", kind)
+        return 0
+
+    row = SyncOutbox(
+        peer_url=SETTINGS.PEER_API_URL,
+        kind=kind,
+        payload_json=payload,
+    )
+    async with _db.SessionLocal() as session:
+        session.add(row)
+        await session.commit()
+    return 1
+
+
 async def enqueue_result(payload: dict[str, Any]) -> int:
     """Insert one ``kind='result'`` row carrying a full job snapshot.
 
@@ -138,6 +159,24 @@ async def drain_outbox(*, max_rows: int = 100) -> dict[str, int]:
                 )
             elif kind == "result":
                 ok, err = await peer_client.push_result(
+                    peer_url=row.peer_url,
+                    api_key=api_key,
+                    payload=row.payload_json or {},
+                )
+            elif kind == "watchlist":
+                ok, err = await peer_client.push_watchlist(
+                    peer_url=row.peer_url,
+                    api_key=api_key,
+                    payload=row.payload_json or {},
+                )
+            elif kind == "schedule":
+                ok, err = await peer_client.push_schedule(
+                    peer_url=row.peer_url,
+                    api_key=api_key,
+                    payload=row.payload_json or {},
+                )
+            elif kind == "label":
+                ok, err = await peer_client.push_label(
                     peer_url=row.peer_url,
                     api_key=api_key,
                     payload=row.payload_json or {},

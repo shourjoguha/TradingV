@@ -68,18 +68,9 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ---
 
-## Watchlist + schedule_config + labels replication to Railway
+## Watchlist + schedule_config + labels replication to Railway  ✅ RESOLVED
 
-**What:** v1 keeps these laptop-only. Railway has no view of them.
-
-**Status:** Open.
-
-**Trigger to revisit:** When Railway-fallback inference activates, OR when frontend needs a Railway endpoint for read-only watchlist views (e.g. when laptop is closed).
-
-**Implementation pointers:**
-- Extend `sync_outbox` with new `kind` values: `'watchlist'`, `'schedule_config'`, `'ticker_label'`.
-- Receiver endpoints on Railway: `/v1/watchlist/import`, `/v1/schedule/import`, `/v1/labels/import` — idempotent upserts.
-- Trigger enqueue on every CRUD on these resources.
+**Resolution:** Phase B3. `sync_outbox.kind` extended with `'watchlist' | 'schedule' | 'label'`. Each external CRUD on watchlist / schedule / label enqueues a row; drain dispatches to peer `POST /v1/{watchlist,schedule,labels}/import`. Receivers bypass the enqueue path so imports don't loop. Tested in `tests/test_sync_replication.py`.
 
 ---
 
