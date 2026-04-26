@@ -4,8 +4,15 @@ Hard-won lessons from getting this stack onto Railway. Read before changing anyt
 
 ## Builder
 
-Railway switched from Nixpacks to **Railpack** (auto-selected). It reads `Procfile` and `requirements.txt` differently from Nixpacks:
+We switched from Railpack to **Dockerfile** (commit Phase B1) so we can install Tailscale inside the container — see Tailscale section below. `railway.toml` declares:
 
+```
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+```
+
+Historical context (Railpack lessons that still apply if you ever revert):
 - **`Procfile` `release:` phase runs at BUILD time, not container start.** DB isn't available, so `alembic upgrade head` fails. **Do not put `release:` in `Procfile`.** Use `railway.toml` `startCommand` (`alembic upgrade head && uvicorn ...`) or Railway's dashboard "pre-deploy command" instead.
 - `requirements.txt` is the single install manifest. Optional extras files (`requirements-kronos.txt`) are NOT auto-installed. Fold all runtime deps into `requirements.txt` or add a custom build step.
 
@@ -66,6 +73,45 @@ The Kronos model code lives in `app/kronos/_vendor/kronos_model/`. Upstream Kron
    curl https://<your-railway-url>/openapi.json | python3 -c "import sys,json; print(list(json.load(sys.stdin)['paths'].keys()))"
    ```
 4. If `/v1/*` routes are missing → old deploy still running. Force redeploy.
+
+## Tailscale tunnel (for Railway → laptop sync)
+
+The container joins the operator's tailnet on boot so it can reach the laptop's `localhost:8000` via tailnet IP / MagicDNS, without exposing the laptop publicly.
+
+### How it's wired
+
+- `Dockerfile` installs Tailscale's official Debian package.
+- `tailscale-entrypoint.sh` runs `tailscaled --tun=userspace-networking` (no `/dev/net/tun` / `CAP_NET_ADMIN` needed) then `tailscale up --authkey=$TS_AUTHKEY --hostname=tradingv-railway --ephemeral`. After that it execs `alembic upgrade head && uvicorn ...`.
+- If `TS_AUTHKEY` is empty, the script SKIPS Tailscale and boots the app normally. Safe default — pushing the container without provisioning the key won't break anything.
+
+### Operator setup (one-time)
+
+1. Sign up / log in to Tailscale (free personal tier). Install on laptop: `brew install tailscale && sudo tailscale up`.
+2. Generate an auth key at https://login.tailscale.com/admin/settings/keys with:
+   - **Reusable** ✅ (Railway redeploys re-use it)
+   - **Ephemeral** ✅ (stale Railway nodes auto-deregister)
+   - **Pre-authorized** ✅ (no manual approval per node)
+   - **Tag** (e.g. `tag:railway`)
+   - **Expiry** 90 days (rotate quarterly)
+3. Set on Railway as a **secret** env var: `TS_AUTHKEY=tskey-auth-...`.
+4. (Optional) `TS_HOSTNAME=tradingv-railway` — defaults to that if unset.
+5. Redeploy. Logs should show `[entrypoint] Tailscale up. Status:` followed by the tailnet status.
+6. From laptop: `tailscale ping tradingv-railway` should succeed.
+
+### Setting `PEER_API_URL` over Tailscale
+
+Once Tailscale is joined, set on Railway:
+```
+PEER_API_URL=http://<laptop-magicdns>:8000
+PEER_API_KEY=<laptop's API_KEY>
+```
+where `<laptop-magicdns>` is what `tailscale status` shows on your laptop (e.g. `shourjos-mbp.tailxxxxx.ts.net`). Test with: trigger a small job on Railway, then `curl localhost:8000/v1/analysis/jobs?origin=peer` on laptop and confirm the job appears with `origin='peer'`.
+
+### Diagnosing Tailscale issues
+
+- Container logs `[entrypoint] tailscaled failed to start` → check `/tmp/tailscaled.log` via `railway logs`. Most common cause: bad auth key.
+- `tailscale status` on Railway shows "expired" → key rotated. Generate new key, update Railway env.
+- Laptop can't reach Railway via tailnet → confirm laptop is in the same tailnet (`tailscale status` should list `tradingv-railway`).
 
 ## What NOT to do
 
