@@ -44,6 +44,9 @@ async def lifespan(_app: FastAPI):
         if _sync_service.peer_configured():
             asyncio.create_task(_sync_service.drain_outbox())
 
+        # Hourly purge of old completed outbox rows (config-driven retention).
+        purge_task = asyncio.create_task(_sync_service.purge_loop(), name="outbox-purge")
+
         # Daily forecast scheduler (idle until enabled via PUT /v1/schedule).
         from app.schedule import runner as _schedule_runner
 
@@ -53,6 +56,7 @@ async def lifespan(_app: FastAPI):
 
         # Clean shutdown.
         await _schedule_runner.stop()
+        purge_task.cancel()
 
     except Exception as e:
         logger.error("startup error: %s", e)

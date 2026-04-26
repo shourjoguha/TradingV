@@ -23,7 +23,13 @@ async def upsert_ticker(
     asset_class: Optional[str] = None,
     notes: Optional[str] = None,
 ) -> Ticker:
-    """Insert new ticker or update last_seen on existing. Idempotent."""
+    """Insert new ticker or update last_seen on existing. Idempotent.
+
+    If ``asset_class`` is supplied AND it changes the existing row from
+    ``unknown`` to a real class, enqueue a `kind='ticker'` sync row so the
+    peer's cached row gets the upgrade. (Otherwise stale `unknown` rows
+    persist on the peer indefinitely.)
+    """
     sym = normalize(symbol)
     if not sym:
         raise ValueError("symbol cannot be empty")
@@ -31,10 +37,15 @@ async def upsert_ticker(
     existing = await session.get(Ticker, sym)
     if existing is not None:
         existing.last_seen = datetime.datetime.now(datetime.timezone.utc)
-        if asset_class is not None:
+        upgraded = False
+        if asset_class is not None and asset_class != existing.asset_class:
+            if (existing.asset_class or "").lower() in ("", "unknown"):
+                upgraded = True
             existing.asset_class = asset_class
         if notes is not None:
             existing.notes = notes
+        if upgraded:
+            await _enqueue_class_upgrade(sym, asset_class)
         return existing
 
     row = Ticker(
@@ -45,6 +56,21 @@ async def upsert_ticker(
     )
     session.add(row)
     return row
+
+
+async def _enqueue_class_upgrade(symbol: str, asset_class: str) -> None:
+    """Best-effort: log + swallow so a sync hiccup never blocks the upsert."""
+    try:
+        from app.sync import service as sync_svc
+
+        if sync_svc.peer_configured():
+            await sync_svc.enqueue([(symbol, asset_class)])
+    except Exception:  # pragma: no cover - defensive
+        import logging
+
+        logging.getLogger(__name__).exception(
+            "tickers: asset_class upgrade replication failed for %s", symbol
+        )
 
 
 async def upsert_many(

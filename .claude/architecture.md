@@ -110,9 +110,18 @@ The `app.main` lifespan starts:
 1. **`Base.metadata.create_all`** — first-boot fallback (Alembic is the source of truth in prod).
 2. **Kronos adapter activation** if `KRONOS_ENABLED=true`.
 3. **`sync_service.drain_outbox()`** — best-effort drain of pending rows from a prior process.
-4. **`schedule.runner.start()`** — single asyncio task running the daily-forecast loop. Idle until `schedule_config.enabled=true`.
+4. **`sync_service.purge_loop()`** — hourly cleanup of completed outbox rows older than `OUTBOX_RETENTION_DAYS` (default 7).
+5. **`schedule.runner.start()`** — main daily-forecast loop. Idle until `schedule_config.enabled=true`. On Railway with `RAILWAY_FALLBACK_ENABLED=true`, `start()` ALSO spawns `_fallback_loop()` which fires submit_run on Railway when laptop hasn't pushed by deadline.
 
-All four are tolerant of missing config (drain no-ops without `PEER_API_URL`; scheduler stays asleep if disabled).
+All five are tolerant of missing config (drain no-ops without `PEER_API_URL`; scheduler stays asleep if disabled; fallback only spawns when explicitly opted in).
+
+## Network topology + Tailscale
+
+Railway uses a Dockerfile (not Railpack) so it can install Tailscale. On boot, `tailscale-entrypoint.sh` joins the operator's tailnet (userspace networking — no `CAP_NET_ADMIN` needed) when `TS_AUTHKEY` is set. With Tailscale up, `PEER_API_URL` on Railway points at the laptop's MagicDNS hostname (e.g. `laptop-name.tailxxxxx.ts.net:8000`) — laptop is reachable from Railway without exposing it publicly. See [railway-deployment.md](railway-deployment.md) for setup.
+
+## CORS
+
+`app/main.py` adds `CORSMiddleware`. Allow-list driven by `FRONTEND_ORIGIN` env var (CSV of absolute origins). When unset, falls back to `localhost:{3000,5173}` so local dev works zero-config.
 
 ## Frontend
 

@@ -199,6 +199,51 @@ async def drain_outbox(*, max_rows: int = 100) -> dict[str, int]:
     return stats
 
 
+async def purge_completed(*, retention_days: int | None = None) -> int:
+    """Delete `sync_outbox` rows where ``completed_at`` is older than
+    ``retention_days`` (default ``SETTINGS.OUTBOX_RETENTION_DAYS``).
+
+    Pending rows (``completed_at IS NULL``) are never touched.
+    Returns count purged.
+    """
+    from sqlalchemy import delete
+
+    days = retention_days if retention_days is not None else SETTINGS.OUTBOX_RETENTION_DAYS
+    if days <= 0:
+        return 0
+    cutoff = _now() - datetime.timedelta(days=days)
+    async with _db.SessionLocal() as session:
+        result = await session.execute(
+            delete(SyncOutbox)
+            .where(SyncOutbox.completed_at.is_not(None))
+            .where(SyncOutbox.completed_at < cutoff)
+        )
+        await session.commit()
+        return result.rowcount or 0
+
+
+async def purge_loop(*, interval_seconds: int = 3600) -> None:
+    """Lifespan-task wrapper around :func:`purge_completed`. Runs forever
+    until cancelled. Failures are logged but never bubble — purge is
+    janitorial and missing a tick isn't critical.
+    """
+    import asyncio
+
+    while True:
+        try:
+            n = await purge_completed()
+            if n:
+                logger.info("sync: purged %d completed outbox rows", n)
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("sync: outbox purge crashed; retrying next tick")
+        try:
+            await asyncio.sleep(interval_seconds)
+        except asyncio.CancelledError:
+            raise
+
+
 async def list_outbox(*, status: str = "pending", limit: int = 200) -> list[SyncOutbox]:
     """status = pending | completed | failed (pending w/ attempts > 0)."""
     async with _db.SessionLocal() as session:

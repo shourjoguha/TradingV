@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     # the laptop hasn't pushed today's predictions by run_at_local +
     # fallback_offset_hours. Off by default — explicit opt-in.
     RAILWAY_FALLBACK_ENABLED: bool = False
+    # Days to keep completed sync_outbox rows. Hourly purge in lifespan.
+    OUTBOX_RETENTION_DAYS: int = 7
 
 
 SETTINGS = Settings()

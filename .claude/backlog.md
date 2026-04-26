@@ -27,27 +27,15 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ---
 
-## sync_outbox cleanup task
+## sync_outbox cleanup task  ✅ RESOLVED
 
-**What:** `sync_outbox` table grows unbounded; completed rows never deleted.
-
-**Status:** Open. No production impact yet (low row count).
-
-**Trigger to revisit:** When row count exceeds ~10k or query latency on `ix_sync_outbox_pending` degrades.
-
-**Implementation:** Add a periodic task (`asyncio.create_task` on startup) that deletes rows where `completed_at < now() - 7 days`.
+**Resolution:** Phase C1. `purge_loop()` lifespan task ticks hourly, deletes rows where `completed_at < now() - OUTBOX_RETENTION_DAYS` (default 7). Pending rows are never touched. Tested in `tests/test_outbox_cleanup.py`.
 
 ---
 
-## asset_class reconciliation
+## asset_class reconciliation  ✅ RESOLVED
 
-**What:** When sync pushes a ticker as `asset_class='unknown'` (because we hadn't classified it yet), and the source backend later learns the real class, the receiver isn't updated.
-
-**Status:** Open. Cosmetic — doesn't affect inference correctness.
-
-**Trigger to revisit:** When a downstream feature relies on accurate `asset_class` on both backends (e.g. cross-asset screening).
-
-**Implementation:** Push a follow-up `kind='ticker'` row whenever `tickers_svc.upsert_ticker` upgrades the class. Or a periodic reconciliation drain.
+**Resolution:** Phase C3. `tickers_svc.upsert_ticker` enqueues a `kind='ticker'` sync row when asset_class transitions from `unknown` (or empty) to a real class. Same code path as the existing ticker push — receiver upserts via `POST /v1/tickers`. Tested in `tests/test_sync.py`.
 
 ---
 
@@ -77,15 +65,9 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ---
 
-## Trading-day filter per asset_class
+## Trading-day filter per asset_class  ✅ RESOLVED
 
-**What:** v1 scheduler skips weekends (`weekday() >= 5`). Crypto trades 24/7; would be skipped wrongly when the watchlist contains crypto.
-
-**Status:** Open.
-
-**Trigger to revisit:** When watchlist gains crypto tickers.
-
-**Implementation:** Per-asset_class trading-day predicate in `app/market_data/calendar.py` (new). Scheduler partitions watchlist by asset class, runs only the eligible-today subset.
+**Resolution:** Phase C2. `app/market_data/calendar.py::is_trading_day(asset_class, date)`: stocks/ETFs/forex/futures = Mon-Fri; crypto/commodity = always; unknown = always (permissive fallback). Scheduler partitions watchlist by asset class on each tick. Tested in `tests/test_calendar.py`.
 
 ---
 
