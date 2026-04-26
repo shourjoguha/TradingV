@@ -41,7 +41,7 @@ Re-run when backend OpenAPI changes. Currently not used by the app — `lib/type
 
 `VITE_LAPTOP_URL` must be **empty string** in `.env.local` so `BACKENDS.laptop.baseUrl = ''` and requests stay relative.
 
-When you toggle to Railway, requests become absolute (`https://tradingv-production.up.railway.app/v1/...`) and CORS applies — currently fails until backend gets `CORSMiddleware`. Tracked in [.claude/backlog.md](../backlog.md).
+When you toggle to Railway, requests become absolute (`https://tradingv-production.up.railway.app/v1/...`). Backend has `CORSMiddleware` now (Phase A1) — allow-list driven by `FRONTEND_ORIGIN` env var on Railway, defaulting to `localhost:{3000,5173}` when unset. Local dev works zero-config.
 
 ## Adding a page
 
@@ -50,9 +50,9 @@ When you toggle to Railway, requests become absolute (`https://tradingv-producti
 3. Add nav entry in `src/components/Layout.tsx` `NAV` array (path, label, lucide icon).
 4. Use existing hooks from `hooks/use-api.ts`; add new ones if needed.
 
-## Cloud deploy (deferred)
+## Cloud deploy → Lovable
 
-See brief §14. Set `VITE_RAILWAY_URL` + `VITE_RAILWAY_KEY` on host (Vercel/Lovable), set `VITE_LAPTOP_URL=""` so laptop toggle stays disabled in cloud. Backend needs `CORSMiddleware` (backlog).
+See `/Users/shourjosmac/.claude/plans/lovable-frontend-port.md` for the full port plan. TL;DR: set `VITE_RAILWAY_URL` + `VITE_RAILWAY_KEY` + `VITE_LAPTOP_URL=""` on Lovable; set `FRONTEND_ORIGIN=https://<your-app>.lovable.dev` on Railway; the laptop toggle stays usable when the user opens Lovable from a browser on the laptop or any tailnet device, but is unreachable from public-internet browsers.
 
 ## Debugging
 
