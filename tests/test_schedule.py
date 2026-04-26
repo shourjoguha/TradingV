@@ -272,6 +272,98 @@ async def test_tick_handles_at_capacity(client, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_tick_collects_actuals_after_run(client, monkeypatch):
+    class FakeJob:
+        id = "fake-job"
+        task_count = 1
+
+    async def fake_submit(**kwargs):
+        return FakeJob()
+
+    refresh_calls = []
+
+    async def fake_refresh(sym, interval, **_):
+        refresh_calls.append((sym, interval))
+        return 100
+
+    from app.analysis import service as analysis_svc
+    from app.market_data import service as md_service
+
+    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(md_service, "refresh", fake_refresh)
+
+    await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "AAPL"})
+    await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "MSFT"})
+    await schedule_svc.update_config(
+        enabled=True, skip_weekends=False, intervals=["1d"], collect_actuals=True
+    )
+
+    await runner._tick()
+    cfg = await schedule_svc.get_config()
+    assert cfg.last_run_status == "succeeded"
+    assert set(refresh_calls) == {("AAPL", "1d"), ("MSFT", "1d")}
+
+
+@pytest.mark.asyncio
+async def test_tick_skips_actuals_when_collect_disabled(client, monkeypatch):
+    class FakeJob:
+        id = "fake-job"
+        task_count = 1
+
+    async def fake_submit(**kwargs):
+        return FakeJob()
+
+    refresh_calls = []
+
+    async def fake_refresh(*args, **kwargs):
+        refresh_calls.append((args, kwargs))
+        return 0
+
+    from app.analysis import service as analysis_svc
+    from app.market_data import service as md_service
+
+    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(md_service, "refresh", fake_refresh)
+
+    await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "AAPL"})
+    await schedule_svc.update_config(
+        enabled=True, skip_weekends=False, collect_actuals=False
+    )
+
+    await runner._tick()
+    assert refresh_calls == []
+
+
+@pytest.mark.asyncio
+async def test_actuals_failure_does_not_fail_scheduled_run(client, monkeypatch):
+    class FakeJob:
+        id = "fake-job"
+        task_count = 1
+
+    async def fake_submit(**kwargs):
+        return FakeJob()
+
+    async def boom_refresh(*args, **kwargs):
+        raise RuntimeError("provider down")
+
+    from app.analysis import service as analysis_svc
+    from app.market_data import service as md_service
+
+    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(md_service, "refresh", boom_refresh)
+
+    await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "AAPL"})
+    await schedule_svc.update_config(
+        enabled=True, skip_weekends=False, collect_actuals=True
+    )
+
+    await runner._tick()
+    cfg = await schedule_svc.get_config()
+    # Run still recorded as succeeded — actuals failure is best-effort.
+    assert cfg.last_run_status == "succeeded"
+
+
+@pytest.mark.asyncio
 async def test_request_wake_safe_when_runner_not_started():
     runner._wake_event = None
     runner.request_wake()  # must not raise
