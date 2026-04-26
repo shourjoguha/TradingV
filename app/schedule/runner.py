@@ -41,6 +41,32 @@ def _now_utc() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc)
 
 
+async def _collect_actuals(symbols: list[str], intervals: list[str]) -> dict[str, int]:
+    """Best-effort OHLCV refresh for every (watchlist symbol × interval).
+
+    Each refresh is independently try/excepted so one provider hiccup on
+    a symbol doesn't poison the whole run. Returns a status counter for
+    logging visibility.
+    """
+    from app.market_data import service as md_service
+
+    stats = {"ok": 0, "failed": 0}
+    for sym in symbols:
+        for interval in intervals:
+            try:
+                await md_service.refresh(sym, interval)
+                stats["ok"] += 1
+            except Exception as e:
+                logger.warning(
+                    "scheduler: actuals refresh failed for %s/%s: %s", sym, interval, e
+                )
+                stats["failed"] += 1
+    logger.info(
+        "scheduler: actuals refreshed (%d ok, %d failed)", stats["ok"], stats["failed"]
+    )
+    return stats
+
+
 def request_wake() -> None:
     """Public hook: wake the runner without changing state.
 
@@ -87,6 +113,13 @@ async def _tick() -> None:
         logger.info(
             "scheduler: started job %s with %d task(s)", job.id, job.task_count
         )
+
+        # After predictions land, refresh OHLCV cache so actuals for
+        # prior target dates are available to comparison endpoints.
+        # Best-effort — log failures, don't fail the scheduled run.
+        if cfg.collect_actuals:
+            await _collect_actuals(symbols, list(cfg.intervals))
+
         await schedule_svc.record_run(status="succeeded", advance_to=next_after_run)
     except concurrency.AtCapacityError:
         logger.info("scheduler: deferred (manual job in flight); will retry")

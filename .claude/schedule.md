@@ -43,6 +43,11 @@ Started in `app.main` lifespan. Single async loop:
 ## Completion-trigger
 At end of `_process_job` in `app/analysis/service.py`, `runner.request_wake()` is called. If a scheduled run was deferred by 429, this fires it as soon as the in-flight manual job finishes — no 5-minute wait.
 
+## Actuals collection (Phase 4)
+After `submit_run` succeeds, the runner refreshes OHLCV cache for every (watchlist symbol × interval) via `md_service.refresh`. Best-effort: per-symbol failures are logged but don't fail the scheduled run. Disabled by setting `collect_actuals=false` in `schedule_config`.
+
+This is what makes the comparison endpoints (Phase 5) meaningful — actuals for past target dates are guaranteed to be in `ohlcv_bars` shortly after each run.
+
 ## Catch-up at startup
 First-iteration of the loop computes `next_run_at` if missing. If it's already in the past (laptop was off through the scheduled time), the loop fires immediately on startup.
 
