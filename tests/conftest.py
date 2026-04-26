@@ -18,6 +18,7 @@ from app.analysis import models as _analysis_models  # noqa: F401, E402
 from app.market_data import models as _market_data_models  # noqa: F401, E402
 from app.sync import models as _sync_models  # noqa: F401, E402
 from app.tickers import models as _tickers_models  # noqa: F401, E402
+from app.watchlist import models as _watchlist_models  # noqa: F401, E402
 
 
 @pytest_asyncio.fixture
