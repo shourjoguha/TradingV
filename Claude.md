@@ -21,7 +21,7 @@ FastAPI backend that ingests TradingView alerts and (in-flight) runs Kronos cand
 | `/v1/sync/*`, outbox, peer ticker replication, dual-backend | [.claude/sync.md](.claude/sync.md) |
 | `/v1/watchlist*`, daily-run target set | [.claude/watchlist.md](.claude/watchlist.md) |
 | `/v1/schedule*`, daily forecast runner | [.claude/schedule.md](.claude/schedule.md) |
-| `prediction_points` flat table, `/v1/predictions/backfill` | [.claude/predictions.md](.claude/predictions.md) |
+| `/v1/predictions/by-target`, `/by-horizon`, `/backfill`, `prediction_points` table | [.claude/predictions.md](.claude/predictions.md) |
 | `/v1/tickers/{sym}/labels*`, free-form ticker metadata | [.claude/labels.md](.claude/labels.md) |
 | DB schema changes / new migration | [.claude/migrations.md](.claude/migrations.md) |
 | Writing or debugging tests | [.claude/testing.md](.claude/testing.md) |
