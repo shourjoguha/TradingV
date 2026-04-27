@@ -23,6 +23,7 @@ from app.labels import models as _labels_models  # noqa: F401, E402
 from app.predictions import models as _predictions_models  # noqa: F401, E402
 from app.schedule import models as _schedule_models  # noqa: F401, E402
 from app.watchlist import models as _watchlist_models  # noqa: F401, E402
+from app.accuracy import models as _accuracy_models  # noqa: F401, E402
 
 
 @pytest_asyncio.fixture

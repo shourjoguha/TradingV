@@ -18,6 +18,7 @@ from app.labels import models as _labels_models  # noqa: F401
 from app.predictions import models as _predictions_models  # noqa: F401
 from app.schedule import models as _schedule_models  # noqa: F401
 from app.watchlist import models as _watchlist_models  # noqa: F401
+from app.accuracy import models as _accuracy_models  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -52,11 +53,23 @@ async def lifespan(_app: FastAPI):
 
         _schedule_runner.start()
 
+        # Hourly accuracy evaluator — fills prediction_accuracy as predictions
+        # elapse and actuals land in ohlcv_bars. Idempotent; safe to interrupt.
+        from app.accuracy import service as _accuracy_service
+
+        accuracy_stop = asyncio.Event()
+        accuracy_task = asyncio.create_task(
+            _accuracy_service.evaluator_loop(stop_event=accuracy_stop),
+            name="accuracy-evaluator",
+        )
+
         yield
 
         # Clean shutdown.
         await _schedule_runner.stop()
         purge_task.cancel()
+        accuracy_stop.set()
+        accuracy_task.cancel()
 
     except Exception as e:
         logger.error("startup error: %s", e)
