@@ -25,7 +25,7 @@ Backend must be running on `:8000` (`uvicorn app.main:app` from repo root with `
 npm run build                    # tsc -b && vite build → dist/
 ```
 
-Must be zero errors. Output ~600 KB JS gzipped to ~180 KB. Code-splitting deferred — single user, page load is fine.
+Must be zero errors. Output ~617 KB JS gzipped to ~187 KB (post-Neumorphism redesign; +6 KB vs prior for Plus Jakarta + DM Sans fonts). Code-splitting deferred — single user, page load is fine.
 
 ## Type-gen from OpenAPI (optional)
 
