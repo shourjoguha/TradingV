@@ -6,19 +6,71 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ## Decision-tool roadmap — see [.claude/roadmap.md](roadmap.md)
 
-**Status (2026-04-27):** Active multi-phase plan to evolve the app from forecasting tool → decision-support tool. Phases 0-2 active or queued; Phases 3-6 deferred behind exit gates.
+**Status (2026-04-27):** Phases 0-6 SHIPPED. All backend tables + lifespan loops + endpoints + frontend pages live. 224 tests pass. Awaiting live data + operator unlocks (see next entries) to validate behavior.
 
-| Phase | Title | Status | Gate |
-|---|---|---|---|
-| 0 | Snapshot (rollback safety) | **active** | none |
-| 1 | Trust through feedback (accuracy + drift) | next | Phase 0 done |
-| 2 | UX hardening (empty states + lightweight-charts v5) | parallel-able | none |
-| 3 | Opportunities + signal generator | DEFERRED | Phase 1 exit (≥1 tradeable pair, hit-rate ≥ 60%) |
-| 4 | Daily Telegram digest | DEFERRED | Phase 3 generates ≥1 opp/day |
-| 5 | Trade journal | DEFERRED | 2 weeks of opportunities observed |
-| 6 | Options runway data layer (IV %ile + earnings) | DEFERRED | Slot inside Phase 3 sprint |
+| Phase | Title | Status |
+|---|---|---|
+| 0 | Snapshot (rollback safety) | ✅ tag `v1.0-pre-trust-sprint` |
+| 1.1 | prediction_accuracy + evaluator | ✅ live |
+| 1.2 | /accuracy frontend | ✅ live |
+| 1.3 | drift detection + Telegram alerts (backend) | ✅ live (Telegram dormant — see unlock #1) |
+| 2.1 | empty states | ✅ live |
+| 2.2 | lightweight-charts v5 upgrade | DEFERRED — not on critical path |
+| 3.1 | opportunities + signal generator | ✅ live (waiting on accuracy data — see unlock #2) |
+| 3.2 | /opportunities frontend | ✅ live |
+| 4 | daily Telegram digest | ✅ live (dormant until Telegram set up) |
+| 5 | trade journal (backend + frontend) | ✅ live |
+| 6 | options runway data layer | ✅ live (silently collecting IV + earnings daily) |
 
 Roadmap doc has locked decisions (metrics, drift threshold, channel, sequencing). Update there, not here.
+
+---
+
+## Unlock #1 — Telegram bot setup (~5 min) — DEFERRED
+
+**What:** Drift alerts + daily digest are coded + live but no-op until `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` env vars are set on Railway (and optionally laptop). Notifier logs once at startup that it's not configured, then stays silent. Code is deploy-safe in this state.
+
+**Steps when revisiting:**
+1. On Telegram, DM @BotFather → `/newbot` → follow prompts → save the token (looks like `123456:ABC-DEF...`).
+2. DM your new bot any message (forces a chat to exist).
+3. `curl https://api.telegram.org/bot<TOKEN>/getUpdates` → in the JSON response, copy `result[0].message.chat.id` (an integer).
+4. Railway dashboard → service → Variables → add:
+   - `TELEGRAM_BOT_TOKEN=<token>`
+   - `TELEGRAM_CHAT_ID=<chat_id>`
+5. Save → Railway redeploys → drift alerts post on next detection tick (every 6h); daily digest fires at `DIGEST_HOUR_UTC` (default 12 = 8 AM ET).
+6. Test: `curl -X POST -H "X-API-Key: <RAILWAY_KEY>" https://tradingv-production.up.railway.app/v1/accuracy/drift/detect` — if any drift exists you'll get the message instantly.
+
+**Files involved:** `app/notifications/telegram.py`, `app/notifications/digest.py`, `app/accuracy/drift.py`, `app/core/config.py`.
+
+**Trigger to revisit:** when you want push notifications instead of polling the dashboard.
+
+---
+
+## Unlock #2 — Accuracy/opportunities can't compute (no actuals in OHLCV cache) — DEFERRED
+
+**What:** First live smoke test (post-deploy) showed:
+- `POST /v1/accuracy/evaluate` → `{scanned: 12, evaluated: 0, skipped_no_actual: 12}`
+- `POST /v1/opportunities/generate` → `{scanned: 12, evaluated: 0, skipped_no_baseline: 12}`
+
+Same root cause: existing `prediction_points` reference `target_ts` and `made_on` dates for which `ohlcv_bars` was never refreshed. The evaluator needs both the actual close at `target_ts` AND the baseline close at `made_on` to compute error + direction. The opportunity generator needs `made_on` baseline to compute predicted move %.
+
+**Two options to fix:**
+
+### Option A — On-demand OHLCV refresh inside the evaluator (~30 min, recommended)
+
+When `_fetch_actual_close()` returns None, call `market_data.service.refresh()` for that `(ticker, interval, target_date)` window, then retry the lookup. Same for baseline. Add a per-tick cap (e.g. 20 refreshes max) so a backlog doesn't hammer yfinance. Self-healing — first evaluator tick after deploy fills in everything available.
+
+**Files:** `app/accuracy/service.py::_fetch_actual_close` + `_fetch_baseline_close` + `evaluate_pending`. Add `max_refresh` param + counter.
+
+### Option B — Wait for the schedule runner
+
+Each scheduled run pulls fresh OHLCV for the input window (last N days). Eventually those windows cover the historical `target_ts` + `made_on` values currently missing. Free but slow — won't backfill weeks of history.
+
+**Recommendation:** Option A. It's a small, idempotent change that makes the dashboard fillable from day one and is a one-time cost.
+
+**Trigger to revisit:** as soon as you want the accuracy dashboard to show non-empty rows. Likely after observing whether Option B fills in naturally over a few schedule cycles — if it does, Option A is unnecessary.
+
+---
 
 ---
 
