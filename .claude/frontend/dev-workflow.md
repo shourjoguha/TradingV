@@ -50,9 +50,11 @@ When you toggle to Railway, requests become absolute (`https://tradingv-producti
 3. Add nav entry in `src/components/Layout.tsx` `NAV` array (path, label, lucide icon).
 4. Use existing hooks from `hooks/use-api.ts`; add new ones if needed.
 
-## Cloud deploy → Lovable
+## Cloud deploy → Cloudflare Pages
 
-See `/Users/shourjosmac/.claude/plans/lovable-frontend-port.md` for the full port plan. TL;DR: set `VITE_RAILWAY_URL` + `VITE_RAILWAY_KEY` + `VITE_LAPTOP_URL=""` on Lovable; set `FRONTEND_ORIGIN=https://<your-app>.lovable.dev` on Railway; the laptop toggle stays usable when the user opens Lovable from a browser on the laptop or any tailnet device, but is unreachable from public-internet browsers.
+See `/Users/shourjosmac/.claude/plans/cloudflare-pages-port.md` for the full port plan. (Lovable was evaluated and rejected — incompatible on existing-repo import, build-time `VITE_*` env vars, per-PR previews, header config, and AI editor source-of-truth control. CF Pages handles all five.)
+
+TL;DR: connect repo, root `frontend/`, build `npm run build` → `dist/`, set `VITE_RAILWAY_URL` + `VITE_RAILWAY_KEY` + `VITE_LAPTOP_URL=""` + `VITE_DEFAULT_BACKEND=railway` + `NODE_VERSION=20` on CF; set `FRONTEND_ORIGIN=https://tradingv-83b.pages.dev` on Railway; ship `frontend/public/_redirects` for SPA fallback. Laptop toggle decorative from public-internet browsers; usable when laptop is on the same tailnet (rebuild with `VITE_LAPTOP_URL=http://100.x.y.z:8000`).
 
 ## Debugging
 
