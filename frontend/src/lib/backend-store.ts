@@ -26,6 +26,7 @@ const DEFAULT_BACKEND: BackendId =
     : 'laptop'
 
 export function isBackendAvailable(id: BackendId): boolean {
+  if (id === 'laptop' && import.meta.env.DEV) return true
   return BACKENDS[id].baseUrl !== ''
 }
 
