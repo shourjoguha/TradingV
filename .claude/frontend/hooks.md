@@ -43,3 +43,14 @@ useMutation({
 2. Add type in `lib/types.ts` if not present.
 3. Add hook in `use-api.ts` mirroring an existing one.
 4. If response shape doesn't match what the page wants, adapt in the `queryFn.then(...)` (don't modify pages).
+
+## Hooks added in Phase 1-5
+
+Backend shape now matches frontend usage closely; new hooks pass through without adapters:
+
+- `useAccuracyGrid({ tickers?, horizons?, model_id?, last_n? })`, `useAccuracyPair({ ticker, horizon_offset, model_id?, limit? })`, `useEvaluateAccuracy()` — for `/accuracy` page.
+- `useDriftAlerts()`, `useAckDriftAlert()` — drift banner.
+- `useOpportunities({ status?, limit? })`, `useUpdateOpportunity()` — for `/opportunities` page.
+- `useTrades({ limit? })`, `useCreateTrade()`, `useUpdateTrade()` — for `/trades` page.
+
+All key by `backendId`, invalidate sibling queries on mutation success, toast outcomes via `sonner`.

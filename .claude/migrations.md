@@ -11,7 +11,7 @@ Schema is owned by Alembic. `migrations/versions/NNNN_*.py` is the source of tru
 Alembic uses **sync** psycopg2 (not asyncpg). `migrations/env.py` rewrites `postgresql+asyncpg://` → `postgresql+psycopg2://` automatically. Both drivers are in `requirements.txt` on purpose.
 
 ## Deploy wiring
-`railway.toml` has `startCommand = "alembic upgrade head && uvicorn ..."` so migrations run at container start, before the web process binds the port. `Procfile` is just `web: uvicorn ...` — no `release:` phase, because Railpack runs that at BUILD time when the DB isn't yet available. See [railway-deployment.md](railway-deployment.md) for the full Railpack-vs-Nixpacks notes.
+Railway uses the **Dockerfile** builder (declared in `railway.toml`). The Dockerfile CMD chains `alembic upgrade head && uvicorn ...`; the entrypoint script (`tailscale-entrypoint.sh`) wraps that to bring up Tailscale first. Migrations run at container start before the web process binds the port. `Procfile` is unused on Railway. See [railway-deployment.md](railway-deployment.md) for the full Tailscale + Dockerfile notes (and the historical Railpack lessons that still apply if reverted).
 
 ## Idempotency
 All migrations guard with `inspect(bind).get_column_names()` / `get_table_names()` before mutating, so they're safe to run against a DB that was first initialised via `Base.metadata.create_all` (legacy path) and re-runs are no-ops. Some migrations also dialect-branch (e.g. SQLite can't `ALTER COLUMN` to relax NOT NULL — skip on SQLite, apply on Postgres).
@@ -27,6 +27,12 @@ All migrations guard with `inspect(bind).get_column_names()` / `get_table_names(
 - `0008` — `schedule_config` singleton table + seed row id=1 with locked defaults
 - `0009` — `prediction_points` flat table + 4 indexes for comparison queries
 - `0010` — `ticker_labels` EAV table + `(symbol, key)` UNIQUE + `(key)` index
+- `0011` — `schedule_config.fallback_offset_hours` for Railway-fallback inference timing
+- `0012` — `prediction_accuracy` table + `UNIQUE(prediction_id)` for idempotent evaluator. Backed by [accuracy.md](accuracy.md).
+- `0013` — `drift_alerts` table + open/ack lifecycle indexes. Drift detector writes here.
+- `0014` — `opportunities` table + `UNIQUE(source_prediction_id, rule_id)` for idempotent generator. See [opportunities.md](opportunities.md).
+- `0015` — `trades` table + FK `opportunities` (SET NULL). See [trades.md](trades.md).
+- `0016` — `ticker_market_data` table for IV percentile + earnings (Phase 6 options runway, daily refresh, no UI yet).
 
 ## Backfills
 When adding backfill logic to a migration, dialect-branch (`bind.dialect.name`) for portability: `ON CONFLICT` (Postgres) vs `INSERT OR IGNORE` (SQLite, used in tests).
