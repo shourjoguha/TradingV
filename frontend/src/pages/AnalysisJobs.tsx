@@ -284,7 +284,7 @@ export function AnalysisJobs() {
               </TableBody>
             </Table>
           ) : (
-            <div className="text-center py-12 text-sm text-muted-foreground border border-dashed rounded-lg flex flex-col items-center">
+            <div className="text-center py-12 text-sm text-muted-foreground rounded-2xl shadow-inset-sm flex flex-col items-center">
               <FlaskConical className="h-8 w-8 mb-2 text-muted-foreground/50" />
               No analysis jobs found. Run a new analysis to get started.
             </div>

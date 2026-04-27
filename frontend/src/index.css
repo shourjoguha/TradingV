@@ -1,64 +1,74 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Neumorphic palette — light only. All shadcn primitive tokens point
+   * at the same cool-grey base; visual interest comes from shadows.
+   *
+   * HSL components below correspond to the neumorphic spec:
+   *   #E0E5EC  →  214 23% 90%   (background, card, popover, secondary, accent, muted)
+   *   #3D4852  →  213 15% 28%   (foreground / primary text)
+   *   #6B7280  →  220 9%  46%   (muted-foreground)
+   *   #6C63FF  →  244 100% 70%  (primary / accent / ring)
+   */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
-    --primary: 0 0% 12%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 12%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 12%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 70%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --background: 214 23% 90%;
+    --foreground: 213 15% 28%;
+    --card: 214 23% 90%;
+    --card-foreground: 213 15% 28%;
+    --popover: 214 23% 90%;
+    --popover-foreground: 213 15% 28%;
+    --primary: 244 100% 70%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 23% 90%;
+    --secondary-foreground: 213 15% 28%;
+    --muted: 214 23% 90%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 244 100% 70%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 6 65% 65%;
+    --destructive-foreground: 0 0% 100%;
+    /* Borders are transparent — neumorphism uses shadows only.
+       Kept as a CSS var so primitives that apply `border-border` stay
+       no-op rather than 404 the token. */
+    --border: 0 0% 100% / 0;
+    --input: 214 23% 90%;
+    --ring: 244 100% 70%;
+    /* Chart colors override (used only by shadcn chart helpers; we set
+       lightweight-charts theme directly in PredictionsByTarget.tsx). */
+    --chart-1: 244 100% 70%;
+    --chart-2: 174 53% 47%;
+    --chart-3: 6 65% 65%;
+    --chart-4: 41 64% 56%;
+    --chart-5: 220 9% 46%;
+    --radius: 16px;
   }
 
-  .dark {
-    --background: 0 0% 7%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 12%;
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 63%;
-    --accent: 0 0% 14%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 0 0% 40%;
+  html {
+    scroll-behavior: smooth;
   }
 
+  /* Override the shadcn-default `* { @apply border-border }` so it
+     resolves to a transparent rule (no visible borders anywhere unless
+     a component explicitly opts in). */
   * {
-    @apply border-border;
+    border-color: transparent;
   }
+
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    background-color: #E0E5EC;
+    color: #3D4852;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Display class for headlines per spec. */
+  .font-display {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
 }

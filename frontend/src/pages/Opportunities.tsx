@@ -54,20 +54,20 @@ export function Opportunities() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold">Opportunities</h2>
+        <h2 className="font-display text-2xl font-bold tracking-tight">Opportunities</h2>
         <p className="text-sm text-muted-foreground">
           Signals from Kronos predictions that crossed a rule threshold AND have ≥60% historical hit-rate.
         </p>
       </div>
 
-      <div className="flex gap-2 border-b">
+      <div className="inline-flex gap-1 p-1.5 rounded-2xl shadow-inset-sm bg-background">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t.id ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
+            className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
+              tab === t.id ? 'bg-background shadow-extruded-sm text-violet' : 'text-muted-foreground hover:text-foreground'
+            } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet`}
           >
             {t.label}
           </button>
@@ -77,7 +77,7 @@ export function Opportunities() {
       {opps.isLoading ? (
         <Skeleton className="h-40 w-full" />
       ) : items.length === 0 ? (
-        <div className="border rounded p-8 text-center text-muted-foreground border-dashed">
+        <div className="rounded-3xl shadow-inset-sm p-8 text-center text-muted-foreground bg-background">
           <Target className="h-8 w-8 mb-2 mx-auto text-muted-foreground/50" />
           <p className="text-sm">No {tab} opportunities.</p>
           {tab === 'open' && (
@@ -88,32 +88,32 @@ export function Opportunities() {
           )}
         </div>
       ) : (
-        <div className="border rounded overflow-x-auto">
+        <div className="rounded-2xl bg-background shadow-inset-sm p-3 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40">
+            <thead>
               <tr>
-                <th className="text-left px-3 py-2">Ticker</th>
-                <th className="text-left px-3 py-2">Kind</th>
-                <th className="text-left px-3 py-2">Rule</th>
-                <th className="text-right px-3 py-2">Move</th>
-                <th className="text-right px-3 py-2">Conf</th>
-                <th className="text-left px-3 py-2">Generated</th>
-                <th className="text-left px-3 py-2">Expires</th>
-                {tab === 'open' && <th className="text-right px-3 py-2">Actions</th>}
+                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ticker</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kind</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Rule</th>
+                <th className="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Move</th>
+                <th className="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Conf</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Generated</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Expires</th>
+                {tab === 'open' && <th className="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {items.map((o) => (
-                <tr key={o.id} className="border-t">
+                <tr key={o.id} className="hover:bg-white/30">
                   <td className="px-3 py-2 font-mono">{o.ticker}</td>
                   <td className="px-3 py-2">
-                    <Badge variant={o.kind === 'buy' ? 'default' : 'destructive'}>
+                    <Badge variant={o.kind === 'buy' ? 'success' : 'destructive'}>
                       {o.kind === 'buy' ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
                       {o.kind.toUpperCase()}
                     </Badge>
                   </td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">{o.rule_label}</td>
-                  <td className={`px-3 py-2 text-right font-mono ${o.predicted_move_pct > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <td className={`px-3 py-2 text-right font-mono ${o.predicted_move_pct > 0 ? 'text-success' : 'text-danger'}`}>
                     {fmtPct(o.predicted_move_pct)}
                   </td>
                   <td className="px-3 py-2 text-right font-mono">{(o.confidence * 100).toFixed(0)}%</td>
@@ -123,7 +123,7 @@ export function Opportunities() {
                     <td className="px-3 py-2 text-right space-x-1">
                       <Button
                         size="sm"
-                        variant="default"
+                        variant="primary"
                         onClick={() => handleAct(o.id, o.ticker, o.kind as 'buy' | 'sell')}
                         disabled={update.isPending}
                       >
@@ -147,19 +147,19 @@ export function Opportunities() {
       )}
 
       {dismissingId && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6" onClick={() => setDismissingId(null)}>
-          <div className="bg-card border rounded-lg w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-semibold">Dismiss opportunity</h3>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setDismissingId(null)}>
+          <div className="bg-background rounded-3xl shadow-extruded w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display font-bold text-lg">Dismiss opportunity</h3>
             <textarea
               autoFocus
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full bg-background border rounded p-2 text-sm h-24"
+              className="w-full bg-background rounded-2xl shadow-inset-sm p-3 text-sm h-24 placeholder:text-[#A0AEC0] focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-violet"
               placeholder="Reason (optional)..."
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setDismissingId(null)}>Cancel</Button>
-              <Button size="sm" onClick={submitDismiss} disabled={update.isPending}>Confirm dismiss</Button>
+              <Button variant="primary" size="sm" onClick={submitDismiss} disabled={update.isPending}>Confirm dismiss</Button>
             </div>
           </div>
         </div>

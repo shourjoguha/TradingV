@@ -202,7 +202,7 @@ export function Watchlist() {
               </TableBody>
             </Table>
           ) : (
-            <div className="text-center py-12 text-sm text-muted-foreground border border-dashed rounded-lg">
+            <div className="text-center py-12 text-sm text-muted-foreground rounded-2xl shadow-inset-sm">
               No tickers in watchlist. Add some to get started.
             </div>
           )}

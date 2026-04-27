@@ -126,7 +126,7 @@ export function Schedule() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center justify-between p-4 rounded-2xl shadow-inset-sm">
                 <div className="space-y-0.5">
                   <Label className="text-base">Enable Schedule</Label>
                   <p className="text-sm text-muted-foreground">
@@ -174,7 +174,7 @@ export function Schedule() {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center justify-between p-4 rounded-2xl shadow-inset-sm">
                   <div className="space-y-0.5">
                     <Label>Skip Weekends</Label>
                     <p className="text-xs text-muted-foreground">
@@ -270,7 +270,7 @@ export function Schedule() {
                     }
                   />
                 </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg mt-6">
+                <div className="flex items-center justify-between p-4 rounded-2xl shadow-inset-sm mt-6">
                   <div className="space-y-0.5">
                     <Label>Collect Actuals</Label>
                     <p className="text-xs text-muted-foreground">
