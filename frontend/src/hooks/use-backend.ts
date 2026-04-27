@@ -1,5 +1,5 @@
-import { useCallback, useSyncExternalStore } from 'react'
-import { getBackendId, setBackendId } from '../lib/backend-store'
+import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { getBackendId, isBackendAvailable, setBackendId } from '../lib/backend-store'
 import type { BackendId } from '../lib/types'
 
 const listeners = new Set<() => void>()
@@ -14,5 +14,10 @@ export function useBackend() {
     setBackendId(id)
     listeners.forEach((l) => l())
   }, [])
+  useEffect(() => {
+    if (!isBackendAvailable(backendId)) {
+      setBackend(getBackendId())
+    }
+  }, [backendId, setBackend])
   return { backendId, setBackend } as const
 }
