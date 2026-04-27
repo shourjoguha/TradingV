@@ -4,6 +4,12 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ---
 
+## Cloud frontend hosting (Lovable rejected → Cloudflare Pages)  ✅ RESOLVED
+
+**Resolution (2026-04-27):** Lovable evaluated, rejected — no existing-repo import, no build-time `VITE_*` env var UI, no per-PR preview URLs, no header/redirect config, AI editor mutates source. Switched to **Cloudflare Pages** at `https://tradingv-83b.pages.dev`. Plan: `/Users/shourjosmac/.claude/plans/cloudflare-pages-port.md`. New artifacts: `frontend/public/_redirects` (SPA fallback) + CF dashboard config + Railway `FRONTEND_ORIGIN`. No `frontend/src/` changes.
+
+---
+
 ## Reverse-direction sync: Railway → Laptop  ✅ RESOLVED
 
 **Resolution:** Phase B1+B2 of backlog rollout. Tailscale chosen (Option A from the original three).
