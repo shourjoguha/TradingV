@@ -67,6 +67,31 @@ export interface Opportunity {
   dismissed_reason: string | null
 }
 
+export interface QueueItem {
+  id: string
+  status: 'pending' | 'running' | 'done' | 'failed' | 'cancelled'
+  source: 'manual' | 'schedule' | 'fallback'
+  inputs: {
+    tickers: string[]
+    intervals: string[]
+    model_ids?: string[] | null
+    horizon_bars?: number | null
+  }
+  enqueued_at: string
+  started_at: string | null
+  finished_at: string | null
+  job_id: string | null
+  error: string | null
+}
+
+export interface QueueStats {
+  pending: number
+  running: number
+  done: number
+  failed: number
+  cancelled: number
+}
+
 export interface Trade {
   id: string
   opportunity_id: string | null

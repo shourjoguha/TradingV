@@ -130,6 +130,7 @@ The `app.main` lifespan starts these tasks (all cancellation-safe; tolerant of m
 8. **`notifications.digest.digest_loop()`** — sleeps until `DIGEST_HOUR_UTC`, posts daily summary (top opportunities + open drift alerts + schedule snapshot) to Telegram.
 9. **`market_data.derived.market_data_loop()`** — daily: refresh per-watchlist IV + earnings dates into `ticker_market_data`. Phase 6 runway data; no UI yet.
 10. **Opportunities tick** (inline `_opps_loop` in `app/main.py`) — hourly: `generate_for_predictions()` then `expire_stale()`.
+11. **`queue.worker.worker_loop()`** — single-flight FIFO drain of `submit_queue`. Each pending row → `analysis.service.submit_run` → mark done. Boot calls `queue.service.reset_stuck_on_boot()` first to recover from crashed mid-job state. See [analysis.md](analysis.md) for the queue contract; deferred-decision tracking in [tech_debt.md](tech_debt.md).
 
 ## Network topology + Tailscale
 

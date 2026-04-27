@@ -5,6 +5,8 @@ import {
   useRunAnalysis,
   useWatchlist,
   useModels,
+  useQueue,
+  useCancelQueueItem,
 } from '../hooks/use-api'
 import {
   Card,
@@ -41,7 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select'
-import { Play, FlaskConical } from 'lucide-react'
+import { Play, FlaskConical, X, Layers } from 'lucide-react'
 export function AnalysisJobs() {
   const { data: jobs, isLoading } = useAnalysisJobs({
     limit: 50,
@@ -51,6 +53,13 @@ export function AnalysisJobs() {
   })
   const { data: models } = useModels()
   const { mutate: runAnalysis, isPending: isRunning } = useRunAnalysis()
+  const { data: pendingQueue } = useQueue({ status: 'pending', limit: 20 })
+  const { data: runningQueue } = useQueue({ status: 'running', limit: 5 })
+  const cancel = useCancelQueueItem()
+  const queueItems = [
+    ...(runningQueue?.items ?? []),
+    ...(pendingQueue?.items ?? []),
+  ]
   const [isRunOpen, setIsRunOpen] = useState(false)
   const [runForm, setRunForm] = useState({
     tickers: '',
@@ -215,6 +224,55 @@ export function AnalysisJobs() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {queueItems.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Layers className="h-4 w-4 text-violet" />
+              Queue
+            </CardTitle>
+            <CardDescription>Worker drains FIFO. Cancel pending items before they start.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {queueItems.map((q) => (
+                <div
+                  key={q.id}
+                  className="flex items-center justify-between p-3 rounded-2xl shadow-inset-sm"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Badge variant={q.status === 'running' ? 'success' : 'secondary'}>
+                      {q.status}
+                    </Badge>
+                    <Badge variant="outline">{q.source}</Badge>
+                    <div className="text-sm font-mono truncate">
+                      {q.inputs.tickers.slice(0, 5).join(', ')}
+                      {q.inputs.tickers.length > 5 && ` +${q.inputs.tickers.length - 5}`}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
+                      {new Date(q.enqueued_at).toLocaleTimeString()}
+                    </span>
+                    {q.status === 'pending' && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => cancel.mutate(q.id)}
+                        disabled={cancel.isPending}
+                        title="Cancel"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

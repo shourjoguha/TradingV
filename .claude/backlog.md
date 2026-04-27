@@ -2,6 +2,8 @@
 
 Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferred, options considered, current state, trigger to revisit.
 
+> **Tech debt** (cruft we knowingly left in shipped code) lives separately at [.claude/tech_debt.md](tech_debt.md). Backlog is for *features*; tech_debt is for *code chores*.
+
 ---
 
 ## Decision-tool roadmap — see [.claude/roadmap.md](roadmap.md)

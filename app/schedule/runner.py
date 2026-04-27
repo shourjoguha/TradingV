@@ -125,32 +125,34 @@ async def _tick() -> None:
             return
         symbols = eligible
 
-    # Run.
-    from app.analysis import concurrency, service as analysis_svc
+    # Run via the queue. The worker drains FIFO; we don't wait for the
+    # actual job to finish here — only that the enqueue succeeded. The
+    # 'succeeded' status below means "successfully queued for execution".
+    from app.queue import service as queue_svc
 
     try:
-        job = await analysis_svc.submit_run(
-            tickers=symbols,
-            intervals=list(cfg.intervals),
-            model_ids=list(cfg.model_ids),
-            horizon_bars=cfg.horizon_bars,
+        item = await queue_svc.enqueue(
+            inputs={
+                "tickers": symbols,
+                "intervals": list(cfg.intervals),
+                "model_ids": list(cfg.model_ids),
+                "horizon_bars": cfg.horizon_bars,
+            },
+            source="schedule",
         )
         logger.info(
-            "scheduler: started job %s with %d task(s)", job.id, job.task_count
+            "scheduler: enqueued queue_id=%s (worker will drain)", item["id"]
         )
 
         # After predictions land, refresh OHLCV cache so actuals for
         # prior target dates are available to comparison endpoints.
         # Best-effort — log failures, don't fail the scheduled run.
+        # Note: this runs immediately after enqueue, not after the worker
+        # finishes — actuals refresh is independent of job completion.
         if cfg.collect_actuals:
             await _collect_actuals(symbols, list(cfg.intervals))
 
         await schedule_svc.record_run(status="succeeded", advance_to=next_after_run)
-    except concurrency.AtCapacityError:
-        logger.info("scheduler: deferred (manual job in flight); will retry")
-        # Don't advance next_run_at — pending_run + retry_minutes drives retry.
-        await schedule_svc.set_pending(True)
-        await schedule_svc.record_run(status="deferred_429")
     except Exception as e:  # pragma: no cover - defensive
         logger.exception("scheduler: tick failed")
         await schedule_svc.record_run(
@@ -281,8 +283,8 @@ async def _fallback_loop() -> None:
 
 async def _fallback_tick() -> None:
     """One iteration of the fallback loop. Public-ish for tests."""
-    from app.analysis import concurrency, service as analysis_svc
     from app.predictions.models import PredictionPoint
+    from app.queue import service as queue_svc
     from sqlalchemy import select
 
     cfg = await schedule_svc.get_config()
@@ -346,13 +348,15 @@ async def _fallback_tick() -> None:
         len(fire_for), len(symbols),
     )
     try:
-        await analysis_svc.submit_run(
-            tickers=fire_for,
-            intervals=list(cfg.intervals),
-            model_ids=list(cfg.model_ids),
-            horizon_bars=cfg.horizon_bars,
+        item = await queue_svc.enqueue(
+            inputs={
+                "tickers": fire_for,
+                "intervals": list(cfg.intervals),
+                "model_ids": list(cfg.model_ids),
+                "horizon_bars": cfg.horizon_bars,
+            },
+            source="fallback",
         )
-    except concurrency.AtCapacityError:
-        logger.info("fallback: at capacity, retrying next cycle")
+        logger.info("fallback: enqueued queue_id=%s for %d symbol(s)", item["id"], len(fire_for))
     except Exception:  # pragma: no cover - defensive
-        logger.exception("fallback: submit_run failed")
+        logger.exception("fallback: enqueue failed")

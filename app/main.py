@@ -22,6 +22,7 @@ from app.accuracy import models as _accuracy_models  # noqa: F401
 from app.opportunities import models as _opportunities_models  # noqa: F401
 from app.trades import models as _trades_models  # noqa: F401
 from app.market_data import derived as _derived_models  # noqa: F401
+from app.queue import models as _queue_models  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -118,6 +119,21 @@ async def lifespan(_app: FastAPI):
 
         opps_task = asyncio.create_task(_opps_loop(), name="opportunities-tick")
 
+        # Submit-queue worker — single-flight FIFO drain. Boot recovery
+        # first: any 'running' rows from a crashed prior process flip back
+        # to 'pending' so this worker re-picks them.
+        from app.queue import service as _qsvc, worker as _qworker
+
+        n_recovered = await _qsvc.reset_stuck_on_boot()
+        if n_recovered:
+            logger.info("queue: recovered %d stuck rows on boot", n_recovered)
+
+        queue_stop = asyncio.Event()
+        queue_task = asyncio.create_task(
+            _qworker.worker_loop(stop_event=queue_stop),
+            name="queue-worker",
+        )
+
         yield
 
         # Clean shutdown.
@@ -133,6 +149,8 @@ async def lifespan(_app: FastAPI):
         market_data_task.cancel()
         opps_stop.set()
         opps_task.cancel()
+        queue_stop.set()
+        queue_task.cancel()
 
     except Exception as e:
         logger.error("startup error: %s", e)

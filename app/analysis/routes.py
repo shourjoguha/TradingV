@@ -8,7 +8,8 @@ from typing import Any, Dict
 
 from fastapi import Body
 
-from app.analysis import concurrency, service
+from app.analysis import concurrency, service  # noqa: F401 — concurrency kept for tech-debt cleanup
+from app.queue import service as _qsvc
 from app.analysis.schemas import (
     AnalysisImportResponse,
     AnalysisJobResponse,
@@ -32,23 +33,33 @@ async def list_jobs(
     return [AnalysisJobSummary.model_validate(j) for j in jobs]
 
 
-@router.post("/run", response_model=AnalysisRunResponse)
+@router.post("/run", response_model=AnalysisRunResponse, status_code=202)
 async def submit_run(
     body: AnalysisRunRequest,
     _api_key: str = Depends(verify_api_key),
 ):
+    """Enqueue an analysis run. Returns 202 with queue_id; worker drains FIFO.
+
+    Pre-validates inputs so bad tickers/intervals return 400 immediately.
+    Frontend polls ``GET /v1/analysis/queue/{queue_id}`` for lifecycle, then
+    jumps to ``/v1/analysis/jobs/{job_id}`` once status='done'.
+    """
     try:
-        job = await service.submit_run(
+        service.validate_inputs(
             tickers=body.tickers,
             intervals=body.intervals,
             model_ids=body.model_ids,
-            horizon_bars=body.horizon_bars,
         )
     except service.AnalysisInputError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except concurrency.AtCapacityError:
-        raise HTTPException(status_code=429, detail="at_capacity")
-    return AnalysisRunResponse(job_id=job.id, task_count=job.task_count, status=job.status)
+
+    item = await _qsvc.enqueue(inputs=body.model_dump(), source="manual")
+    return AnalysisRunResponse(
+        queue_id=item["id"],
+        status="queued",
+        job_id=None,
+        task_count=None,
+    )
 
 
 @router.get("/jobs/{job_id}", response_model=AnalysisJobResponse)

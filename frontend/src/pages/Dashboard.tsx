@@ -4,6 +4,8 @@ import {
   useWatchlist,
   useAnalysisJobs,
   useFireNow,
+  useQueueStats,
+  useQueue,
 } from '../hooks/use-api'
 import {
   Card,
@@ -23,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '../components/ui/table'
-import { Play, Clock, List, Activity } from 'lucide-react'
+import { Play, Clock, List, Activity, Layers } from 'lucide-react'
 import { Link } from 'react-router-dom'
 export function Dashboard() {
   const { data: schedule, isLoading: isLoadingSchedule } = useSchedule()
@@ -34,6 +36,10 @@ export function Dashboard() {
     limit: 5,
   })
   const { mutate: fireNow, isPending: isFiring } = useFireNow()
+  const { data: queueStats } = useQueueStats()
+  const { data: queue } = useQueue({ status: 'pending', limit: 5 })
+  const { data: runningQueue } = useQueue({ status: 'running', limit: 1 })
+  const runningItem = runningQueue?.items[0]
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -54,6 +60,60 @@ export function Dashboard() {
           Run Now
         </Button>
       </div>
+
+      {/* Queue widget — pending + running counts. Hidden when queue is fully empty. */}
+      {(queueStats?.pending ?? 0) + (queueStats?.running ?? 0) > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Layers className="h-4 w-4 text-violet" />
+              Queue
+            </CardTitle>
+            <Link to="/analysis" className="text-xs text-muted-foreground hover:text-violet">
+              View all
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-6">
+              <div>
+                <div className="text-2xl font-bold font-mono">{queueStats?.pending ?? 0}</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Pending</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold font-mono">{queueStats?.running ?? 0}</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Running</div>
+              </div>
+              {runningItem && (
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider">Now</div>
+                  <div className="text-sm font-mono truncate">
+                    {runningItem.inputs.tickers.slice(0, 4).join(', ')}
+                    {runningItem.inputs.tickers.length > 4 && ` +${runningItem.inputs.tickers.length - 4}`}
+                  </div>
+                </div>
+              )}
+            </div>
+            {(queue?.items.length ?? 0) > 0 && (
+              <div className="mt-4 pt-4 border-t border-white/30">
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+                  Pending queue (FIFO)
+                </div>
+                <div className="space-y-1">
+                  {queue!.items.map((q, idx) => (
+                    <div key={q.id} className="flex items-center justify-between text-xs">
+                      <span className="font-mono">
+                        #{idx + 1}: {q.inputs.tickers.slice(0, 3).join(', ')}
+                        {q.inputs.tickers.length > 3 && '…'}
+                      </span>
+                      <Badge variant="secondary">{q.source}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         {/* Schedule Status Card */}

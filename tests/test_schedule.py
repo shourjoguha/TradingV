@@ -223,20 +223,18 @@ async def test_tick_skipped_empty_watchlist(client, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_tick_invokes_submit_run(client, monkeypatch):
-    submit_calls = []
+async def test_tick_enqueues_via_queue(client, monkeypatch):
+    """Tier-1 queue: scheduler enqueues, worker drains. Tick succeeds as
+    soon as the row is enqueued (doesn't wait for actual execution)."""
+    enqueue_calls = []
 
-    class FakeJob:
-        id = "fake-job"
-        task_count = 1
+    async def fake_enqueue(*, inputs, source="manual"):
+        enqueue_calls.append({"inputs": inputs, "source": source})
+        return {"id": "fake-q-1", "status": "pending"}
 
-    async def fake_submit(**kwargs):
-        submit_calls.append(kwargs)
-        return FakeJob()
+    from app.queue import service as queue_svc
 
-    from app.analysis import service as analysis_svc
-
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(queue_svc, "enqueue", fake_enqueue)
 
     # Add a watchlist symbol.
     await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "AAPL"})
@@ -246,39 +244,24 @@ async def test_tick_invokes_submit_run(client, monkeypatch):
     await runner._tick()
     cfg = await schedule_svc.get_config()
     assert cfg.last_run_status == "succeeded", cfg.last_run_error
-    assert len(submit_calls) == 1
-    assert submit_calls[0]["tickers"] == ["AAPL"]
-    assert submit_calls[0]["intervals"] == ["1d"]
-    assert submit_calls[0]["model_ids"] == ["kronos_base"]
-    assert submit_calls[0]["horizon_bars"] == 5
+    assert len(enqueue_calls) == 1
+    assert enqueue_calls[0]["source"] == "schedule"
+    assert enqueue_calls[0]["inputs"]["tickers"] == ["AAPL"]
+    assert enqueue_calls[0]["inputs"]["intervals"] == ["1d"]
+    assert enqueue_calls[0]["inputs"]["model_ids"] == ["kronos_base"]
+    assert enqueue_calls[0]["inputs"]["horizon_bars"] == 5
 
 
-@pytest.mark.asyncio
-async def test_tick_handles_at_capacity(client, monkeypatch):
-    from app.analysis import concurrency, service as analysis_svc
-
-    async def fake_submit(**kwargs):
-        raise concurrency.AtCapacityError("busy")
-
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
-
-    await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "AAPL"})
-    await schedule_svc.update_config(enabled=True, skip_weekends=False)
-
-    await runner._tick()
-    cfg = await schedule_svc.get_config()
-    assert cfg.last_run_status == "deferred_429"
-    assert cfg.pending_run is True
+# (test_tick_handles_at_capacity removed: under Tier-1 queue, scheduler
+# enqueues unconditionally and the AtCapacityError path is unreachable
+# from the schedule runner. Concurrency-gate semantics still tested in
+# tests/test_concurrency.py via direct service.submit_run calls.)
 
 
 @pytest.mark.asyncio
 async def test_tick_collects_actuals_after_run(client, monkeypatch):
-    class FakeJob:
-        id = "fake-job"
-        task_count = 1
-
-    async def fake_submit(**kwargs):
-        return FakeJob()
+    async def fake_enqueue(*, inputs, source="manual"):
+        return {"id": "fake-q-actuals", "status": "pending"}
 
     refresh_calls = []
 
@@ -286,10 +269,10 @@ async def test_tick_collects_actuals_after_run(client, monkeypatch):
         refresh_calls.append((sym, interval))
         return 100
 
-    from app.analysis import service as analysis_svc
+    from app.queue import service as queue_svc
     from app.market_data import service as md_service
 
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(queue_svc, "enqueue", fake_enqueue)
     monkeypatch.setattr(md_service, "refresh", fake_refresh)
 
     await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "AAPL"})
@@ -319,10 +302,13 @@ async def test_tick_skips_actuals_when_collect_disabled(client, monkeypatch):
         refresh_calls.append((args, kwargs))
         return 0
 
-    from app.analysis import service as analysis_svc
+    from app.queue import service as queue_svc
     from app.market_data import service as md_service
 
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    async def fake_enqueue(*, inputs, source="manual"):
+        return {"id": "fake-q", "status": "pending"}
+
+    monkeypatch.setattr(queue_svc, "enqueue", fake_enqueue)
     monkeypatch.setattr(md_service, "refresh", fake_refresh)
 
     await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "AAPL"})
@@ -336,20 +322,16 @@ async def test_tick_skips_actuals_when_collect_disabled(client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_actuals_failure_does_not_fail_scheduled_run(client, monkeypatch):
-    class FakeJob:
-        id = "fake-job"
-        task_count = 1
-
-    async def fake_submit(**kwargs):
-        return FakeJob()
+    async def fake_enqueue(*, inputs, source="manual"):
+        return {"id": "fake-q", "status": "pending"}
 
     async def boom_refresh(*args, **kwargs):
         raise RuntimeError("provider down")
 
-    from app.analysis import service as analysis_svc
+    from app.queue import service as queue_svc
     from app.market_data import service as md_service
 
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(queue_svc, "enqueue", fake_enqueue)
     monkeypatch.setattr(md_service, "refresh", boom_refresh)
 
     await client.post("/v1/watchlist", headers=HEADERS, json={"symbol": "AAPL"})
@@ -368,19 +350,15 @@ async def test_tick_runs_crypto_on_weekend_when_skip_weekends_true(
     client, monkeypatch
 ):
     """Per-asset-class filter: stocks skipped on Sat, crypto runs."""
-    submit_calls = []
+    enqueue_calls = []
 
-    class FakeJob:
-        id = "fake"
-        task_count = 1
+    async def fake_enqueue(*, inputs, source="manual"):
+        enqueue_calls.append(inputs)
+        return {"id": "fake-q", "status": "pending"}
 
-    async def fake_submit(**kwargs):
-        submit_calls.append(kwargs)
-        return FakeJob()
+    from app.queue import service as queue_svc
 
-    from app.analysis import service as analysis_svc
-
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(queue_svc, "enqueue", fake_enqueue)
 
     # Force the local clock to a Saturday.
     saturday = datetime.datetime(2026, 4, 25, 14, 0, tzinfo=datetime.timezone.utc)
@@ -400,23 +378,24 @@ async def test_tick_runs_crypto_on_weekend_when_skip_weekends_true(
     await runner._tick()
     cfg = await schedule_svc.get_config()
     assert cfg.last_run_status == "succeeded"
-    assert len(submit_calls) == 1
+    assert len(enqueue_calls) == 1
     # Only crypto fired — AAPL skipped because Saturday.
-    assert submit_calls[0]["tickers"] == ["BTC-USD"]
+    assert enqueue_calls[0]["tickers"] == ["BTC-USD"]
 
 
 @pytest.mark.asyncio
 async def test_tick_skipped_weekend_when_only_stocks_present(
     client, monkeypatch
 ):
-    submit_calls = []
+    enqueue_calls = []
 
-    async def fake_submit(**kwargs):
-        submit_calls.append(kwargs)
+    async def fake_enqueue(*, inputs, source="manual"):
+        enqueue_calls.append(inputs)
+        return {"id": "fake-q", "status": "pending"}
 
-    from app.analysis import service as analysis_svc
+    from app.queue import service as queue_svc
 
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(queue_svc, "enqueue", fake_enqueue)
 
     saturday = datetime.datetime(2026, 4, 25, 14, 0, tzinfo=datetime.timezone.utc)
     monkeypatch.setattr(runner, "_now_utc", lambda: saturday)
@@ -430,7 +409,7 @@ async def test_tick_skipped_weekend_when_only_stocks_present(
     await runner._tick()
     cfg = await schedule_svc.get_config()
     assert cfg.last_run_status == "skipped_weekend"
-    assert submit_calls == []
+    assert enqueue_calls == []
 
 
 @pytest.mark.asyncio

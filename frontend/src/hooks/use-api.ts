@@ -19,6 +19,8 @@ import type {
   DriftAlert,
   Opportunity,
   Trade,
+  QueueItem,
+  QueueStats,
 } from '../lib/types'
 import { toast } from 'sonner'
 
@@ -445,20 +447,86 @@ export function useUpdateTrade() {
   })
 }
 
+// Tier-1 queue hooks ────────────────────────────────────────────────
+
+export function useQueue(params?: { status?: string; limit?: number }) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['queue', backendId, params],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (params?.status) s.set('status', params.status)
+      if (params?.limit) s.set('limit', String(params.limit))
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<{ items: QueueItem[]; count: number }>(
+        `/v1/analysis/queue${qs}`,
+        { backendId },
+      )
+    },
+    refetchInterval: 5000,
+  })
+}
+
+export function useQueueStats() {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['queue-stats', backendId],
+    queryFn: () => apiFetch<QueueStats>('/v1/analysis/queue/stats', { backendId }),
+    refetchInterval: 5000,
+  })
+}
+
+export function useQueueItem(queueId: string | null) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['queue-item', backendId, queueId],
+    queryFn: () => apiFetch<QueueItem>(`/v1/analysis/queue/${queueId}`, { backendId }),
+    enabled: !!queueId,
+    // Stop polling when terminal. TanStack returns the data so we can
+    // peek at it and decide whether to keep polling.
+    refetchInterval: (query) => {
+      const data = query.state.data as QueueItem | undefined
+      if (!data) return 2000
+      if (['done', 'failed', 'cancelled'].includes(data.status)) return false
+      return 2000
+    },
+  })
+}
+
+export function useCancelQueueItem() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (queueId: string) =>
+      apiFetch(`/v1/analysis/queue/${queueId}`, { method: 'DELETE', backendId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['queue', backendId] })
+      qc.invalidateQueries({ queryKey: ['queue-stats', backendId] })
+      toast.success('Cancelled')
+    },
+    onError: (err: any) => toast.error(`Cancel failed: ${err.detail || err.message}`),
+  })
+}
+
 export function useRunAnalysis() {
   const { backendId } = useBackend()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: {
-      tickers: string[]; intervals: string[]; model_ids: string[]; horizon_bars: number
-    }) => apiFetch<AnalysisJob>('/v1/analysis/run', { method: 'POST', body: data, backendId }),
-    onSuccess: () => {
+      tickers: string[]; intervals: string[]; model_ids?: string[]; horizon_bars?: number
+    }) =>
+      apiFetch<{ queue_id: string; status: string; job_id: string | null }>(
+        '/v1/analysis/run',
+        { method: 'POST', body: data, backendId },
+      ),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['queue', backendId] })
+      qc.invalidateQueries({ queryKey: ['queue-stats', backendId] })
       qc.invalidateQueries({ queryKey: ['analysis-jobs', backendId] })
-      toast.success('Analysis started')
+      toast.success(`Queued: ${data.queue_id.slice(0, 8)}…`, {
+        description: 'Worker will pick this up shortly. Watch the queue widget on the Dashboard.',
+      })
     },
-    onError: (err: any) => {
-      if (err.detail === 'at_capacity') toast.error('Backend busy — retry in a few seconds')
-      else toast.error(`Run failed: ${err.detail || err.message}`)
-    },
+    onError: (err: any) => toast.error(`Run failed: ${err.detail || err.message}`),
   })
 }
