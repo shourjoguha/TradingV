@@ -41,10 +41,11 @@ backups/          local snapshots + ROLLBACK.md (gitignored except docs)
 | Module | Purpose | Doc |
 |---|---|---|
 | `kronos/` | Registry + validator + real adapter (vendored Kronos model) | [kronos.md](kronos.md) |
-| `analysis/` | Job orchestrator (inline v1, arq-bound when frontend ships). Receives peer-imported jobs idempotently. | [analysis.md](analysis.md) |
+| `analysis/` | Job orchestrator. Receives peer-imported jobs idempotently. | [analysis.md](analysis.md) |
+| `queue/` | Tier-1 in-process FIFO submit queue + single-flight worker. `POST /v1/analysis/run` returns 202 + queue_id. | [queue.md](queue.md) |
 | `sync/` | Outbox-based replication: `kind='ticker'` + `kind='result'` rows drain to peer. | [sync.md](sync.md) |
 | `watchlist/` | The actively-tracked symbol set. Daily scheduler iterates this. | [watchlist.md](watchlist.md) |
-| `schedule/` | Singleton config row + asyncio runner loop in lifespan. Skip-weekends, completion-trigger, retry-on-429. | [schedule.md](schedule.md) |
+| `schedule/` | Singleton config row + asyncio runner loop in lifespan. Skip-weekends, completion-trigger. Enqueues via the submit queue (no inline run, no 429 retry). | [schedule.md](schedule.md) |
 | `predictions/` | `prediction_points` flat table (auto-exploded from `result_json`) + `by-target`/`by-horizon` comparison endpoints. | [predictions.md](predictions.md) |
 | `accuracy/` | `prediction_accuracy` (per-row error) + `drift_alerts` + evaluator + drift detector. Powers `/accuracy` dashboard. | [accuracy.md](accuracy.md) |
 | `opportunities/` | Signal generator: hardcoded rules over predictions + accuracy hit-rate → `opportunities` table. | [opportunities.md](opportunities.md) |

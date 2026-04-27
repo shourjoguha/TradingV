@@ -141,57 +141,11 @@ Verified: Railway-originated job pushes both `kind='ticker'` and `kind='result'`
 
 ---
 
-## Job submission queue (replace 5-min poll + eliminate 429s) — READY TO PICK UP
+## Job submission queue (replace 5-min poll + eliminate 429s)  ✅ RESOLVED
 
-**What:** Today, manual `POST /v1/analysis/run` runs inline. Concurrent submissions get **429 `at_capacity`**, scheduled runs deferred by 429 wait up to **5 min** for the next poll (or fire early via `runner.request_wake()` from the in-flight job's completion hook). A real submission queue would accept every request, return `202 Accepted` immediately, and let a single worker drain in FIFO order.
+**Resolution (2026-04-27):** Tier-1 in-process queue shipped — see [.claude/queue.md](queue.md). `submit_queue` table (migration 0017) + single-flight `worker.worker_loop` lifespan task. `POST /v1/analysis/run` returns 202 with `queue_id`; schedule runner enqueues like any other caller. Crash recovery via `reset_stuck_on_boot()`. Cancellation supported on `pending` items only. Frontend: toast on submit, queue widget on Dashboard, queue card with cancel buttons on AnalysisJobs page. 245 tests pass.
 
-**Status:** Deferred at v1. Hybrid (5-min poll + completion-trigger) ships today and is functionally adequate at current scale (~1 scheduled run/day + occasional manual). The full queue is well-scoped and **ready-to-pick-up** when usage friction surfaces.
-
-**Trigger to revisit:**
-- Operator hits 429 more than ~twice a week.
-- Frontend UX needs "queued" status (rather than rejected → retry).
-- Scheduled run keeps deferring beyond 30 min on a regular basis.
-- Multiple watchlist groups want to run in sequence.
-
-### Tier 1 — in-process async queue with DB persistence (~3–4 hr)
-
-Minimal solution. No new infra.
-
-- **New table** `submit_queue(id PK, inputs_json, enqueued_at, started_at, finished_at, job_id_fk, status)`. Migration adds it.
-- **`POST /v1/analysis/run`** changes: insert `submit_queue` row, return `202 Accepted` with `{queue_id, status: 'queued'}`. No more 429.
-- **New worker coroutine** in `app/main.py` lifespan: pulls oldest `pending` queue row, calls existing `_process_job`, writes `job_id` back, marks `done`, repeats. Single-flight (one queue row in flight at a time on laptop).
-- **New routes**:
-  - `GET /v1/analysis/queue` — list (visibility)
-  - `GET /v1/analysis/queue/{queue_id}` — status (frontend polls this until `job_id` populates, then switches to polling `/v1/analysis/jobs/{job_id}`)
-- **Schedule runner**: drops 5-min poll. Just enqueues like any caller. Removes pending_run/retry_minutes plumbing (but leave columns for back-compat).
-- **Completion-trigger**: removed (worker auto-pulls next item).
-- **Crash safety**: queue is in DB, surviving process restarts. On boot, worker resumes from oldest `pending`.
-
-Trade-offs:
-- ✅ No new infra; pure code change.
-- ✅ Removes 429 entirely; removes 5-min latency.
-- ✅ DB-durable.
-- ❌ Still single-flight per backend (Kronos is CPU-heavy; multi-worker on free Railway = OOM).
-- ❌ Queue is per-backend; laptop and Railway have separate queues — no global ordering.
-
-### Tier 2 — Redis + arq workers (~1–2 days)
-
-Production grade. Already flagged in `architecture.md` as the long-term plan.
-
-- Railway Redis plugin (~$5/mo).
-- `arq` library; worker process separate from web.
-- Multiple worker concurrency (when GPU/parallel inference becomes possible).
-- Built-in retries, dead-letter, priorities.
-- Requires 2nd Railway service for the worker (or co-locate via process manager).
-
-Use this only when Tier 1 falls over or when ML parallelism matters.
-
-### Implementation pointers (Tier 1)
-
-- Existing concurrency gate (`app/analysis/concurrency.py`) becomes redundant when the queue worker is single-flight — but leave it as belt-and-braces; cheap insurance against bugs in the worker.
-- `_process_job` already has all the right hooks (post-job sync enqueue + `runner.request_wake()`); reuse without changes.
-- Schedule runner: replace its `submit_run` call with `enqueue_submission(...)`. Remove the AtCapacityError branch.
-- Frontend impact: change "Run now" handler from `expect 200/429` to `expect 202, then poll`. Small refactor.
+**Tier 2 (Redis + arq workers)** deferred — see [.claude/tech_debt.md](tech_debt.md). Trigger to revisit: sustained queue depth > 5 OR GPU inference lands.
 
 ---
 

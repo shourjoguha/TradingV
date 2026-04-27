@@ -4,6 +4,8 @@ Orchestrates Kronos inference over (ticker × interval × model) fan-out. Every 
 
 ## Flow
 
+`POST /v1/analysis/run` is now an enqueue: returns **202 Accepted** with `{queue_id, status: 'queued'}`. The single-flight queue worker (lifespan task) calls `submit_run()` to do the actual fan-out below. Frontend polls `/v1/analysis/queue/{queue_id}` until terminal, then jumps to `/v1/analysis/jobs/{job_id}`. See [queue.md](queue.md).
+
 `POST /v1/analysis/run` body:
 ```json
 {
@@ -30,16 +32,16 @@ Every `analysis_jobs` row carries `origin`:
 
 Only `origin='self'` jobs trigger downstream sync (loop avoidance — see [sync.md](sync.md)).
 
-## Concurrency gate (429)
+## Concurrency gate (belt-and-braces, post-queue)
 
-`submit_run` is wrapped in `concurrency.acquire_slot()` (lock + counter, `MAX_CONCURRENT_JOBS`-bounded). If full, raises `AtCapacityError` → route returns **429 `{"detail": "at_capacity"}`**. Gate sits BEFORE DB writes so rejected requests leave no orphan rows. By design — daily scheduler also respects this and defers via `pending_run` flag.
+`submit_run` is wrapped in `concurrency.acquire_slot()` (lock + counter, `MAX_CONCURRENT_JOBS`-bounded). Under the Tier-1 queue this gate is functionally redundant — the worker is single-flight, so two `submit_run` calls never overlap from the route surface. Kept as defence-in-depth: if a future code path ever calls `submit_run` outside the worker (e.g. a script), the gate prevents corruption. Tracked in [tech_debt.md](tech_debt.md) for cleanup once the queue runs cleanly long enough.
 
 ## Post-job hooks
 
 After the parent transitions to `done`, `_process_job`:
 1. Collects `(symbol, asset_class)` pairs and serialises a full job snapshot.
 2. Calls `sync_service.enqueue(...)` (ticker rows) + `enqueue_result(snapshot)` (one result row) + fires `drain_outbox()` as a background task. No-op if `PEER_API_URL`/`PEER_API_KEY` unset.
-3. Fires `schedule.runner.request_wake()` — in case a daily run was deferred by `AtCapacityError`, wakes the scheduler immediately. See [schedule.md](schedule.md).
+3. Fires `schedule.runner.request_wake()` — historically nudged a 429-deferred daily run. Under the queue this is no longer needed (worker auto-pulls the next item) but the call is harmless and kept for the rare external-caller case. See [schedule.md](schedule.md) and [tech_debt.md](tech_debt.md).
 
 Both hooks skipped for `origin='peer'` jobs (loop avoidance).
 
