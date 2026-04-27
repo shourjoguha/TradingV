@@ -337,10 +337,10 @@ export function PredictionsByHorizon() {
                           ((predVal - actualVal) / actualVal) * 100
                         const colorClass =
                           deltaPct > 1
-                            ? 'text-red-500 bg-red-500/10'
+                            ? 'text-danger bg-danger-bg'
                             : deltaPct < -1
-                              ? 'text-green-500 bg-green-500/10'
-                              : 'text-muted-foreground bg-muted/30'
+                              ? 'text-success bg-success-bg'
+                              : 'text-muted-foreground bg-background shadow-inset-sm'
                         return (
                           <TableCell key={h} className="text-center p-0">
                             <div
@@ -365,7 +365,7 @@ export function PredictionsByHorizon() {
           </CardContent>
         </Card>
       ) : (
-        <div className="text-center py-12 text-sm text-muted-foreground border border-dashed rounded-lg flex flex-col items-center">
+        <div className="text-center py-12 text-sm text-muted-foreground rounded-2xl shadow-inset-sm flex flex-col items-center">
           <Grid3x3 className="h-8 w-8 mb-2 text-muted-foreground/50" />
           <p>Configure parameters above to view the horizon matrix.</p>
           <p className="text-xs mt-1">Pick at least one ticker, one horizon (k-days-ago), and a target date.</p>

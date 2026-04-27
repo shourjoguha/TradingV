@@ -17,10 +17,10 @@ function fmtNum(v: number | null | undefined, digits = 2): string {
 }
 
 function hitRateColor(hr: number | null): string {
-  if (hr == null) return 'bg-muted'
-  if (hr >= 0.6) return 'bg-green-500/20 text-green-300 border-green-500/40'
-  if (hr >= 0.5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40'
-  return 'bg-red-500/20 text-red-300 border-red-500/40'
+  if (hr == null) return 'bg-background shadow-inset-sm text-muted-foreground'
+  if (hr >= 0.6) return 'bg-success-bg text-success-fg shadow-extruded-sm hover:shadow-extruded'
+  if (hr >= 0.5) return 'bg-warning-bg text-warning-fg shadow-extruded-sm hover:shadow-extruded'
+  return 'bg-danger-bg text-danger-fg shadow-extruded-sm hover:shadow-extruded'
 }
 
 export function Accuracy() {
@@ -52,7 +52,7 @@ export function Accuracy() {
     <div className="space-y-6">
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Accuracy</h2>
+          <h2 className="font-display text-2xl font-bold tracking-tight">Accuracy</h2>
           <p className="text-sm text-muted-foreground">
             Per-(ticker, horizon) Kronos performance over the rolling window. Click a cell to drill down.
           </p>
@@ -62,7 +62,7 @@ export function Accuracy() {
           <select
             value={windowSize}
             onChange={(e) => setWindowSize(parseInt(e.target.value, 10))}
-            className="bg-background border rounded px-2 py-1 text-sm"
+            className="bg-background rounded-xl px-3 py-2 text-sm shadow-inset-sm focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-violet"
           >
             <option value={10}>last 10</option>
             <option value={30}>last 30</option>
@@ -79,9 +79,9 @@ export function Accuracy() {
       {(drifts.data?.alerts.length ?? 0) > 0 && (
         <div className="space-y-2">
           {drifts.data!.alerts.map((d) => (
-            <div key={d.id} className="flex items-center gap-3 p-3 border border-yellow-500/40 bg-yellow-500/10 rounded">
-              <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
-              <div className="flex-1 text-sm">
+            <div key={d.id} className="flex items-center gap-3 p-4 rounded-2xl bg-warning-bg shadow-extruded-sm">
+              <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+              <div className="flex-1 text-sm text-warning-fg">
                 <span className="font-medium">{d.ticker}@{d.horizon_offset}d ({d.model_id})</span>
                 {' '}drift detected — recent MAPE {fmtPct(d.recent_mape)} vs all-time {fmtPct(d.all_time_mape)}
                 {' '}({d.ratio.toFixed(2)}× degradation).
@@ -97,7 +97,7 @@ export function Accuracy() {
       {grid.isLoading ? (
         <Skeleton className="h-40 w-full" />
       ) : tickers.length === 0 ? (
-        <div className="border rounded p-8 text-center text-muted-foreground">
+        <div className="rounded-3xl shadow-inset-sm p-8 text-center text-muted-foreground bg-background">
           <p className="text-sm">No accuracy data yet.</p>
           <p className="text-xs mt-2">
             Predictions need to elapse and have actuals fetched before they're evaluated.
@@ -105,19 +105,19 @@ export function Accuracy() {
           </p>
         </div>
       ) : (
-        <div className="border rounded overflow-x-auto">
+        <div className="rounded-2xl bg-background shadow-inset-sm p-3 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40">
+            <thead>
               <tr>
-                <th className="text-left px-3 py-2 font-medium">Ticker</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ticker</th>
                 {horizons.map((h) => (
-                  <th key={h} className="text-center px-3 py-2 font-medium">+{h}d</th>
+                  <th key={h} className="text-center px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">+{h}d</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {tickers.map((t) => (
-                <tr key={t} className="border-t">
+                <tr key={t}>
                   <td className="px-3 py-2 font-mono text-xs">{t}</td>
                   {horizons.map((h) => {
                     const row = Object.values(byKey).find(
@@ -130,10 +130,10 @@ export function Accuracy() {
                       <td key={h} className="px-1 py-1 text-center">
                         <button
                           onClick={() => setDrill({ ticker: t, horizon: h, model: row.model_id })}
-                          className={`w-full px-2 py-2 rounded border text-xs hover:scale-105 transition-transform ${hitRateColor(row.hit_rate)}`}
+                          className={`w-full px-2 py-3 rounded-xl text-xs transition-all duration-200 hover:-translate-y-[1px] ${hitRateColor(row.hit_rate)}`}
                           title={`MAPE ${fmtPct(row.mape)} · RMSE ${fmtNum(row.rmse)} · n=${row.sample_count}`}
                         >
-                          <div className="font-semibold">{fmtPct(row.hit_rate, 0)}</div>
+                          <div className="font-bold">{fmtPct(row.hit_rate, 0)}</div>
                           <div className="opacity-60 text-[10px]">n={row.sample_count}</div>
                         </button>
                       </td>
@@ -155,42 +155,42 @@ function DrillModal({ ticker, horizon, model, onClose }: { ticker: string; horiz
   const pair = useAccuracyPair({ ticker, horizon_offset: horizon, model_id: model, limit: 100 })
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-start justify-center p-6 overflow-y-auto" onClick={onClose}>
-      <div className="bg-card border rounded-lg w-full max-w-4xl my-8 p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-background rounded-3xl shadow-extruded w-full max-w-4xl my-8 p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">{ticker} @ +{horizon}d · {model}</h3>
-          <Button variant="ghost" size="sm" onClick={onClose}><X className="h-4 w-4" /></Button>
+          <h3 className="font-display text-lg font-bold">{ticker} @ +{horizon}d · {model}</h3>
+          <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
         {pair.isLoading ? (
           <Skeleton className="h-60 w-full" />
         ) : (pair.data?.rows.length ?? 0) === 0 ? (
           <p className="text-sm text-muted-foreground">No evaluations yet.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="rounded-2xl bg-background shadow-inset-sm p-3 overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="bg-muted/40">
+              <thead>
                 <tr>
-                  <th className="text-left px-2 py-1">Made on</th>
-                  <th className="text-left px-2 py-1">Target</th>
-                  <th className="text-right px-2 py-1">Predicted</th>
-                  <th className="text-right px-2 py-1">Actual</th>
-                  <th className="text-right px-2 py-1">Baseline</th>
-                  <th className="text-right px-2 py-1">Err %</th>
-                  <th className="text-center px-2 py-1">Dir</th>
+                  <th className="text-left px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Made on</th>
+                  <th className="text-left px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Target</th>
+                  <th className="text-right px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Predicted</th>
+                  <th className="text-right px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Actual</th>
+                  <th className="text-right px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Baseline</th>
+                  <th className="text-right px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Err %</th>
+                  <th className="text-center px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Dir</th>
                 </tr>
               </thead>
               <tbody>
                 {pair.data!.rows.map((r) => (
-                  <tr key={r.prediction_id} className="border-t">
-                    <td className="px-2 py-1 font-mono">{r.made_on}</td>
-                    <td className="px-2 py-1 font-mono">{r.target_date}</td>
-                    <td className="px-2 py-1 text-right font-mono">{fmtNum(r.predicted_close)}</td>
-                    <td className="px-2 py-1 text-right font-mono">{fmtNum(r.actual_close)}</td>
-                    <td className="px-2 py-1 text-right font-mono">{fmtNum(r.baseline_close)}</td>
-                    <td className={`px-2 py-1 text-right font-mono ${r.error_pct > 0 ? 'text-green-400' : r.error_pct < 0 ? 'text-red-400' : ''}`}>
+                  <tr key={r.prediction_id} className="hover:bg-white/30">
+                    <td className="px-2 py-1.5 font-mono">{r.made_on}</td>
+                    <td className="px-2 py-1.5 font-mono">{r.target_date}</td>
+                    <td className="px-2 py-1.5 text-right font-mono">{fmtNum(r.predicted_close)}</td>
+                    <td className="px-2 py-1.5 text-right font-mono">{fmtNum(r.actual_close)}</td>
+                    <td className="px-2 py-1.5 text-right font-mono">{fmtNum(r.baseline_close)}</td>
+                    <td className={`px-2 py-1.5 text-right font-mono ${r.error_pct > 0 ? 'text-success' : r.error_pct < 0 ? 'text-danger' : ''}`}>
                       {fmtPct(r.error_pct)}
                     </td>
-                    <td className="px-2 py-1 text-center">
-                      {r.direction_correct === true ? '✓' : r.direction_correct === false ? '✗' : '—'}
+                    <td className="px-2 py-1.5 text-center">
+                      {r.direction_correct === true ? <span className="text-success">✓</span> : r.direction_correct === false ? <span className="text-danger">✗</span> : '—'}
                     </td>
                   </tr>
                 ))}

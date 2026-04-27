@@ -37,17 +37,20 @@ import { TrendingUp } from 'lucide-react'
 const FIELD_PRESETS = ['open', 'high', 'low', 'close', 'volume'] as const
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 // Color palette for prediction lines by days_ago
+// Prediction-line palette: anchored on neumorphic accent (violet)
+// + secondary accent (teal), with neighborly variations. Keeps the
+// chart inside the design system while still distinguishing N runs.
 const PREDICTION_COLORS = [
-  '#3b82f6',
-  '#8b5cf6',
-  '#ec4899',
-  '#f97316',
-  '#14b8a6',
-  '#eab308',
-  '#ef4444',
-  '#6366f1',
-  '#22c55e',
-  '#06b6d4',
+  '#6C63FF', // violet (primary accent)
+  '#38B2AC', // teal (secondary accent)
+  '#8B84FF', // violet light
+  '#5FAFA8', // success (also candle up)
+  '#A78BFA', // muted violet
+  '#4FD1C5', // muted teal
+  '#7986CB', // indigo neighbor
+  '#9F7AEA', // mid violet
+  '#48BB78', // muted green
+  '#06b6d4', // cyan neighbor
 ]
 export function PredictionsByTarget() {
   const [ticker, setTicker] = useState('AAPL')
@@ -86,45 +89,34 @@ export function PredictionsByTarget() {
       layout: {
         background: {
           type: ColorType.Solid,
-          color: 'transparent',
+          color: '#E0E5EC',
         },
-        textColor: 'rgba(255, 255, 255, 0.5)',
-        fontFamily: '"Geist Mono", monospace',
+        textColor: '#3D4852',
+        fontFamily: '"DM Sans", system-ui, sans-serif',
         fontSize: 11,
       },
       grid: {
-        vertLines: {
-          color: 'rgba(255, 255, 255, 0.04)',
-        },
-        horzLines: {
-          color: 'rgba(255, 255, 255, 0.04)',
-        },
+        vertLines: { color: 'rgba(163, 177, 198, 0.2)' },
+        horzLines: { color: 'rgba(163, 177, 198, 0.2)' },
       },
       width: container.clientWidth,
       height: 320,
       crosshair: {
-        vertLine: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
-        horzLine: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
+        vertLine: { color: 'rgba(108, 99, 255, 0.4)' },
+        horzLine: { color: 'rgba(108, 99, 255, 0.4)' },
       },
-      rightPriceScale: {
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-      },
-      timeScale: {
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-      },
+      rightPriceScale: { borderColor: 'rgba(163, 177, 198, 0.4)' },
+      timeScale: { borderColor: 'rgba(163, 177, 198, 0.4)' },
     })
-    // Candlestick series for OHLCV data
+    // Candlestick series — neumorphic-toned semantic colors so up/down
+    // direction stays readable without breaking the cool-grey palette.
     const candleSeries = chart.addCandlestickSeries({
-      upColor: '#22c55e',
-      downColor: '#ef4444',
-      borderUpColor: '#22c55e',
-      borderDownColor: '#ef4444',
-      wickUpColor: '#22c55e',
-      wickDownColor: '#ef4444',
+      upColor: '#5FAFA8',
+      downColor: '#E07A6F',
+      borderUpColor: '#5FAFA8',
+      borderDownColor: '#E07A6F',
+      wickUpColor: '#5FAFA8',
+      wickDownColor: '#E07A6F',
     })
     const candleData = ohlcvData
       .map((bar) => ({
@@ -468,7 +460,7 @@ export function PredictionsByTarget() {
                 </TableBody>
               </Table>
               {predictions.predictions.length === 0 && (
-                <div className="text-center py-12 text-sm text-muted-foreground border border-dashed rounded-lg flex flex-col items-center mt-4">
+                <div className="text-center py-12 text-sm text-muted-foreground rounded-2xl shadow-inset-sm flex flex-col items-center mt-4">
                   <TrendingUp className="h-8 w-8 mb-2 text-muted-foreground/50" />
                   <p>No predictions found for these parameters.</p>
                   <p className="text-xs mt-1">Try a different ticker or earlier target date. Run an analysis if data is sparse.</p>
@@ -478,7 +470,7 @@ export function PredictionsByTarget() {
           </Card>
         </div>
       ) : (
-        <div className="text-center py-12 text-sm text-muted-foreground border border-dashed rounded-lg flex flex-col items-center">
+        <div className="text-center py-12 text-sm text-muted-foreground rounded-2xl shadow-inset-sm flex flex-col items-center">
           <TrendingUp className="h-8 w-8 mb-2 text-muted-foreground/50" />
           <p>Select a ticker + target date above to view predictions.</p>
           <p className="text-xs mt-1">Tickers come from your watchlist.</p>

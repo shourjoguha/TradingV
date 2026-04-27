@@ -42,12 +42,12 @@ export function Trades() {
     <div className="space-y-6">
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Trades</h2>
+          <h2 className="font-display text-2xl font-bold tracking-tight">Trades</h2>
           <p className="text-sm text-muted-foreground">
             Manual trade journal. Closed trades show realized P&L; open trades show entry only.
           </p>
         </div>
-        <Button size="sm" onClick={() => setShowForm(true)}>
+        <Button variant="primary" size="sm" onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Log trade
         </Button>
@@ -64,38 +64,38 @@ export function Trades() {
       {trades.isLoading ? (
         <Skeleton className="h-40 w-full" />
       ) : (trades.data?.items.length ?? 0) === 0 ? (
-        <div className="border rounded p-8 text-center text-muted-foreground border-dashed">
+        <div className="rounded-3xl shadow-inset-sm p-8 text-center text-muted-foreground bg-background">
           <Receipt className="h-8 w-8 mb-2 mx-auto text-muted-foreground/50" />
           <p className="text-sm">No trades logged yet.</p>
           <p className="text-xs mt-2">Log one from an Opportunity or via the "Log trade" button.</p>
         </div>
       ) : (
-        <div className="border rounded overflow-x-auto">
+        <div className="rounded-2xl bg-background shadow-inset-sm p-3 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40">
+            <thead>
               <tr>
-                <th className="text-left px-3 py-2">Ticker</th>
-                <th className="text-left px-3 py-2">Side</th>
-                <th className="text-right px-3 py-2">Qty</th>
-                <th className="text-right px-3 py-2">Entry</th>
-                <th className="text-right px-3 py-2">Exit</th>
-                <th className="text-right px-3 py-2">P&L</th>
-                <th className="text-left px-3 py-2">Entry at</th>
-                <th className="text-right px-3 py-2">Action</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ticker</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Side</th>
+                <th className="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Qty</th>
+                <th className="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Entry</th>
+                <th className="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Exit</th>
+                <th className="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">P&L</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Entry at</th>
+                <th className="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Action</th>
               </tr>
             </thead>
             <tbody>
               {trades.data!.items.map((t) => (
-                <tr key={t.id} className="border-t">
+                <tr key={t.id} className="hover:bg-white/30">
                   <td className="px-3 py-2 font-mono">{t.ticker}</td>
                   <td className="px-3 py-2">
-                    <Badge variant={t.side === 'buy' ? 'default' : 'destructive'}>{t.side.toUpperCase()}</Badge>
+                    <Badge variant={t.side === 'buy' ? 'success' : 'destructive'}>{t.side.toUpperCase()}</Badge>
                   </td>
                   <td className="px-3 py-2 text-right font-mono">{fmtNum(t.qty, 0)}</td>
                   <td className="px-3 py-2 text-right font-mono">{fmtNum(t.entry_price)}</td>
                   <td className="px-3 py-2 text-right font-mono">{fmtNum(t.exit_price)}</td>
                   <td className={`px-3 py-2 text-right font-mono ${
-                    (t.realized_pnl ?? 0) > 0 ? 'text-green-400' : (t.realized_pnl ?? 0) < 0 ? 'text-red-400' : ''
+                    (t.realized_pnl ?? 0) > 0 ? 'text-success' : (t.realized_pnl ?? 0) < 0 ? 'text-danger' : ''
                   }`}>
                     {fmtCur(t.realized_pnl)}
                   </td>
@@ -141,9 +141,9 @@ export function Trades() {
 
 function SummaryCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className={`border rounded p-4 ${accent ? 'border-primary/40 bg-primary/5' : ''}`}>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-xl font-semibold font-mono mt-1">{value}</div>
+    <div className={`rounded-3xl shadow-extruded p-5 bg-background ${accent ? 'text-violet' : ''}`}>
+      <div className="text-xs text-muted-foreground uppercase tracking-wider">{label}</div>
+      <div className="text-2xl font-display font-bold font-mono mt-1">{value}</div>
     </div>
   )
 }
@@ -165,7 +165,7 @@ function TradeForm({ oppContext, onClose, onSubmit }: {
   const set = (k: string, v: any) => setForm({ ...form, [k]: v })
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6" onClick={onClose}>
-      <div className="bg-card border rounded-lg w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-background rounded-3xl shadow-extruded w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Log trade</h3>
           <Button variant="ghost" size="sm" onClick={onClose}><X className="h-4 w-4" /></Button>
@@ -177,7 +177,7 @@ function TradeForm({ oppContext, onClose, onSubmit }: {
           </div>
           <div>
             <Label>Side</Label>
-            <select value={form.side} onChange={(e) => set('side', e.target.value)} className="w-full bg-background border rounded px-2 py-2 text-sm">
+            <select value={form.side} onChange={(e) => set('side', e.target.value)} className="w-full bg-background rounded-2xl shadow-inset-sm px-3 py-2 text-sm focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-violet">
               <option value="buy">BUY</option>
               <option value="sell">SELL</option>
             </select>
@@ -200,12 +200,12 @@ function TradeForm({ oppContext, onClose, onSubmit }: {
           <textarea
             value={form.notes_md}
             onChange={(e) => set('notes_md', e.target.value)}
-            className="w-full bg-background border rounded p-2 text-sm h-20"
+            className="w-full bg-background rounded-2xl shadow-inset-sm p-3 text-sm h-20 placeholder:text-[#A0AEC0] focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-violet"
           />
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" onClick={() => onSubmit({
+          <Button variant="primary" size="sm" onClick={() => onSubmit({
             ticker: form.ticker,
             side: form.side,
             qty: parseFloat(form.qty),
@@ -223,16 +223,16 @@ function TradeForm({ oppContext, onClose, onSubmit }: {
 function ExitForm({ tradeId: _id, onClose, onSubmit }: { tradeId: string; onClose: () => void; onSubmit: (data: any) => Promise<void> }) {
   const [exitPrice, setExitPrice] = useState('')
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6" onClick={onClose}>
-      <div className="bg-card border rounded-lg w-full max-w-sm p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
-        <h3 className="font-semibold">Close trade</h3>
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6" onClick={onClose}>
+      <div className="bg-background rounded-3xl shadow-extruded w-full max-w-sm p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <h3 className="font-display font-bold text-lg">Close trade</h3>
         <div>
           <Label>Exit price</Label>
           <Input autoFocus type="number" step="0.01" value={exitPrice} onChange={(e) => setExitPrice(e.target.value)} />
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" onClick={() => onSubmit({ exit_price: parseFloat(exitPrice), exit_at: new Date().toISOString() })}>Close trade</Button>
+          <Button variant="primary" size="sm" onClick={() => onSubmit({ exit_price: parseFloat(exitPrice), exit_at: new Date().toISOString() })}>Close trade</Button>
         </div>
       </div>
     </div>

@@ -210,7 +210,7 @@ export function TickerLabels() {
               <Skeleton className="h-10 w-full" />
             </div>
           ) : !labels || Object.keys(labels).length === 0 ? (
-            <div className="text-center py-12 text-sm text-muted-foreground border border-dashed rounded-lg">
+            <div className="text-center py-12 text-sm text-muted-foreground rounded-2xl shadow-inset-sm">
               No labels found for {safeSymbol}.
             </div>
           ) : (
