@@ -17,7 +17,8 @@ FastAPI backend that ingests TradingView alerts and (in-flight) runs Kronos cand
 | `/v1/tickers*` or symbol registry | [.claude/tickers.md](.claude/tickers.md) |
 | `/v1/ohlcv`, `/v1/intervals`, OHLCV cache, providers | [.claude/market_data.md](.claude/market_data.md) |
 | `/v1/models`, `/v1/timeframes`, `/v1/eligibility`, Kronos validator/adapter | [.claude/kronos.md](.claude/kronos.md) |
-| `/v1/analysis/*`, job orchestration, fan-out, 429 gate | [.claude/analysis.md](.claude/analysis.md) |
+| `/v1/analysis/*`, job orchestration, fan-out, validator | [.claude/analysis.md](.claude/analysis.md) |
+| `/v1/analysis/queue/*`, submit queue + worker | [.claude/queue.md](.claude/queue.md) |
 | `/v1/sync/*`, outbox, peer ticker replication, dual-backend | [.claude/sync.md](.claude/sync.md) |
 | `/v1/watchlist*`, daily-run target set | [.claude/watchlist.md](.claude/watchlist.md) |
 | `/v1/schedule*`, daily forecast runner | [.claude/schedule.md](.claude/schedule.md) |
@@ -33,7 +34,8 @@ FastAPI backend that ingests TradingView alerts and (in-flight) runs Kronos cand
 | Laptop (primary) backend setup | [.claude/laptop-setup.md](.claude/laptop-setup.md) |
 | `frontend/` (Vite + React SPA, deployed at https://tradingv-83b.pages.dev) | [.claude/frontend/README.md](.claude/frontend/README.md) |
 | Multi-phase decision-tool roadmap (current scope) | [.claude/roadmap.md](.claude/roadmap.md) |
-| Deferred decisions / known gaps / operator unlocks | [.claude/backlog.md](.claude/backlog.md) |
+| Deferred features / known gaps / operator unlocks | [.claude/backlog.md](.claude/backlog.md) |
+| Tech debt knowingly left in shipped code | [.claude/tech_debt.md](.claude/tech_debt.md) |
 
 Read only what you need. Each file is < 1 screen and describes one concern: the module's purpose, its schema, the decisions that aren't obvious from code, and the known gaps. When in doubt, `architecture.md` has the map.
 
