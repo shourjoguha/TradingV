@@ -5,21 +5,26 @@ Modular monorepo. Single FastAPI process. Modules are independent packages under
 ## Layout
 ```
 app/
-  core/         config, db, auth — shared by every module
-  alerts/       TradingView webhook ingestion (legacy endpoints, unversioned)
-  tickers/      symbol registry, asset class inference, dropdown source
-  market_data/  OHLCV providers, cache table, /v1/ohlcv
-  kronos/       model registry, validator, real adapter (vendored model)
-  analysis/     job orchestrator, fan-out, 429 gate, peer-import receiver
-  sync/         outbox-based ticker + result replication
-  watchlist/    actively-tracked subset of tickers (daily-run target)
-  schedule/     daily forecast runner config + asyncio loop
-  predictions/  flat materialised forecast view + comparison endpoints
-  labels/       free-form EAV ticker metadata
-  api/          router aggregation (mounts v1 + legacy surfaces)
-  main.py       FastAPI app factory + lifespan
-migrations/     Alembic (source of truth for schema)
-tests/          pytest, SQLite in-memory per test
+  core/           config, db, auth — shared by every module
+  alerts/         TradingView webhook ingestion (legacy endpoints, unversioned)
+  tickers/        symbol registry, asset class inference, dropdown source
+  market_data/    OHLCV providers, cache table, /v1/ohlcv; derived.py = IV/earnings (Phase 6)
+  kronos/         model registry, validator, real adapter (vendored model)
+  analysis/       job orchestrator, fan-out, 429 gate, peer-import receiver
+  sync/           outbox-based ticker + result replication
+  watchlist/      actively-tracked subset of tickers (daily-run target)
+  schedule/       daily forecast runner config + asyncio loop
+  predictions/    flat materialised forecast view + comparison endpoints
+  accuracy/       prediction_accuracy + drift_alerts; evaluator + drift detector loops
+  opportunities/  signal generator (rule engine over predictions + hit-rate)
+  trades/         manual trade journal + per-rule P&L attribution
+  notifications/  Telegram notifier + daily digest loop
+  labels/         free-form EAV ticker metadata
+  api/            router aggregation (mounts v1 + legacy surfaces)
+  main.py         FastAPI app factory + lifespan (8 background loops)
+migrations/       Alembic (source of truth for schema)
+tests/            pytest, SQLite in-memory per test
+backups/          local snapshots + ROLLBACK.md (gitignored except docs)
 ```
 
 ## API surfaces
@@ -41,6 +46,10 @@ tests/          pytest, SQLite in-memory per test
 | `watchlist/` | The actively-tracked symbol set. Daily scheduler iterates this. | [watchlist.md](watchlist.md) |
 | `schedule/` | Singleton config row + asyncio runner loop in lifespan. Skip-weekends, completion-trigger, retry-on-429. | [schedule.md](schedule.md) |
 | `predictions/` | `prediction_points` flat table (auto-exploded from `result_json`) + `by-target`/`by-horizon` comparison endpoints. | [predictions.md](predictions.md) |
+| `accuracy/` | `prediction_accuracy` (per-row error) + `drift_alerts` + evaluator + drift detector. Powers `/accuracy` dashboard. | [accuracy.md](accuracy.md) |
+| `opportunities/` | Signal generator: hardcoded rules over predictions + accuracy hit-rate → `opportunities` table. | [opportunities.md](opportunities.md) |
+| `trades/` | Manual trade journal + per-opportunity-rule P&L attribution. | [trades.md](trades.md) |
+| `notifications/` | Telegram notifier (no-op when unconfigured) + daily digest loop. | [notifications.md](notifications.md) |
 | `labels/` | Free-form EAV metadata on tickers (sector, capsize, etc.). Powers `?labels=k:v` filter on watchlist. | [labels.md](labels.md) |
 
 ## Daily forecast pipeline (cross-module flow)
@@ -88,7 +97,7 @@ Comparison endpoints (`/v1/predictions/by-target`, `/v1/predictions/by-horizon`)
 
 Two identical FastAPI instances (laptop primary on LAN, Railway replica always-on). Frontend picks which runs a given job; after completion, the runner pushes its touched tickers AND a full job snapshot to the peer via `POST /v1/tickers` + `POST /v1/analysis/import` so both DBs retain history. OHLCV is refetched per job, not synced. Details: [sync.md](sync.md).
 
-v1 ships with **Laptop → Railway** sync only (one-way). Reverse direction deferred — see [backlog.md](backlog.md).
+**Bidirectional sync is live**. Phase B1+B2 added a Tailscale tunnel from Railway back to the laptop, so jobs originating on either side replicate to the other (`kind='ticker'` + `kind='result'` outbox rows). Either backend can run a job; both DBs end up with the result. See [backlog.md](backlog.md) "Reverse-direction sync" RESOLVED.
 
 ## Storage split: Postgres vs Redis
 Postgres = durable state. Redis (deferred) = ephemeral queues.
@@ -98,6 +107,9 @@ Postgres = durable state. Redis (deferred) = ephemeral queues.
 | Alerts, tickers, analysis jobs/tasks | Postgres | Durable, relational, Alembic-managed |
 | OHLCV bars (cache) | Postgres `ohlcv_bars` | Range queries by ts, append-dedupe on `(symbol, interval, ts)` |
 | `prediction_points` (forecast materialised view) | Postgres | Indexed lookups by (target_date, ticker), (made_on, ticker) |
+| `prediction_accuracy`, `drift_alerts` | Postgres | Per-row error history; aggregated at query time |
+| `opportunities`, `trades` | Postgres | Signal lifecycle + manual journal |
+| `ticker_market_data` (IV percentile, earnings) | Postgres | Phase 6 options runway, daily refresh |
 | `sync_outbox`, `schedule_config`, `watchlist`, `ticker_labels` | Postgres | All durable config + queue state |
 | Analysis job queue (deferred) | Redis (via `arq`) | Worker coordination when inline-dispatch becomes a bottleneck |
 | Rate-limit counters / last-price hot cache (future) | Redis | Ephemeral, TTL-native |
@@ -106,14 +118,18 @@ Do not use Redis for data that must survive a restart or that needs range querie
 
 ## In-process schedulers + background tasks
 
-The `app.main` lifespan starts:
+The `app.main` lifespan starts these tasks (all cancellation-safe; tolerant of missing config — they no-op rather than crash when prerequisites are absent):
+
 1. **`Base.metadata.create_all`** — first-boot fallback (Alembic is the source of truth in prod).
 2. **Kronos adapter activation** if `KRONOS_ENABLED=true`.
 3. **`sync_service.drain_outbox()`** — best-effort drain of pending rows from a prior process.
 4. **`sync_service.purge_loop()`** — hourly cleanup of completed outbox rows older than `OUTBOX_RETENTION_DAYS` (default 7).
-5. **`schedule.runner.start()`** — main daily-forecast loop. Idle until `schedule_config.enabled=true`. On Railway with `RAILWAY_FALLBACK_ENABLED=true`, `start()` ALSO spawns `_fallback_loop()` which fires submit_run on Railway when laptop hasn't pushed by deadline.
-
-All five are tolerant of missing config (drain no-ops without `PEER_API_URL`; scheduler stays asleep if disabled; fallback only spawns when explicitly opted in).
+5. **`schedule.runner.start()`** — daily forecast runner (idle until `schedule_config.enabled=true`). On Railway with `RAILWAY_FALLBACK_ENABLED=true` ALSO spawns `_fallback_loop()`.
+6. **`accuracy.service.evaluator_loop()`** — hourly: evaluate elapsed predictions whose actuals exist in `ohlcv_bars`. See [accuracy.md](accuracy.md).
+7. **`accuracy.drift.detector_loop()`** — every 6h: scan for (ticker, horizon, model) pairs whose recent MAPE has degraded past threshold. Posts to Telegram on flag. See [accuracy.md](accuracy.md).
+8. **`notifications.digest.digest_loop()`** — sleeps until `DIGEST_HOUR_UTC`, posts daily summary (top opportunities + open drift alerts + schedule snapshot) to Telegram.
+9. **`market_data.derived.market_data_loop()`** — daily: refresh per-watchlist IV + earnings dates into `ticker_market_data`. Phase 6 runway data; no UI yet.
+10. **Opportunities tick** (inline `_opps_loop` in `app/main.py`) — hourly: `generate_for_predictions()` then `expire_stale()`.
 
 ## Network topology + Tailscale
 
@@ -125,4 +141,4 @@ Railway uses a Dockerfile (not Railpack) so it can install Tailscale. On boot, `
 
 ## Frontend
 
-`frontend/` is a Vite + React + TypeScript SPA that talks to this backend over `X-API-Key`. Single-user, no SSR. Local dev uses a Vite proxy to sidestep CORS (`/v1` + `/health` → `localhost:8000`); the Railway toggle in the browser needs `CORSMiddleware` on the backend (deferred — see [backlog.md](backlog.md)). For stack, layout, and per-area docs see [frontend/README.md](frontend/README.md).
+`frontend/` is a Vite + React + TypeScript SPA that talks to this backend over `X-API-Key`. Single-user, no SSR. Production deployment at **`https://tradingv-83b.pages.dev`** (Cloudflare Pages, auto-deploys on push to `main`). Local dev uses a Vite proxy to sidestep CORS (`/v1` + `/health` → `localhost:8000`); the Railway toggle in the browser uses `CORSMiddleware` (already shipped) keyed off `FRONTEND_ORIGIN`. For stack, layout, and per-area docs see [frontend/README.md](frontend/README.md). For the cloud port specifics see `/Users/shourjosmac/.claude/plans/cloudflare-pages-port.md`.

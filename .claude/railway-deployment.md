@@ -36,7 +36,9 @@ MAX_CONCURRENT_JOBS     — 1
 HF_HUB_CACHE            — /data/hf-cache (points at the volume, see below)
 PEER_API_KEY            — laptop's API_KEY (so Railway can authenticate TO laptop). v1: leave blank (see backlog).
 PEER_API_URL            — laptop tunnel URL. v1: intentionally blank — Railway → laptop sync deferred (see .claude/backlog.md).
-FRONTEND_ORIGIN         — comma-separated browser origins for CORS (e.g. https://your-app.lovable.dev). Empty falls back to localhost:{3000,5173}.
+FRONTEND_ORIGIN         — comma-separated browser origins for CORS (production: https://tradingv-83b.pages.dev,https://tradingv-83b.pages.dev. — both forms; trailing-dot variant is browser FQDN normalization). Empty falls back to localhost:{3000,5173}.
+TELEGRAM_BOT_TOKEN      — optional. Bot token from @BotFather. Drift alerts + daily digest no-op until both this AND TELEGRAM_CHAT_ID are set.
+TELEGRAM_CHAT_ID        — optional. Integer chat ID from getUpdates after DM-ing the bot.
 ```
 
 `PEER_*` vars describe the OTHER backend, not yourself.

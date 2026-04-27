@@ -1,14 +1,17 @@
 # Pages
 
-8 routes. All under `src/pages/`. Routing in `src/App.tsx`.
+11 routes. All under `src/pages/`. Routing in `src/App.tsx`.
 
 | Route | File | Endpoints | Notes |
 |---|---|---|---|
 | `/` | `Dashboard.tsx` | `GET /v1/schedule`, `/v1/watchlist?limit=1`, `/v1/analysis/jobs?limit=5`, `POST /v1/schedule/fire-now` | Cards: schedule status, watchlist size, recent jobs. Big "Run now" button. |
 | `/watchlist` | `Watchlist.tsx` | `GET/POST/DELETE /v1/watchlist*`, `PUT /v1/tickers/{sym}/labels` | Table + add input + bulk modal + per-row label chips + label filter chip bar. |
 | `/schedule` | `Schedule.tsx` | `GET/PUT /v1/schedule`, `POST /v1/schedule/fire-now`, `GET /v1/models` | Form for all `Schedule` fields. tz_name autocomplete. Shows `next_run_at` after save. |
-| `/predictions/by-target` | `PredictionsByTarget.tsx` | `GET /v1/predictions/by-target`, `/v1/ohlcv`, `/v1/watchlist`, `/v1/models` | Ticker autocomplete (from watchlist) + target_date + interval + model + fields chips + DOW chips. **Local: lightweight-charts candle + N prediction lines**. MP: inline SVG. |
+| `/predictions/by-target` | `PredictionsByTarget.tsx` | `GET /v1/predictions/by-target`, `/v1/ohlcv`, `/v1/watchlist`, `/v1/models` | Ticker autocomplete (from watchlist) + target_date + interval + model + fields chips + DOW chips. lightweight-charts candle + N prediction lines. |
 | `/predictions/by-horizon` | `PredictionsByHorizon.tsx` | `GET /v1/predictions/by-horizon`, `/v1/watchlist`, `/v1/models` | target_date + horizons multiselect (1..10) + tickers multiselect. Renders grid: rows=tickers, cols=days_ago. Cell colour = (pred-actual)/actual. Grey on null. |
+| `/accuracy` | `Accuracy.tsx` | `GET /v1/accuracy/grid`, `/pair`, `/drift`; `POST /v1/accuracy/evaluate`, `/drift/{id}/ack` | Heatmap table (rows=tickers, cols=horizons, cells=hit-rate% color-graded). Cell click → drilldown modal with per-prediction error rows. Drift-alert banner with one-click ack. Window-size selector (10/30/100/500). |
+| `/opportunities` | `Opportunities.tsx` | `GET /v1/opportunities`, `PATCH /v1/opportunities/{id}` | Tabs (open/acted/dismissed/expired). Action buttons: Acted (with optional jump to `/trades?from=<oppId>`) + Dismiss (modal with reason). Color-coded predicted move + confidence. |
+| `/trades` | `Trades.tsx` | `GET/POST /v1/trades`, `PATCH /v1/trades/{id}` | P&L summary cards (Total / Closed / Open). Table with close-trade modal + log-trade modal. Prefilled from opportunity when navigated with `?from=<oppId>`. |
 | `/tickers/:symbol/labels` | `TickerLabels.tsx` | `GET/PUT /v1/tickers/{sym}/labels`, `DELETE /v1/tickers/{sym}/labels/{key}` | Curated key dropdown + free-form. JSON-aware value editor (bool toggle / list builder / string fallback). |
 | `/analysis` | `AnalysisJobs.tsx` | `GET /v1/analysis/jobs`, `POST /v1/analysis/run` | Paginated table. Run-form modal. 429 → toast "Backend busy". |
 | `/analysis/:jobId` | `AnalysisJobDetail.tsx` | `GET /v1/analysis/jobs/{id}` | Task list + per-task `result_json.forecast` viewer. |

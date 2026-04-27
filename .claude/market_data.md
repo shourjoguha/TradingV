@@ -46,3 +46,19 @@ Any `/v1/ohlcv` call with unknown symbol auto-registers it in `tickers` with `so
 - No smart staleness detection yet — caller decides via `refresh=true`. Phase 3/4 may add "if latest ts < now - interval, auto-refresh" logic. Defer until it's a felt need.
 - `amount` backfill (close × volume) is NOT done here — belongs in the Kronos adapter's data-prep step so the cache stays raw.
 - Redis is the wrong tool for this cache — see `architecture.md` storage split.
+
+## Derived metrics (Phase 6 — `derived.py`)
+
+`market_data/derived.py` adds a separate table `ticker_market_data` for per-ticker derived metrics that aren't OHLCV bars:
+
+```
+ticker_market_data(
+  symbol PK FK→tickers (CASCADE),
+  iv_30d, iv_percentile_1y, next_earnings_date,
+  source, fetched_at, error
+)
+```
+
+`refresh_one(symbol)` pulls via yfinance (ATM 30d IV from option chain, next earnings date from calendar). `iv_percentile_1y` deferred until a real options-history provider replaces yfinance. `refresh_watchlist()` iterates the active watchlist; failures stored as `error` text + skipped (loop never crashes).
+
+Lifespan task `market_data_loop()` ticks daily. No UI yet — data accumulates for the future options chapter (rule extensions, options strategy generator, vol surfaces). Migration: `0016_ticker_market_data.py`.
