@@ -4,6 +4,37 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ---
 
+## Decision-tool roadmap — see [.claude/roadmap.md](roadmap.md)
+
+**Status (2026-04-27):** Active multi-phase plan to evolve the app from forecasting tool → decision-support tool. Phases 0-2 active or queued; Phases 3-6 deferred behind exit gates.
+
+| Phase | Title | Status | Gate |
+|---|---|---|---|
+| 0 | Snapshot (rollback safety) | **active** | none |
+| 1 | Trust through feedback (accuracy + drift) | next | Phase 0 done |
+| 2 | UX hardening (empty states + lightweight-charts v5) | parallel-able | none |
+| 3 | Opportunities + signal generator | DEFERRED | Phase 1 exit (≥1 tradeable pair, hit-rate ≥ 60%) |
+| 4 | Daily Telegram digest | DEFERRED | Phase 3 generates ≥1 opp/day |
+| 5 | Trade journal | DEFERRED | 2 weeks of opportunities observed |
+| 6 | Options runway data layer (IV %ile + earnings) | DEFERRED | Slot inside Phase 3 sprint |
+
+Roadmap doc has locked decisions (metrics, drift threshold, channel, sequencing). Update there, not here.
+
+---
+
+## Charting library — lightweight-charts v5 chosen over Plotly (deliberation)
+
+**Decision (2026-04-27):** Stay on lightweight-charts; upgrade v4 → v5 in Phase 2.2. Plotly evaluated and rejected for primary OHLC charting.
+
+Reasons:
+- lightweight-charts is TradingView's own lib, purpose-built for OHLC + overlays. v5 added crosshair sync, drawing tools, multi-pane.
+- ~50 KB vs Plotly ~3 MB gzipped. Bundle bloat unacceptable for a single-user tool that doesn't need scientific viz.
+- Plotly reserved for the future options chapter (vol surfaces, Greeks plots, 3D) — different problem.
+
+Trigger to revisit: building options strategy generator or wanting non-OHLC scientific overlays.
+
+---
+
 ## Cloud frontend hosting (Lovable rejected → Cloudflare Pages)  ✅ RESOLVED
 
 **Resolution (2026-04-27):** Lovable evaluated, rejected — no existing-repo import, no build-time `VITE_*` env var UI, no per-PR preview URLs, no header/redirect config, AI editor mutates source. Switched to **Cloudflare Pages** at `https://tradingv-83b.pages.dev`. Plan: `/Users/shourjosmac/.claude/plans/cloudflare-pages-port.md`. New artifacts: `frontend/public/_redirects` (SPA fallback) + CF dashboard config + Railway `FRONTEND_ORIGIN`. No `frontend/src/` changes.
