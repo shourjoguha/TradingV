@@ -36,6 +36,21 @@ class Settings(BaseSettings):
     RAILWAY_FALLBACK_ENABLED: bool = False
     # Days to keep completed sync_outbox rows. Hourly purge in lifespan.
     OUTBOX_RETENTION_DAYS: int = 7
+    # Telegram bot for drift alerts + daily digest. Both must be set or the
+    # notifier no-ops gracefully (logged once per send attempt). Get token
+    # from @BotFather, chat_id from a quick getUpdates call after DM-ing
+    # your bot.
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+    # Drift detection: recent_window_mape must exceed all_time_mape * this
+    # ratio to flag (with min sample sizes). Tunable via env once we have
+    # real data to calibrate against.
+    DRIFT_RATIO_THRESHOLD: float = 1.5
+    DRIFT_MIN_RECENT_SAMPLES: int = 10
+    DRIFT_MIN_ALL_TIME_SAMPLES: int = 30
+    DRIFT_RECENT_WINDOW_DAYS: int = 30
+    # Daily digest UTC hour (0-23). 12 = 12:00 UTC ≈ 8 AM ET.
+    DIGEST_HOUR_UTC: int = 12
 
 
 SETTINGS = Settings()

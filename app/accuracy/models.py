@@ -25,6 +25,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    Integer,
     SmallInteger,
     String,
     func,
@@ -79,4 +80,38 @@ class PredictionAccuracy(Base):
         Index("ix_pa_ticker_horizon", "ticker", "horizon_offset"),
         Index("ix_pa_evaluated_at", "evaluated_at"),
         Index("ix_pa_ticker_evaluated", "ticker", "evaluated_at"),
+    )
+
+
+class DriftAlert(Base):
+    """Open drift flag for a (ticker, horizon, model) pair.
+
+    Created by ``accuracy.drift.detect_drift`` when recent MAPE > all-time
+    MAPE × ``DRIFT_RATIO_THRESHOLD`` (with min sample sizes). Idempotent:
+    while an open alert exists for a pair, ``detect_drift`` won't create a
+    duplicate. Acknowledging via ``POST /v1/accuracy/drift/{id}/ack`` sets
+    ``acknowledged_at`` and clears the way for a future re-flag.
+    """
+
+    __tablename__ = "drift_alerts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    ticker: Mapped[str] = mapped_column(String(50), nullable=False)
+    horizon_offset: Mapped[int] = mapped_column(SmallInteger(), nullable=False)
+    model_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    recent_mape: Mapped[float] = mapped_column(Float(), nullable=False)
+    all_time_mape: Mapped[float] = mapped_column(Float(), nullable=False)
+    ratio: Mapped[float] = mapped_column(Float(), nullable=False)
+    recent_sample_count: Mapped[int] = mapped_column(Integer(), nullable=False)
+    all_time_sample_count: Mapped[int] = mapped_column(Integer(), nullable=False)
+    flagged_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    acknowledged_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    __table_args__ = (
+        Index("ix_drift_open", "acknowledged_at", "ticker"),
+        Index("ix_drift_ticker_horizon", "ticker", "horizon_offset"),
     )

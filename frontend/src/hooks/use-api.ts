@@ -14,6 +14,11 @@ import type {
   OhlcvBar,
   AnalysisJob,
   AnalysisJobsResponse,
+  AccuracyGridResponse,
+  AccuracyPairResponse,
+  DriftAlert,
+  Opportunity,
+  Trade,
 } from '../lib/types'
 import { toast } from 'sonner'
 
@@ -283,6 +288,160 @@ export function useAnalysisJob(jobId: string) {
       model_ids: j.model_ids ?? [],
     })),
     enabled: !!jobId,
+  })
+}
+
+export function useAccuracyGrid(params?: {
+  tickers?: string
+  horizons?: string
+  model_id?: string
+  last_n?: number
+}) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['accuracy-grid', backendId, params],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (params?.tickers) s.set('tickers', params.tickers)
+      if (params?.horizons) s.set('horizons', params.horizons)
+      if (params?.model_id) s.set('model_id', params.model_id)
+      if (params?.last_n) s.set('last_n', String(params.last_n))
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<AccuracyGridResponse>(`/v1/accuracy/grid${qs}`, { backendId })
+    },
+    refetchInterval: 60000,
+  })
+}
+
+export function useAccuracyPair(params: {
+  ticker?: string
+  horizon_offset?: number
+  model_id?: string
+  limit?: number
+}) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['accuracy-pair', backendId, params],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      s.set('ticker', params.ticker!)
+      s.set('horizon_offset', String(params.horizon_offset!))
+      if (params.model_id) s.set('model_id', params.model_id)
+      if (params.limit) s.set('limit', String(params.limit))
+      return apiFetch<AccuracyPairResponse>(`/v1/accuracy/pair?${s}`, { backendId })
+    },
+    enabled: !!params.ticker && !!params.horizon_offset,
+  })
+}
+
+export function useEvaluateAccuracy() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => apiFetch('/v1/accuracy/evaluate', { method: 'POST', backendId }),
+    onSuccess: (data: any) => {
+      qc.invalidateQueries({ queryKey: ['accuracy-grid', backendId] })
+      qc.invalidateQueries({ queryKey: ['drift-alerts', backendId] })
+      toast.success(`Evaluated ${data.evaluated ?? 0} (skipped ${data.skipped_no_actual ?? 0} no-actual)`)
+    },
+    onError: (err: any) => toast.error(`Evaluate failed: ${err.detail || err.message}`),
+  })
+}
+
+export function useDriftAlerts() {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['drift-alerts', backendId],
+    queryFn: () => apiFetch<{ alerts: DriftAlert[] }>('/v1/accuracy/drift', { backendId }),
+    refetchInterval: 5 * 60000,
+  })
+}
+
+export function useAckDriftAlert() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/v1/accuracy/drift/${id}/ack`, { method: 'POST', backendId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['drift-alerts', backendId] })
+      toast.success('Drift alert acknowledged')
+    },
+  })
+}
+
+export function useOpportunities(params?: { status?: string; limit?: number }) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['opportunities', backendId, params],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (params?.status) s.set('status', params.status)
+      if (params?.limit) s.set('limit', String(params.limit))
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<{ items: Opportunity[]; count: number }>(`/v1/opportunities${qs}`, { backendId })
+    },
+    refetchInterval: 60000,
+  })
+}
+
+export function useUpdateOpportunity() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { id: string; status: 'acted' | 'dismissed'; reason?: string }) =>
+      apiFetch(`/v1/opportunities/${data.id}`, {
+        method: 'PATCH',
+        body: { status: data.status, dismissed_reason: data.reason },
+        backendId,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['opportunities', backendId] })
+      toast.success('Opportunity updated')
+    },
+    onError: (err: any) => toast.error(`Update failed: ${err.detail || err.message}`),
+  })
+}
+
+export function useTrades(params?: { limit?: number }) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['trades', backendId, params],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (params?.limit) s.set('limit', String(params.limit))
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<{ items: Trade[]; count: number; pnl_summary: any }>(`/v1/trades${qs}`, { backendId })
+    },
+    refetchInterval: 60000,
+  })
+}
+
+export function useCreateTrade() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Partial<Trade>) =>
+      apiFetch<Trade>('/v1/trades', { method: 'POST', body: data, backendId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trades', backendId] })
+      toast.success('Trade logged')
+    },
+    onError: (err: any) => toast.error(`Log trade failed: ${err.detail || err.message}`),
+  })
+}
+
+export function useUpdateTrade() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Partial<Trade> & { id: string }) =>
+      apiFetch<Trade>(`/v1/trades/${data.id}`, { method: 'PATCH', body: data, backendId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trades', backendId] })
+      toast.success('Trade updated')
+    },
+    onError: (err: any) => toast.error(`Update trade failed: ${err.detail || err.message}`),
   })
 }
 

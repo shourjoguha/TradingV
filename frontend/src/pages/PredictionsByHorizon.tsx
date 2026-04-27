@@ -31,6 +31,7 @@ import {
 } from '../components/ui/table'
 import { Skeleton } from '../components/ui/skeleton'
 import { Badge } from '../components/ui/badge'
+import { Grid3x3 } from 'lucide-react'
 const FIELD_OPTIONS = ['open', 'high', 'low', 'close', 'volume'] as const
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 type FieldKey = 'open' | 'high' | 'low' | 'close' | 'volume'
@@ -364,8 +365,10 @@ export function PredictionsByHorizon() {
           </CardContent>
         </Card>
       ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          Configure parameters above to view the horizon matrix.
+        <div className="text-center py-12 text-sm text-muted-foreground border border-dashed rounded-lg flex flex-col items-center">
+          <Grid3x3 className="h-8 w-8 mb-2 text-muted-foreground/50" />
+          <p>Configure parameters above to view the horizon matrix.</p>
+          <p className="text-xs mt-1">Pick at least one ticker, one horizon (k-days-ago), and a target date.</p>
         </div>
       )}
     </div>

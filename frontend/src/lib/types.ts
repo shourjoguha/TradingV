@@ -1,5 +1,88 @@
 export type BackendId = 'laptop' | 'railway'
 
+export interface AccuracyGridRow {
+  ticker: string
+  horizon_offset: number
+  model_id: string
+  sample_count: number
+  mape: number
+  rmse: number
+  hit_rate: number | null
+  latest_eval: string | null
+}
+
+export interface AccuracyGridResponse {
+  rows: AccuracyGridRow[]
+  window_size: number
+}
+
+export interface AccuracyPairRow {
+  prediction_id: string
+  model_id: string
+  made_on: string
+  target_date: string
+  predicted_close: number
+  actual_close: number
+  baseline_close: number | null
+  error_pct: number
+  abs_error_pct: number
+  squared_error: number
+  direction_correct: boolean | null
+  evaluated_at: string
+}
+
+export interface AccuracyPairResponse {
+  ticker: string
+  horizon_offset: number
+  rows: AccuracyPairRow[]
+}
+
+export interface DriftAlert {
+  id: string
+  ticker: string
+  horizon_offset: number
+  model_id: string
+  recent_mape: number
+  all_time_mape: number
+  ratio: number
+  flagged_at: string
+  acknowledged_at: string | null
+}
+
+export interface Opportunity {
+  id: string
+  ticker: string
+  kind: 'buy' | 'sell'
+  generated_at: string
+  source_prediction_id: string
+  source_model_id: string
+  rule_id: string
+  rule_label: string
+  predicted_move_pct: number
+  confidence: number
+  status: 'open' | 'acted' | 'expired' | 'dismissed'
+  expires_at: string | null
+  acted_at: string | null
+  dismissed_at: string | null
+  dismissed_reason: string | null
+}
+
+export interface Trade {
+  id: string
+  opportunity_id: string | null
+  ticker: string
+  side: 'buy' | 'sell'
+  qty: number
+  entry_price: number
+  entry_at: string
+  exit_price: number | null
+  exit_at: string | null
+  realized_pnl: number | null
+  fees: number
+  notes_md: string | null
+}
+
+
 export interface BackendConfig {
   id: BackendId
   label: string

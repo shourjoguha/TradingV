@@ -8,6 +8,9 @@ import { AnalysisJobs } from './pages/AnalysisJobs'
 import { AnalysisJobDetail } from './pages/AnalysisJobDetail'
 import { PredictionsByTarget } from './pages/PredictionsByTarget'
 import { PredictionsByHorizon } from './pages/PredictionsByHorizon'
+import { Accuracy } from './pages/Accuracy'
+import { Opportunities } from './pages/Opportunities'
+import { Trades } from './pages/Trades'
 
 export function App() {
   return (
@@ -21,6 +24,9 @@ export function App() {
         <Route path="/tickers/:symbol/labels" element={<TickerLabels />} />
         <Route path="/analysis" element={<AnalysisJobs />} />
         <Route path="/analysis/:jobId" element={<AnalysisJobDetail />} />
+        <Route path="/accuracy" element={<Accuracy />} />
+        <Route path="/opportunities" element={<Opportunities />} />
+        <Route path="/trades" element={<Trades />} />
       </Routes>
     </Layout>
   )

@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, List, Clock, TrendingUp, Grid3x3, FlaskConical,
+  Activity, Target, Receipt,
 } from 'lucide-react'
 import { BackendToggle } from './BackendToggle'
 
@@ -10,6 +11,9 @@ const NAV = [
   { path: '/schedule', label: 'Schedule', icon: Clock },
   { path: '/predictions/by-target', label: 'By Target', icon: TrendingUp },
   { path: '/predictions/by-horizon', label: 'By Horizon', icon: Grid3x3 },
+  { path: '/accuracy', label: 'Accuracy', icon: Activity },
+  { path: '/opportunities', label: 'Opportunities', icon: Target },
+  { path: '/trades', label: 'Trades', icon: Receipt },
   { path: '/analysis', label: 'Analysis', icon: FlaskConical },
 ]
 

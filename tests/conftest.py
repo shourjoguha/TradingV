@@ -24,6 +24,9 @@ from app.predictions import models as _predictions_models  # noqa: F401, E402
 from app.schedule import models as _schedule_models  # noqa: F401, E402
 from app.watchlist import models as _watchlist_models  # noqa: F401, E402
 from app.accuracy import models as _accuracy_models  # noqa: F401, E402
+from app.opportunities import models as _opportunities_models  # noqa: F401, E402
+from app.trades import models as _trades_models  # noqa: F401, E402
+from app.market_data import derived as _derived_models  # noqa: F401, E402
 
 
 @pytest_asyncio.fixture
