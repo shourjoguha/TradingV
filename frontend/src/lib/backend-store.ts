@@ -19,11 +19,33 @@ export const BACKENDS: Record<BackendId, BackendConfig> = {
   },
 }
 
+const DEFAULT_BACKEND_ENV = import.meta.env.VITE_DEFAULT_BACKEND
+const DEFAULT_BACKEND: BackendId =
+  DEFAULT_BACKEND_ENV === 'railway' || DEFAULT_BACKEND_ENV === 'laptop'
+    ? DEFAULT_BACKEND_ENV
+    : 'laptop'
+
+export function isBackendAvailable(id: BackendId): boolean {
+  return BACKENDS[id].baseUrl !== ''
+}
+
+export function availableBackends(): BackendId[] {
+  return (Object.keys(BACKENDS) as BackendId[]).filter(isBackendAvailable)
+}
+
+function resolveDefault(): BackendId {
+  if (isBackendAvailable(DEFAULT_BACKEND)) return DEFAULT_BACKEND
+  const first = availableBackends()[0]
+  return first ?? 'laptop'
+}
+
 export function getBackendId(): BackendId {
-  if (typeof window === 'undefined') return 'laptop'
+  if (typeof window === 'undefined') return resolveDefault()
   const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === 'laptop' || stored === 'railway') return stored
-  return 'laptop'
+  if ((stored === 'laptop' || stored === 'railway') && isBackendAvailable(stored)) {
+    return stored
+  }
+  return resolveDefault()
 }
 
 export function setBackendId(id: BackendId): void {
