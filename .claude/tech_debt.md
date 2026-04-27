@@ -2,7 +2,7 @@
 
 Things we know about, deferred on purpose, with the trigger to revisit. Different from [backlog.md](backlog.md): backlog tracks _features_ deferred for product reasons; tech_debt tracks _code cruft_ deferred for engineering reasons. When in doubt: if removing it would feel like a feature, it's backlog. If removing it would feel like a chore, it's here.
 
-Update this whenever a phase ships and intentionally leaves cruft behind. Remove entries when the trigger fires and the cleanup happens.
+> **Review cadence:** monthly. Walk every entry — has its trigger fired? If yes, schedule the cleanup. Once this file crosses ~10 active entries, archive RESOLVED ones to `.claude/tech_debt-archive.md` to keep the active list scannable. Update the entry the moment a phase ships and intentionally leaves cruft behind — a stale tech_debt list is worse than none.
 
 ---
 
