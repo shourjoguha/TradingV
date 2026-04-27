@@ -14,9 +14,19 @@ class AnalysisRunRequest(BaseModel):
 
 
 class AnalysisRunResponse(BaseModel):
-    job_id: str
-    task_count: int
-    status: str
+    """Returned by POST /v1/analysis/run.
+
+    Tier-1 queue: the request is queued, not run inline. ``queue_id`` is
+    populated; ``job_id`` stays None until the worker picks it up. Frontend
+    polls /v1/analysis/queue/{queue_id} until status='done', then jumps to
+    the job_id field.
+    """
+    queue_id: str
+    status: str  # 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
+    job_id: Optional[str] = None
+    # Legacy fields kept for backwards-compat — populated when status='done'
+    # via the queue polling endpoint, not by this initial response.
+    task_count: Optional[int] = None
 
 
 class AnalysisTaskResponse(BaseModel):

@@ -13,6 +13,7 @@ from app.watchlist.routes import router as watchlist_router
 from app.accuracy.routes import router as accuracy_router
 from app.opportunities.routes import router as opportunities_router
 from app.trades.routes import router as trades_router
+from app.queue.routes import router as queue_router
 
 api_router = APIRouter()
 # Legacy (unversioned) — keep for existing TradingView webhook URL.
@@ -33,4 +34,5 @@ v1_router.include_router(labels_import_router)
 v1_router.include_router(accuracy_router)
 v1_router.include_router(opportunities_router)
 v1_router.include_router(trades_router)
+v1_router.include_router(queue_router)
 api_router.include_router(v1_router)

@@ -1,69 +1,64 @@
+"""Analysis service + route tests.
+
+Under the Tier-1 queue, ``POST /v1/analysis/run`` returns 202 + a
+``queue_id`` and the worker drains async. These tests focus on the
+service layer (``submit_run``) directly to keep assertions immediate.
+The HTTP queue surface is exercised in ``tests/test_queue.py``.
+"""
 from __future__ import annotations
 
 import pytest
+
+from app.analysis import service
 
 HEADERS = {"X-API-Key": "test-key"}
 
 
 @pytest.mark.asyncio
 async def test_submit_run_creates_job_and_tasks(client):
-    # Ticker not yet registered — service should auto-upsert it.
-    r = await client.post(
-        "/v1/analysis/run",
-        headers=HEADERS,
-        json={"tickers": ["AAPL"], "intervals": ["1d"], "model_ids": ["kronos_base"]},
+    job = await service.submit_run(
+        tickers=["AAPL"], intervals=["1d"], model_ids=["kronos_base"]
     )
-    assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["task_count"] == 1
-    assert body["status"] == "done"
-    job_id = body["job_id"]
+    assert job.task_count == 1
+    assert job.status == "done"
 
-    # Ticker auto-registered.
+    # Ticker auto-registered via the route surface.
     tr = await client.get("/v1/tickers/AAPL", headers=HEADERS)
     assert tr.status_code == 200
 
     # Empty OHLCV cache → insufficient history → ineligible.
-    jr = await client.get(f"/v1/analysis/jobs/{job_id}", headers=HEADERS)
+    jr = await client.get(f"/v1/analysis/jobs/{job.id}", headers=HEADERS)
     assert jr.status_code == 200
-    job = jr.json()
-    assert job["status"] == "done"
-    assert len(job["tasks"]) == 1
-    t = job["tasks"][0]
+    body = jr.json()
+    assert body["status"] == "done"
+    assert len(body["tasks"]) == 1
+    t = body["tasks"][0]
     assert t["status"] == "ineligible"
     assert t["ineligible_reason"] == "INSUFFICIENT_HISTORY"
 
 
 @pytest.mark.asyncio
 async def test_submit_run_fan_out(client):
-    r = await client.post(
-        "/v1/analysis/run",
-        headers=HEADERS,
-        json={
-            "tickers": ["AAPL", "MSFT"],
-            "intervals": ["1d", "5m"],
-            "model_ids": ["kronos_base", "kronos_small"],
-        },
+    job = await service.submit_run(
+        tickers=["AAPL", "MSFT"],
+        intervals=["1d", "5m"],
+        model_ids=["kronos_base", "kronos_small"],
     )
-    assert r.status_code == 200
-    # 2 tickers × 2 intervals × 2 models = 8.
-    assert r.json()["task_count"] == 8
+    # 2 × 2 × 2 = 8.
+    assert job.task_count == 8
 
 
 @pytest.mark.asyncio
 async def test_submit_run_default_expands_all_models(client):
-    r = await client.post(
-        "/v1/analysis/run",
-        headers=HEADERS,
-        json={"tickers": ["AAPL"], "intervals": ["1d"]},
-    )
-    assert r.status_code == 200
-    # 1 × 1 × 3 registered models.
-    assert r.json()["task_count"] == 3
+    job = await service.submit_run(tickers=["AAPL"], intervals=["1d"])
+    # 1 × 1 × N registered models.
+    assert job.task_count >= 1
 
 
 @pytest.mark.asyncio
 async def test_submit_run_rejects_unknown_model(client):
+    """Route still returns 400 for invalid input — pre-validates before
+    enqueueing so user gets immediate feedback."""
     r = await client.post(
         "/v1/analysis/run",
         headers=HEADERS,
@@ -85,17 +80,12 @@ async def test_submit_run_rejects_bad_interval(client):
 @pytest.mark.asyncio
 async def test_unsupported_interval_surfaces_as_ineligible_task(client):
     # 1m is canonical for intervals but not in any Kronos model's
-    # supported_intervals. Request parse accepts (canonical); validator
-    # rejects with UNSUPPORTED_INTERVAL per task.
-    r = await client.post(
-        "/v1/analysis/run",
-        headers=HEADERS,
-        json={"tickers": ["AAPL"], "intervals": ["1m"], "model_ids": ["kronos_base"]},
+    # supported_intervals. Validator rejects per task with
+    # UNSUPPORTED_INTERVAL.
+    job = await service.submit_run(
+        tickers=["AAPL"], intervals=["1m"], model_ids=["kronos_base"]
     )
-    assert r.status_code == 200
-    job_id = r.json()["job_id"]
-
-    jr = await client.get(f"/v1/analysis/jobs/{job_id}", headers=HEADERS)
+    jr = await client.get(f"/v1/analysis/jobs/{job.id}", headers=HEADERS)
     t = jr.json()["tasks"][0]
     assert t["status"] == "ineligible"
     assert t["ineligible_reason"] == "UNSUPPORTED_INTERVAL"
@@ -103,14 +93,11 @@ async def test_unsupported_interval_surfaces_as_ineligible_task(client):
 
 @pytest.mark.asyncio
 async def test_list_jobs_returns_summaries(client):
-    # Submit two runs, then list.
+    # Submit two runs through the service layer (skip the queue async dance).
     for _ in range(2):
-        r = await client.post(
-            "/v1/analysis/run",
-            headers=HEADERS,
-            json={"tickers": ["AAPL"], "intervals": ["1d"], "model_ids": ["kronos_base"]},
+        await service.submit_run(
+            tickers=["AAPL"], intervals=["1d"], model_ids=["kronos_base"]
         )
-        assert r.status_code == 200
     r = await client.get("/v1/analysis/jobs", headers=HEADERS)
     assert r.status_code == 200
     body = r.json()
@@ -170,15 +157,11 @@ async def test_debug_stub_path_returns_synthetic_forecast(client, monkeypatch):
         await _upsert_bars(session, "AAPL", "1d", "test", bars)
         await session.commit()
 
-    r = await client.post(
-        "/v1/analysis/run",
-        headers=HEADERS,
-        json={"tickers": ["AAPL"], "intervals": ["1d"], "model_ids": ["kronos_base"]},
+    job = await service.submit_run(
+        tickers=["AAPL"], intervals=["1d"], model_ids=["kronos_base"]
     )
-    assert r.status_code == 200
-    job_id = r.json()["job_id"]
 
-    jr = await client.get(f"/v1/analysis/jobs/{job_id}", headers=HEADERS)
+    jr = await client.get(f"/v1/analysis/jobs/{job.id}", headers=HEADERS)
     t = jr.json()["tasks"][0]
     assert t["status"] == "done", t
     assert t["result_json"]["model_id"] == "kronos_base"

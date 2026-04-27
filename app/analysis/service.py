@@ -58,6 +58,29 @@ def _resolve_model_ids(requested: Optional[Iterable[str]]) -> List[str]:
     return req_list
 
 
+def validate_inputs(
+    *,
+    tickers: List[str],
+    intervals: List[str],
+    model_ids: Optional[List[str]] = None,
+) -> dict:
+    """Pure validation — raises AnalysisInputError on bad input. Returns the
+    sanitized + resolved inputs dict, suitable for ``submit_run`` or queue
+    enqueue. Public so the queue route can pre-validate before 202'ing."""
+    tickers = [t for t in (s.strip() for s in tickers) if t]
+    if not tickers:
+        raise AnalysisInputError("at least one ticker required")
+    bad_intervals = [i for i in intervals if not is_canonical(i)]
+    if bad_intervals:
+        raise AnalysisInputError(f"unsupported intervals: {bad_intervals}")
+    resolved_models = _resolve_model_ids(model_ids)
+    return {
+        "tickers": [tickers_svc.normalize(t) for t in tickers],
+        "intervals": list(intervals),
+        "model_ids": resolved_models,
+    }
+
+
 async def submit_run(
     *,
     tickers: List[str],
@@ -65,25 +88,21 @@ async def submit_run(
     model_ids: Optional[List[str]] = None,
     horizon_bars: Optional[int] = None,
 ) -> AnalysisJob:
-    tickers = [t for t in (s.strip() for s in tickers) if t]
-    if not tickers:
-        raise AnalysisInputError("at least one ticker required")
-    bad_intervals = [i for i in intervals if not is_canonical(i)]
-    if bad_intervals:
-        raise AnalysisInputError(f"unsupported intervals: {bad_intervals}")
-
-    resolved_models = _resolve_model_ids(model_ids)
+    validated = validate_inputs(tickers=tickers, intervals=intervals, model_ids=model_ids)
+    tickers = validated["tickers"]
+    resolved_models = validated["model_ids"]
 
     inputs = {
-        "tickers": [tickers_svc.normalize(t) for t in tickers],
+        "tickers": tickers,
         "intervals": list(intervals),
         "model_ids": resolved_models,
         "horizon_bars": horizon_bars,
     }
 
     # Acquire the concurrency gate BEFORE any DB writes so we don't leave
-    # orphan job rows when another job is already running. Raises
-    # AtCapacityError which the route layer surfaces as 429.
+    # orphan job rows when another job is already running. Under the Tier-1
+    # queue this gate is belt-and-braces — the worker is single-flight, so
+    # this should never raise. Tracked in tech_debt.md.
     async with concurrency.acquire_slot():
         async with _db.SessionLocal() as session:
             job = AnalysisJob(inputs_json=inputs, status="pending")

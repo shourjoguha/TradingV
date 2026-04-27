@@ -63,12 +63,13 @@ async def _seed_prediction_today(*, ticker: str):
 async def test_fallback_skips_when_disabled(client, monkeypatch):
     submit_calls = []
 
-    async def fake_submit(**kwargs):
-        submit_calls.append(kwargs)
+    async def fake_enqueue(*, inputs, source="manual"):
+        submit_calls.append(inputs)
+        return {"id": "fake-q", "status": "pending"}
 
-    from app.analysis import service as analysis_svc
+    from app.queue import service as queue_svc
 
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(queue_svc, "enqueue", fake_enqueue)
 
     # Config disabled by default.
     await schedule_svc.ensure_config()
@@ -80,12 +81,13 @@ async def test_fallback_skips_when_disabled(client, monkeypatch):
 async def test_fallback_skips_before_deadline(client, monkeypatch):
     submit_calls = []
 
-    async def fake_submit(**kwargs):
-        submit_calls.append(kwargs)
+    async def fake_enqueue(*, inputs, source="manual"):
+        submit_calls.append(inputs)
+        return {"id": "fake-q", "status": "pending"}
 
-    from app.analysis import service as analysis_svc
+    from app.queue import service as queue_svc
 
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(queue_svc, "enqueue", fake_enqueue)
 
     # Deadline = run_at_local + 6 hours. Pick a time that's ALWAYS in the
     # future regardless of clock by setting run_at_local to a near-future
@@ -110,17 +112,13 @@ async def test_fallback_fires_after_deadline_with_empty_predictions(
 ):
     submit_calls = []
 
-    class FakeJob:
-        id = "fake"
-        task_count = 1
+    async def fake_enqueue(*, inputs, source="manual"):
+        submit_calls.append(inputs)
+        return {"id": "fake-q", "status": "pending"}
 
-    async def fake_submit(**kwargs):
-        submit_calls.append(kwargs)
-        return FakeJob()
+    from app.queue import service as queue_svc
 
-    from app.analysis import service as analysis_svc
-
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(queue_svc, "enqueue", fake_enqueue)
 
     # 28th 06:00 UTC: past 28th 05:30 deadline (= 27th 23:30 + 6h).
     fake_now = datetime.datetime(2026, 4, 28, 6, 0, tzinfo=datetime.timezone.utc)
@@ -139,17 +137,13 @@ async def test_fallback_fires_after_deadline_with_empty_predictions(
 async def test_fallback_dedupes_per_ticker(client, monkeypatch):
     submit_calls = []
 
-    class FakeJob:
-        id = "fake"
-        task_count = 1
+    async def fake_enqueue(*, inputs, source="manual"):
+        submit_calls.append(inputs)
+        return {"id": "fake-q", "status": "pending"}
 
-    async def fake_submit(**kwargs):
-        submit_calls.append(kwargs)
-        return FakeJob()
+    from app.queue import service as queue_svc
 
-    from app.analysis import service as analysis_svc
-
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(queue_svc, "enqueue", fake_enqueue)
 
     fake_now = datetime.datetime.combine(
         _today_utc(), datetime.time(23, 0), tzinfo=datetime.timezone.utc
@@ -175,12 +169,13 @@ async def test_fallback_skips_when_all_tickers_already_predicted(
 ):
     submit_calls = []
 
-    async def fake_submit(**kwargs):
-        submit_calls.append(kwargs)
+    async def fake_enqueue(*, inputs, source="manual"):
+        submit_calls.append(inputs)
+        return {"id": "fake-q", "status": "pending"}
 
-    from app.analysis import service as analysis_svc
+    from app.queue import service as queue_svc
 
-    monkeypatch.setattr(analysis_svc, "submit_run", fake_submit)
+    monkeypatch.setattr(queue_svc, "enqueue", fake_enqueue)
 
     fake_now = datetime.datetime.combine(
         _today_utc(), datetime.time(23, 0), tzinfo=datetime.timezone.utc

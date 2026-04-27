@@ -1,8 +1,12 @@
-"""Concurrency-gate semantics: second concurrent submit must get 429.
+"""Concurrency-gate semantics — kept as belt-and-braces under Tier-1 queue.
 
-We don't need the adapter to actually take time — we patch `_process_job`
-with a blocker so the first submit holds the slot while the second one
-hits the gate.
+Under the Tier-1 submit queue, the route layer no longer hits the slot
+gate (queue accepts every request → 202). The slot gate inside
+``service.submit_run`` stays as belt-and-braces — see
+[.claude/tech_debt.md](../.claude/tech_debt.md) for the cleanup trigger.
+
+These tests now drive ``service.submit_run`` directly to exercise the
+gate, since the route doesn't surface 429 anymore.
 """
 from __future__ import annotations
 
@@ -23,7 +27,13 @@ def _reset_gate():
 
 
 @pytest.mark.asyncio
-async def test_second_concurrent_submit_gets_429(client, monkeypatch):
+async def test_second_concurrent_service_call_gets_at_capacity(client, monkeypatch):
+    """Direct service-level: two concurrent submit_runs, second hits gate.
+
+    The route used to surface this as 429; now the queue serializes so
+    this never fires from a normal request path. Kept as a unit test of
+    the gate itself.
+    """
     release = asyncio.Event()
 
     async def slow_process(job_id, *, horizon_bars):
@@ -31,30 +41,33 @@ async def test_second_concurrent_submit_gets_429(client, monkeypatch):
 
     monkeypatch.setattr(service, "_process_job", slow_process)
 
-    body = {"tickers": ["AAPL"], "intervals": ["1d"], "model_ids": ["kronos_base"]}
-
     async def submit():
-        return await client.post("/v1/analysis/run", headers=HEADERS, json=body)
+        return await service.submit_run(
+            tickers=["AAPL"],
+            intervals=["1d"],
+            model_ids=["kronos_base"],
+        )
 
-    # Start two submits concurrently.
     first = asyncio.create_task(submit())
-    # Give the first one a chance to acquire the slot.
-    await asyncio.sleep(0.05)
-    second = asyncio.create_task(submit())
+    await asyncio.sleep(0.05)  # let first acquire slot
 
-    # Second should 429 fast while first is still blocked.
-    r2 = await second
-    assert r2.status_code == 429
-    assert r2.json()["detail"] == "at_capacity"
+    with pytest.raises(concurrency.AtCapacityError):
+        await service.submit_run(
+            tickers=["AAPL"],
+            intervals=["1d"],
+            model_ids=["kronos_base"],
+        )
 
-    # Release the first.
     release.set()
-    r1 = await first
-    assert r1.status_code == 200
+    await first
 
-    # Third request after first completes should succeed.
-    r3 = await submit()
-    assert r3.status_code == 200
+    # After first completes, a third call succeeds.
+    r3 = await service.submit_run(
+        tickers=["AAPL"],
+        intervals=["1d"],
+        model_ids=["kronos_base"],
+    )
+    assert r3 is not None
 
 
 @pytest.mark.asyncio
@@ -65,10 +78,12 @@ async def test_gate_releases_on_process_error(client, monkeypatch):
 
     monkeypatch.setattr(service, "_process_job", boom)
 
-    body = {"tickers": ["AAPL"], "intervals": ["1d"], "model_ids": ["kronos_base"]}
-
     with pytest.raises(RuntimeError, match="boom"):
-        await client.post("/v1/analysis/run", headers=HEADERS, json=body)
+        await service.submit_run(
+            tickers=["AAPL"],
+            intervals=["1d"],
+            model_ids=["kronos_base"],
+        )
 
     # Gate must be clear regardless of the error.
     assert concurrency.in_flight() == 0
