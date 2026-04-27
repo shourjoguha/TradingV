@@ -11,7 +11,7 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.accuracy import service
+from app.accuracy import drift, service
 from app.core.auth import verify_api_key
 
 router = APIRouter(prefix="/accuracy", tags=["accuracy"])
@@ -81,3 +81,34 @@ async def evaluate(
 ) -> dict[str, int]:
     """Manual trigger. Same code path as the lifespan loop. Idempotent."""
     return await service.evaluate_pending(limit=limit)
+
+
+@router.get("/drift")
+async def list_drift(
+    _api_key: str = Depends(verify_api_key),
+) -> dict[str, Any]:
+    """Open (unacknowledged) drift alerts. Powers dashboard banner."""
+    alerts = await drift.list_open_alerts()
+    return {"alerts": alerts}
+
+
+@router.post("/drift/detect")
+async def trigger_drift_detection(
+    notify: bool = Query(True, description="Send Telegram on new alerts."),
+    _api_key: str = Depends(verify_api_key),
+) -> dict[str, Any]:
+    """Manual drift scan. Same code path as the lifespan loop. Idempotent."""
+    new = await drift.detect_drift(notify=notify)
+    return {"new_alerts": [{"id": a.id, "ticker": a.ticker, "ratio": a.ratio} for a in new]}
+
+
+@router.post("/drift/{alert_id}/ack")
+async def ack_drift(
+    alert_id: str,
+    _api_key: str = Depends(verify_api_key),
+) -> dict[str, bool]:
+    """Mark a drift alert acknowledged. Allows future re-flag for the same pair."""
+    ok = await drift.acknowledge_alert(alert_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="alert not found or already acked")
+    return {"acknowledged": True}

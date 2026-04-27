@@ -33,6 +33,7 @@ import {
 } from '../components/ui/table'
 import { Skeleton } from '../components/ui/skeleton'
 import { Badge } from '../components/ui/badge'
+import { TrendingUp } from 'lucide-react'
 const FIELD_PRESETS = ['open', 'high', 'low', 'close', 'volume'] as const
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 // Color palette for prediction lines by days_ago
@@ -467,16 +468,20 @@ export function PredictionsByTarget() {
                 </TableBody>
               </Table>
               {predictions.predictions.length === 0 && (
-                <div className="text-center py-8 text-sm text-muted-foreground">
-                  No predictions found for these parameters.
+                <div className="text-center py-12 text-sm text-muted-foreground border border-dashed rounded-lg flex flex-col items-center mt-4">
+                  <TrendingUp className="h-8 w-8 mb-2 text-muted-foreground/50" />
+                  <p>No predictions found for these parameters.</p>
+                  <p className="text-xs mt-1">Try a different ticker or earlier target date. Run an analysis if data is sparse.</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
       ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          Select parameters to view predictions.
+        <div className="text-center py-12 text-sm text-muted-foreground border border-dashed rounded-lg flex flex-col items-center">
+          <TrendingUp className="h-8 w-8 mb-2 text-muted-foreground/50" />
+          <p>Select a ticker + target date above to view predictions.</p>
+          <p className="text-xs mt-1">Tickers come from your watchlist.</p>
         </div>
       )}
     </div>
