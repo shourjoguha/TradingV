@@ -10,9 +10,10 @@ Single-page React SPA. Pure client-side fetch — no SSR, no server actions. Sin
 | Framework | React 18 + TypeScript (strict) |
 | Routing | react-router-dom v6 (BrowserRouter) |
 | Server state | TanStack Query v5 |
-| Styling | Tailwind 3 + shadcn/ui (handwritten primitives, not CLI-installed) |
-| Charts | lightweight-charts v4 (candlesticks + line overlays) |
-| Toasts | sonner |
+| Styling | Tailwind 3 + shadcn/ui (handwritten primitives, not CLI-installed) — Neumorphism design system (light-only, see [ui-components.md](ui-components.md)) |
+| Typography | Plus Jakarta Sans (display, 500-800) + DM Sans (body, 400-700), loaded from Google Fonts |
+| Charts | lightweight-charts v4 (candlesticks + line overlays) — neumorphic light theme (see PredictionsByTarget.tsx) |
+| Toasts | sonner (with neumorphic classNames in `ui/sonner.tsx`) |
 | Icons | lucide-react |
 
 ## Why Vite (not Next.js)
@@ -50,8 +51,14 @@ frontend/
 
 MP was used to bootstrap the initial UI (editor `tvwawai8bwsqvsgygvaque`) but is no longer the source of truth. MP's bundler doesn't ship `lightweight-charts` and doesn't expose `import.meta.env` the way Vite does — keeping it in sync isn't worth it. Local `frontend/` is canonical; preview via `npm run dev` and Chrome at `http://localhost:3000`.
 
+## Design system: Neumorphism (Soft UI)
+
+The frontend ships a custom Neumorphism design system — monochromatic cool grey (`#E0E5EC`) with dual opposing RGBA shadows for extruded/inset depth. Light-only (dark mode dropped). Compact-neumorphic density: shadows + radii + palette throughout, but data tables stay tight (`p-3`–`p-6`). Semantic colors (success teal, danger coral, warning amber) kept for P&L / hit-rate / status badges, neumorphic-toned to match the palette.
+
+Tokens live in `tailwind.config.js` (palette + 6 shadow tokens + radii + fonts) and `src/index.css` (CSS vars + body styles + font imports). All `ui/*` primitives implement the physics (extruded at rest, inset on press, hover-lift on buttons, deep-inset on focused inputs). See [ui-components.md](ui-components.md) for primitive details and [pages.md](pages.md) for page-level patterns.
+
 ## CORS / dev proxy
 
-Backend has no CORS middleware. Local dev uses Vite proxy (`vite.config.ts`) — frontend calls `/v1/...` and `/health`, Vite forwards to `localhost:8000`. Same-origin from the browser's perspective. See `dev-workflow.md` and `backlog.md` (CORS deferred entry).
+Local dev uses Vite proxy (`vite.config.ts`) — frontend calls `/v1/...` and `/health`, Vite forwards to `localhost:8000`. Same-origin from the browser's perspective. See `dev-workflow.md`.
 
-Toggling to Railway in the browser **fails** until backend gets CORS — also tracked in backlog.
+Backend has `CORSMiddleware` driven by `FRONTEND_ORIGIN` env var (CSV of absolute origins; falls back to `localhost:{3000,5173}` when unset). Production deployment at `https://tradingv-83b.pages.dev` (Cloudflare Pages) talks to Railway directly.
