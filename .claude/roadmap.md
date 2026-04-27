@@ -1,206 +1,43 @@
-# Roadmap — forecasting tool → decision-support tool
+# Roadmap — what's next
 
-The shift: today this is a forecasting tool (Kronos predictions in, charts out, human decides). Target: a decision-support tool (predictions → tested signals → tracked actions → measured outcomes). Each phase gates on the prior phase delivering real signal.
+> Forward-looking. Phases 0-6 of the decision-tool roadmap shipped on 2026-04-27 — see [roadmap-shipped.md](roadmap-shipped.md). Currently no major phase in active build.
 
-Reference brainstorm: chat session 2026-04-27 (this commit's parent thread).
+## Active
 
-## North-star principles
+_(Empty — last sprint completed.)_
 
-1. **Trust before action.** Every "tradeable" claim must be backed by visible accuracy data sliced by `(ticker, horizon, model)`. Aggregate stats lie.
-2. **Cheap reversibility.** Every phase tagged in git; rollback path documented in `backups/ROLLBACK.md`.
-3. **Single-user, opinionated UX.** No auth tiers, no permissions. The cost of premature generality is higher than the cost of refactoring later.
-4. **External channels stay external.** This app is the *quantitative pillar*; news, policy, expert commentary, manual TV chart reads stay out of scope. Plug in only data the model itself emits or that's required to evaluate it.
+## Next candidates (not committed)
 
-## Locked decisions (2026-04-27)
+Order is approximate. Promotion to "Active" requires deliberation + plan. Most candidates derive from operator unlocks (see [backlog.md](backlog.md)) or tech debt triggers (see [tech_debt.md](tech_debt.md)).
 
-| Decision | Choice |
-|---|---|
-| Accuracy metrics | MAPE, RMSE, directional hit-rate (all three, computed per `(ticker, horizon, model)`) |
-| Backfill scope | Existing prediction history only — no special historical batch job |
-| Drift threshold | Recent-30d MAPE > 1.5× all-time MAPE for that pair triggers flag (start strict, tune after 1 week of data) |
-| Notification channel | Telegram bot (single channel for v1; email deferred) |
-| Sequencing | Snapshot → Trust → UX → Actionability → Push → Journal → Options runway |
+| # | Candidate | Trigger | Estimate |
+|---|---|---|---|
+| 7 | Telegram bot setup + drift alert verification | Operator wants push notifications | ~5 min ([backlog.md](backlog.md) Unlock #1) |
+| 8 | OHLCV on-demand refresh in evaluator | Accuracy dashboard stays empty after 1 week of scheduled runs | ~30 min ([backlog.md](backlog.md) Unlock #2) |
+| 9 | Concurrency-gate removal | Queue runs cleanly for 4 weeks with zero `acquire_slot` failures | ~30 min ([tech_debt.md](tech_debt.md)) |
+| 10 | schedule_config column drop (`pending_run`, `retry_minutes`) | Bundled with the next schedule_config schema change | ~15 min ([tech_debt.md](tech_debt.md)) |
+| 11 | Tier-2 queue (Redis + arq) | Queue depth > 5 sustained OR GPU inference lands | ~1-2 days ([tech_debt.md](tech_debt.md)) |
+| 12 | Options strategy generator (uses Phase 6 IV data) | Operator-initiated; needs plan + design | TBD |
+| 13 | lightweight-charts v4 → v5 upgrade | Want crosshair sync, drawing tools | ~2h ([backlog.md](backlog.md)) |
+| 14 | E2E tests via Playwright MCP | Frontend regressions cost more than the test setup | TBD |
 
----
+## Principles that gate the sequence
 
-## Phase 0 — Snapshot (rollback safety) · ~30 min
+(Same ones as last sprint; see [principles.md](principles.md) for the full list.)
 
-Capture the current cloud-deployed v1 (CF Pages frontend at `tradingv-83b.pages.dev` + Railway backend) in case Phase 1+ goes sideways.
+1. Trust before action — observability work goes before action work.
+2. Cheap reversibility — every phase tagged + snapshotted.
+3. Single user — no premature generality.
+4. External channels stay external — no news/policy ingestion.
 
-Artifacts (in `backups/` — gitignored except docs):
-1. **Git tag** `v1.0-pre-trust-sprint` annotated at current main HEAD.
-2. **Laptop Postgres dump** via `pg_dump` of `.env.laptop`'s `DATABASE_URL`.
-3. **Railway Postgres dump** — operator-driven (Railway CLI or psql via Railway DATABASE_URL).
-4. **OpenAPI JSON snapshot** from Railway (`/openapi.json`) — captures API contract.
-5. **Frontend bundle archive** — copy `frontend/dist/` to `backups/frontend-dist-YYYY-MM-DD/`.
-6. **Env-var inventory** — operator-driven copy of Railway + CF Pages env vars to `backups/env-inventory-YYYY-MM-DD.md` (gitignored, contains keys).
+## How to start a new phase
 
-Rollback path: `backups/ROLLBACK.md` (committed) names exact commands to revert: git checkout the tag, restore SQL dumps, rollback CF deployment to specific hash, re-set env vars.
+1. Read [principles.md](principles.md) — confirm the new phase doesn't violate them.
+2. `/plan` — deliberate, get sign-off.
+3. Snapshot if the phase touches durable state (DB schema or Railway env).
+4. Build, test, doc, commit.
+5. Add to `roadmap-shipped.md` retrospective notes when done.
 
-**Note**: Laptop DB and Railway DB are bidirectionally synced via Tailscale (Phase B1+B2). A laptop dump is functionally a Railway dump modulo unsynced rows in flight. Both are still captured for paranoia.
+## How to deprioritize
 
----
-
-## Phase 1 — Trust through feedback · ~1.5 weeks · PRIORITY
-
-**One mandate**: prove or disprove Kronos accuracy at every `(ticker, horizon, model)` pair you might trade.
-
-### 1.1 — Accuracy backfill + persistence (~3 days)
-
-New table `prediction_accuracy`:
-```sql
-prediction_accuracy(
-  id, prediction_id FK, ticker, horizon_bars, model_id,
-  predicted_close NUMERIC, actual_close NUMERIC,
-  error_pct NUMERIC,           -- (actual - predicted) / actual
-  error_abs NUMERIC,           -- |actual - predicted|
-  direction_correct BOOL,      -- sign(predicted_change) == sign(actual_change)
-  generated_at TIMESTAMPTZ,
-  evaluated_at TIMESTAMPTZ,
-  UNIQUE(prediction_id)        -- idempotency
-)
-```
-
-Background job `accuracy_evaluator()` ticks daily after market close: pulls all `prediction_points` whose horizon has elapsed and aren't yet in `prediction_accuracy`, fetches `actual_close` via existing OHLCV provider, computes errors, inserts row. Idempotent.
-
-Backfill: run once on existing `prediction_points` history (~5 jobs of data). No special historical batch.
-
-### 1.2 — Per-(ticker, horizon) accuracy dashboard (~3 days)
-
-New page `/accuracy`:
-- **Heatmap table**: rows = watchlist tickers, columns = horizons in scheduled run (1d, 3d, 5d, 10d). Cells = directional hit-rate over last 30 evaluated predictions (color-graded: green ≥ 60%, yellow 50-60%, red < 50%). Secondary metric (MAPE %) shown on cell hover.
-- **Drilldown** on cell click: scatter plot predicted vs actual (diagonal = perfect), MAPE/RMSE/hit-rate trio, sparkline of accuracy over time, list of recent prediction ↔ actual pairs.
-- **Filters**: date range, model_id (when ensemble lands).
-
-### 1.3 — Drift detection + Telegram alerts (~3 days)
-
-Daily cron compares last-30d MAPE to all-time MAPE per `(ticker, horizon, model)`. Flag if recent > 1.5× all-time AND ≥ 10 evaluations in recent window (avoid noise on sparse data).
-
-New table `drift_alerts(id, ticker, horizon, model_id, recent_mape, allTime_mape, ratio, flagged_at, acknowledged_at)`.
-
-Telegram integration:
-- Bot setup via @BotFather (one-time, manual).
-- New env var `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (your DM with the bot).
-- New `app/notifications/telegram.py` posts markdown messages.
-- Drift alerts → Telegram immediately. Daily morning digest (Phase 4) reuses same channel.
-
-Drift alerts also surface as a banner on `/accuracy` and `/` (dashboard) until acknowledged.
-
-### Phase 1 exit criteria (gates Phase 3)
-
-- ≥ 1 `(ticker, horizon)` pair with directional hit-rate ≥ 60% over ≥ 20 evaluations.
-- Accuracy dashboard renders without empty states for all watchlist tickers.
-- Telegram drift alert verified end-to-end (force a drift via test data).
-
-If exit fails → pivot to retraining / model-side investigation, not Phase 3.
-
----
-
-## Phase 2 — UX hardening · ~3 days · parallel-able with Phase 1
-
-### 2.1 — Empty states pass
-
-By-target, by-horizon, analysis pages currently render blank when there's no data. Replace with a meaningful "No data yet" UI per page, with a single CTA pointing at the first-action ("Run your first analysis" → opens Run dialog).
-
-### 2.2 — lightweight-charts v4 → v5 upgrade
-
-v5 brings: crosshair sync between panes, drawing tools, multi-pane (sets up prediction-vs-actual overlay for Phase 1.2), better mobile touch. Breaking changes minor; check release notes.
-
-Bonus: add prediction-vs-actual line overlay on `/predictions/by-target` chart — doubles as a Phase 1 visualization.
-
-(Plotly explicitly NOT chosen here — see backlog entry "Charting library — lightweight-charts v5 chosen over Plotly".)
-
----
-
-## Phase 3 — Actionability bridge (signals layer) · ~2 weeks
-
-**Predicate**: Phase 1 exit criteria met.
-
-### 3.1 — Opportunities table + signal generator
-
-```sql
-opportunities(
-  id, ticker, kind ENUM('buy','sell'), generated_at,
-  source_prediction_id FK, source_model_id,
-  rule_id, rule_label,
-  predicted_move_pct NUMERIC, confidence NUMERIC,
-  status ENUM('open','acted','expired','dismissed'),
-  expires_at,
-  acted_at, dismissed_at, dismissed_reason
-)
-```
-
-Hardcoded rules to start (NOT a DSL):
-- `R1`: predicted_move_pct ≥ +2% over 5d AND historical_hit_rate ≥ 0.60 → BUY.
-- `R2`: predicted_move_pct ≤ -2% over 5d AND historical_hit_rate ≥ 0.60 → SELL.
-- `R3`: predicted_move_pct ≥ +5% over 10d AND historical_hit_rate ≥ 0.55 → BUY.
-- (Tune after 2 weeks of real signal data.)
-
-Generator runs after each scheduled prediction batch.
-
-### 3.2 — Opportunities UI
-
-New page `/opportunities`:
-- Today's open list (sorted by confidence × predicted_move).
-- History tab (acted + dismissed + expired with realized outcomes).
-- Per-row actions: mark acted, dismiss (with reason).
-
----
-
-## Phase 4 — Daily Telegram digest · ~2 days
-
-Predicate: Phase 3 generates ≥ 1 opportunity per typical day.
-
-Cron at 8 AM operator-tz posts to Telegram:
-- Top N open opportunities (markdown table).
-- Any unacknowledged drift alerts.
-- One-line summary of last night's run.
-
-Reuses Telegram infra from Phase 1.3.
-
----
-
-## Phase 5 — Trade journal · ~1 week
-
-Predicate: 2 weeks of opportunities feed observed; user has acted on ≥ a few.
-
-```sql
-trades(
-  id, opportunity_id FK NULLABLE, ticker, side ENUM('buy','sell'),
-  qty INT, entry_price NUMERIC, entry_at TIMESTAMPTZ,
-  exit_price NUMERIC, exit_at TIMESTAMPTZ,
-  realized_pnl NUMERIC, fees NUMERIC, notes_md TEXT
-)
-```
-
-Manual entry. Brokerage-API integration explicitly out of scope (single user, friction not worth it). One-click "create trade from opportunity" button on opportunities page prefills fields.
-
-`/trades` page: list view + entry form + simple P&L summary (today / week / month / all-time).
-
-Per-opportunity P&L attribution: "If you'd taken every BUY opportunity Kronos surfaced from rule R1, your P&L would be X." Closes the feedback loop on whether Kronos is worth trading on.
-
----
-
-## Phase 6 — Options runway data layer · ~2 days · tucks into Phase 3 sprint
-
-Single background job: pull IV percentile + earnings date for each watchlist ticker (free source: yfinance, polygon free tier, or similar). Two new columns on `tickers` (or new `ticker_market_data` table — TBD). No UI yet. Just data accumulating.
-
-Sets up the eventual options chapter (strategy generator, IV surfaces) without blocking Phase 1-5.
-
----
-
-## Out of scope (explicit)
-
-- News/policy/commentary ingestion (user owns these channels manually)
-- Brokerage API integration (single user, manual entry friction acceptable)
-- Multi-user / auth tiers / sharing
-- Mobile-first responsive layout (Telegram serves mobile; desktop-first web is fine)
-- Backtesting infrastructure beyond what `prediction_accuracy` provides
-- Multi-model ensemble (defer until at least one second model exists)
-- Public tunnel for laptop (separate backlog)
-
----
-
-## Estimated total
-
-~5 weeks of focused work to "decision-support tool", gated phase-by-phase. Stop early at any phase whose exit criteria don't hit — that's the signal that Kronos isn't ready for the next layer of investment.
+If a "Next candidate" gets stale (trigger fires but nothing happens for > 4 weeks), demote it to [backlog.md](backlog.md) so it doesn't pretend to be on the roadmap.
