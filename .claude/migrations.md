@@ -33,6 +33,7 @@ All migrations guard with `inspect(bind).get_column_names()` / `get_table_names(
 - `0014` — `opportunities` table + `UNIQUE(source_prediction_id, rule_id)` for idempotent generator. See [opportunities.md](opportunities.md).
 - `0015` — `trades` table + FK `opportunities` (SET NULL). See [trades.md](trades.md).
 - `0016` — `ticker_market_data` table for IV percentile + earnings (Phase 6 options runway, daily refresh, no UI yet).
+- `0017` — `submit_queue` table for the Tier-1 job submission queue. `POST /v1/analysis/run` now returns 202 with a queue_id; worker drains FIFO. See [queue.md](queue.md).
 
 ## Backfills
 When adding backfill logic to a migration, dialect-branch (`bind.dialect.name`) for portability: `ON CONFLICT` (Postgres) vs `INSERT OR IGNORE` (SQLite, used in tests).

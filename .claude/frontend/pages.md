@@ -4,7 +4,7 @@
 
 | Route | File | Endpoints | Notes |
 |---|---|---|---|
-| `/` | `Dashboard.tsx` | `GET /v1/schedule`, `/v1/watchlist?limit=1`, `/v1/analysis/jobs?limit=5`, `POST /v1/schedule/fire-now` | Cards: schedule status, watchlist size, recent jobs. Big "Run now" button. |
+| `/` | `Dashboard.tsx` | `GET /v1/schedule`, `/v1/watchlist?limit=1`, `/v1/analysis/jobs?limit=5`, `/v1/analysis/queue/stats`, `POST /v1/schedule/fire-now` | Cards: schedule status, watchlist size, recent jobs + Queue widget (pending/running counts, hidden when empty). Big "Run now" button. |
 | `/watchlist` | `Watchlist.tsx` | `GET/POST/DELETE /v1/watchlist*`, `PUT /v1/tickers/{sym}/labels` | Table + add input + bulk modal + per-row label chips + label filter chip bar. |
 | `/schedule` | `Schedule.tsx` | `GET/PUT /v1/schedule`, `POST /v1/schedule/fire-now`, `GET /v1/models` | Form for all `Schedule` fields. tz_name autocomplete. Shows `next_run_at` after save. |
 | `/predictions/by-target` | `PredictionsByTarget.tsx` | `GET /v1/predictions/by-target`, `/v1/ohlcv`, `/v1/watchlist`, `/v1/models` | Ticker autocomplete (from watchlist) + target_date + interval + model + fields chips + DOW chips. lightweight-charts candle + N prediction lines. |
@@ -13,7 +13,7 @@
 | `/opportunities` | `Opportunities.tsx` | `GET /v1/opportunities`, `PATCH /v1/opportunities/{id}` | Tabs (open/acted/dismissed/expired). Action buttons: Acted (with optional jump to `/trades?from=<oppId>`) + Dismiss (modal with reason). Color-coded predicted move + confidence. |
 | `/trades` | `Trades.tsx` | `GET/POST /v1/trades`, `PATCH /v1/trades/{id}` | P&L summary cards (Total / Closed / Open). Table with close-trade modal + log-trade modal. Prefilled from opportunity when navigated with `?from=<oppId>`. |
 | `/tickers/:symbol/labels` | `TickerLabels.tsx` | `GET/PUT /v1/tickers/{sym}/labels`, `DELETE /v1/tickers/{sym}/labels/{key}` | Curated key dropdown + free-form. JSON-aware value editor (bool toggle / list builder / string fallback). |
-| `/analysis` | `AnalysisJobs.tsx` | `GET /v1/analysis/jobs`, `POST /v1/analysis/run` | Paginated table. Run-form modal. 429 → toast "Backend busy". |
+| `/analysis` | `AnalysisJobs.tsx` | `GET /v1/analysis/jobs`, `POST /v1/analysis/run`, `GET/DELETE /v1/analysis/queue*` | Paginated table + Queue card above (running + pending, cancel button on pending). Run-now toast: "Queued: <id>". See [queue.md](../queue.md). |
 | `/analysis/:jobId` | `AnalysisJobDetail.tsx` | `GET /v1/analysis/jobs/{id}` | Task list + per-task `result_json.forecast` viewer. |
 
 ## Conventions
