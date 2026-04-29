@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   usePredictionsByHorizon,
   useWatchlist,
@@ -36,11 +36,16 @@ const FIELD_OPTIONS = ['open', 'high', 'low', 'close', 'volume'] as const
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 type FieldKey = 'open' | 'high' | 'low' | 'close' | 'volume'
 export function PredictionsByHorizon() {
-  const [targetDate, setTargetDate] = useState(
-    new Date().toISOString().split('T')[0],
-  )
+  const [targetDate, setTargetDate] = useState(() => {
+    // Predictions are forward-looking: a daily run made today targets tomorrow+ (T-1 onwards).
+    // Default to tomorrow (UTC) so the user sees the run that fired last.
+    const d = new Date()
+    d.setUTCDate(d.getUTCDate() + 1)
+    return d.toISOString().split('T')[0]
+  })
   const [horizons, setHorizons] = useState('1,2,3,4,5')
-  const [tickers, setTickers] = useState('AAPL,MSFT,GOOGL')
+  const [tickers, setTickers] = useState('')
+  const [tickersTouched, setTickersTouched] = useState(false)
   const [interval, setInterval] = useState('1d')
   const [modelId, setModelId] = useState('')
   const [activeField, setActiveField] = useState<FieldKey>('close')
@@ -50,12 +55,18 @@ export function PredictionsByHorizon() {
     limit: 100,
   })
   const { data: models } = useModels()
+  // Auto-populate tickers from watchlist on first load (until user edits the field).
+  useEffect(() => {
+    if (tickersTouched) return
+    if (!watchlist?.entries?.length) return
+    setTickers(watchlist.entries.map((e: any) => e.symbol).join(','))
+  }, [watchlist, tickersTouched])
   const queryParams = {
     target_date: targetDate,
     horizons,
     tickers,
     interval,
-    model_id: modelId || undefined,
+    model_id: modelId && modelId !== '__all__' ? modelId : undefined,
     fields: fields.join(',') || undefined,
     made_on_dow: madeOnDow.length > 0 ? madeOnDow.join(',') : undefined,
   }
@@ -107,7 +118,7 @@ export function PredictionsByHorizon() {
               <div className="space-y-1.5">
                 <Input
                   value={tickers}
-                  onChange={(e) => setTickers(e.target.value)}
+                  onChange={(e) => { setTickers(e.target.value); setTickersTouched(true) }}
                   className="font-mono uppercase"
                   placeholder="AAPL, MSFT, GOOGL"
                 />
@@ -124,6 +135,7 @@ export function PredictionsByHorizon() {
                             .filter(Boolean)
                           if (!current.includes(item.symbol)) {
                             setTickers([...current, item.symbol].join(','))
+                            setTickersTouched(true)
                           }
                         }}
                         className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -164,12 +176,12 @@ export function PredictionsByHorizon() {
 
             <div className="space-y-2">
               <Label>Model</Label>
-              <Select value={modelId} onValueChange={setModelId}>
+              <Select value={modelId || '__all__'} onValueChange={(v) => setModelId(v === '__all__' ? '' : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="All models" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Models</SelectItem>
+                  <SelectItem value="__all__">All Models</SelectItem>
                   {models?.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.id}
@@ -244,7 +256,7 @@ export function PredictionsByHorizon() {
             <Skeleton className="h-32 w-full" />
           </CardContent>
         </Card>
-      ) : predictions ? (
+      ) : predictions && predictions.rows.some((r) => r.prediction) ? (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -323,13 +335,24 @@ export function PredictionsByHorizon() {
                           row?.prediction as Record<string, number> | null,
                           activeField,
                         )
-                        if (actualVal == null || predVal == null) {
+                        if (predVal == null) {
                           return (
                             <TableCell
                               key={h}
                               className="text-center text-muted-foreground"
                             >
                               —
+                            </TableCell>
+                          )
+                        }
+                        if (actualVal == null) {
+                          // Forward-looking: prediction exists but target date hasn't elapsed yet.
+                          return (
+                            <TableCell key={h} className="text-center p-0">
+                              <div className="w-full h-full p-3 font-mono text-xs flex flex-col items-center justify-center text-muted-foreground bg-background shadow-inset-sm">
+                                <div className="font-medium">${predVal.toFixed(2)}</div>
+                                <div className="text-[10px] opacity-60 mt-0.5">forecast</div>
+                              </div>
                             </TableCell>
                           )
                         }
@@ -367,8 +390,21 @@ export function PredictionsByHorizon() {
       ) : (
         <div className="text-center py-12 text-sm text-muted-foreground rounded-2xl shadow-inset-sm flex flex-col items-center">
           <Grid3x3 className="h-8 w-8 mb-2 text-muted-foreground/50" />
-          <p>Configure parameters above to view the horizon matrix.</p>
-          <p className="text-xs mt-1">Pick at least one ticker, one horizon (k-days-ago), and a target date.</p>
+          {predictions && tickersList.length > 0 ? (
+            <>
+              <p>No predictions for any of the selected tickers on {targetDate}.</p>
+              <p className="text-xs mt-1 max-w-md">
+                Predictions are generated by the daily scheduled run for whatever was on the watchlist <em>at run time</em>.
+                If you added these symbols after the last run, hit <span className="font-medium">Fire Now</span> on the Schedule tab — predictions arrive in ~1 minute.
+                Or pick an earlier <span className="font-medium">target date</span> covering symbols that were on the watchlist then.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>Configure parameters above to view the horizon matrix.</p>
+              <p className="text-xs mt-1">Pick at least one ticker, one horizon (k-days-ago), and a target date.</p>
+            </>
+          )}
         </div>
       )}
     </div>

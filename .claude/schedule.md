@@ -48,6 +48,8 @@ After `submit_run` succeeds, the runner refreshes OHLCV cache for every (watchli
 
 This is what makes the comparison endpoints (Phase 5) meaningful — actuals for past target dates are guaranteed to be in `ohlcv_bars` shortly after each run.
 
+Right after `_collect_actuals`, the runner also calls `accuracy.service.evaluate_pending()` (best-effort, log-and-swallow). This pairs newly-cached actuals with elapsed predictions immediately, so the Accuracy tab reflects last night's run by morning rather than waiting up to 1h for the hourly `evaluator_loop` tick.
+
 ## Catch-up at startup
 First-iteration of the loop computes `next_run_at` if missing. If it's already in the past (laptop was off through the scheduled time), the loop fires immediately on startup.
 

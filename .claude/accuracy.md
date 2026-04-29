@@ -36,7 +36,7 @@ flagged_at, acknowledged_at (nullable)
 
 `app/accuracy/service.py::evaluate_pending(now=, limit=500)` — finds elapsed predictions (`target_ts <= now`) without an accuracy row, joins to `ohlcv_bars` for actual + baseline, inserts. Idempotent via `UNIQUE(prediction_id)`. Returns `{scanned, evaluated, skipped_no_actual, skipped_bad_data}`.
 
-Lifespan loop `evaluator_loop()` ticks hourly. Manual trigger via `POST /v1/accuracy/evaluate`.
+Lifespan loop `evaluator_loop()` ticks hourly. Schedule runner also invokes `evaluate_pending()` synchronously right after `_collect_actuals` (`app/schedule/runner.py`) so the Accuracy tab is fresh by morning instead of up to 1h late. Manual trigger via `POST /v1/accuracy/evaluate`.
 
 **Known gap**: when an actual is missing from `ohlcv_bars` the evaluator skips silently — see [backlog.md](backlog.md) "Unlock #2" for the on-demand-refresh fix.
 
