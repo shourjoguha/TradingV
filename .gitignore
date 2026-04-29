@@ -36,3 +36,7 @@ Thumbs.db
 # Kronos runtime
 hf-cache/
 /data/
+
+# Personal operator runbook (contains keys + workflow notes)
+use_me_guide.md
+docs/

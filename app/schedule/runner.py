@@ -151,6 +151,20 @@ async def _tick() -> None:
         # finishes — actuals refresh is independent of job completion.
         if cfg.collect_actuals:
             await _collect_actuals(symbols, list(cfg.intervals))
+            # Best-effort: pair freshly-cached actuals with elapsed predictions
+            # immediately, so the Accuracy tab is up-to-date by morning instead
+            # of waiting up to an hour for the next evaluator_loop tick.
+            try:
+                from app.accuracy import service as _accuracy_svc
+
+                stats = await _accuracy_svc.evaluate_pending()
+                logger.info(
+                    "scheduler: post-run accuracy evaluate (scanned=%d evaluated=%d)",
+                    stats["scanned"],
+                    stats["evaluated"],
+                )
+            except Exception as e:  # noqa: BLE001
+                logger.warning("scheduler: post-run accuracy evaluate failed: %s", e)
 
         await schedule_svc.record_run(status="succeeded", advance_to=next_after_run)
     except Exception as e:  # pragma: no cover - defensive

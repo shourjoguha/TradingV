@@ -100,8 +100,9 @@ export function Accuracy() {
         <div className="rounded-3xl shadow-inset-sm p-8 text-center text-muted-foreground bg-background">
           <p className="text-sm">No accuracy data yet.</p>
           <p className="text-xs mt-2">
-            Predictions need to elapse and have actuals fetched before they're evaluated.
-            Hit "Evaluate" or wait for the hourly background tick.
+            Each prediction needs its target date to elapse <em>and</em> the matching actual close to land in the OHLCV cache before a pair is formed.
+            Pairs are computed automatically: hourly via the evaluator loop, plus immediately after each scheduled daily run.
+            Hit <span className="font-medium">Evaluate</span> above to force a pass now.
           </p>
         </div>
       ) : (

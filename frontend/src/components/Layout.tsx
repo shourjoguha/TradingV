@@ -2,9 +2,37 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, List, Clock, TrendingUp, Grid3x3, FlaskConical,
-  Activity, Target, Receipt, Menu, X,
+  Activity, Target, Receipt, Menu, X, AlertTriangle,
 } from 'lucide-react'
 import { BackendToggle } from './BackendToggle'
+import { useHealth } from '../hooks/use-api'
+import { useBackend } from '../hooks/use-backend'
+import { availableBackends } from '../lib/backend-store'
+
+function BackendHealthBanner() {
+  const { backendId, setBackend } = useBackend()
+  const health = useHealth()
+  if (!health.isError) return null
+  const others = availableBackends().filter((id) => id !== backendId)
+  const otherId = others[0]
+  return (
+    <div className="bg-warning-bg text-warning-fg px-4 md:px-8 py-2 flex items-center gap-3 text-sm shadow-inset-sm">
+      <AlertTriangle className="h-4 w-4 shrink-0" />
+      <div className="flex-1">
+        Cannot reach <span className="font-mono font-medium">{backendId}</span> backend.
+        {' '}Health check failing — laptop may be asleep, Tailscale down, or server stopped.
+      </div>
+      {otherId && (
+        <button
+          onClick={() => setBackend(otherId)}
+          className="text-xs font-medium px-3 py-1 rounded-xl shadow-extruded-sm hover:shadow-extruded transition-all"
+        >
+          Switch to {otherId}
+        </button>
+      )}
+    </div>
+  )
+}
 
 const NAV = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -124,6 +152,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <BackendToggle />
         </header>
+
+        <BackendHealthBanner />
 
         {/* Content */}
         <div className="flex-1 p-4 md:p-8">
