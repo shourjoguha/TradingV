@@ -161,6 +161,26 @@ Verified: Railway-originated job pushes both `kind='ticker'` and `kind='result'`
 
 ---
 
+## Scheduler loses today's slot if PUT /v1/schedule lands during execution window
+
+**What:** When `PUT /v1/schedule` is called while the daily scheduler is mid-execution (roughly 30-min trigger window), it recomputes `next_run_at` and advances it past today, permanently losing that day's slot. Example: run fires at 21:33 UTC, PUT lands at 21:34, recalculates → 2026-04-30 23:30 UTC, skipping the remainder of today.
+
+**Status:** Open (discovered 2026-04-29 during manual fire-now test).
+
+**Why deferred:** One-operator tool; schedule changes are rare. Workaround: fire-now is idempotent, so re-run manually if a PUT accidentally lands mid-execution. Still bad UX — should defer the recomputation.
+
+**Options:**
+1. **Defer recomputation** (~10 min): Wrap `next_run_at` update in a check: if `is_running`, defer to end-of-execution. Add `recompute_pending` flag to `schedule_config`. Runner checks at loop exit.
+2. **Retry window** (~5 min): After a PUT lands during execution, don't advance `next_run_at`; let the retry_minutes logic fire again if the current slot hasn't completed. Simpler but couples the logic tighter.
+
+**Recommendation:** Option 1. Cleaner separation, prevents any race condition where the slot is lost between the PUT and the end of execution.
+
+**Files involved:** `app/schedule/runner.py` (main runner loop + `is_running` state), `app/schedule/routes.py` (PUT handler).
+
+**Trigger to revisit:** when schedule changes become more frequent (e.g. operator-driven A/B testing of run times).
+
+---
+
 ## How to add an entry
 
 Use the same structure: **What** / **Status** / **Why deferred** (or **Open**) / **Trigger to revisit** / **Implementation pointers**. Include the key files involved so future-you doesn't have to re-derive context.
