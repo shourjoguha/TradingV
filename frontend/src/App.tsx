@@ -18,6 +18,11 @@ const Docs = lazy(() => import('./pages/Docs').then((m) => ({ default: m.Docs })
 // Lazy-load Macro so lightweight-charts ships only when the operator opens it.
 const Macro = lazy(() => import('./pages/Macro').then((m) => ({ default: m.Macro })))
 
+// Lazy-load Watchlists (casual lists; distinct from Roster).
+const Watchlists = lazy(() =>
+  import('./pages/Watchlists').then((m) => ({ default: m.Watchlists })),
+)
+
 export function App() {
   return (
     <Layout>
@@ -35,6 +40,14 @@ export function App() {
         />
         <Route path="/predictions/:tab?" element={<Predictions />} />
         <Route path="/motion/:tab?" element={<Motion />} />
+        <Route
+          path="/watchlists/:boardId?"
+          element={
+            <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+              <Watchlists />
+            </Suspense>
+          }
+        />
 
         {/* Admin group — Roster / Schedule / Health */}
         <Route path="/roster" element={<Watchlist />} />

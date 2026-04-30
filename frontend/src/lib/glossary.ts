@@ -322,6 +322,12 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
 }
 
+// Watchlists feature (MW-2)
+GLOSSARY.watchlist_concept = {
+  short: 'Casual ticker lists',
+  long: 'Lightweight collections of tickers you\'re curious about — group by thesis, source, or whatever else helps you stay organised. Adding here does NOT spawn Kronos predictions; for that, use the Roster (Admin → Roster). A nightly cron pulls last-close + 1-week %change for any ticker on any list. Charts are intentionally not in-app — click a row to open it on TradingView.',
+}
+
 export function getGlossary(term: string): GlossaryEntry | undefined {
   return GLOSSARY[term]
 }

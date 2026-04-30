@@ -53,6 +53,7 @@ const NAV_GROUPS: NavEntry[] = [
       { path: '/macro', label: 'Macro' },
       { path: '/predictions', label: 'Predictions' },
       { path: '/motion', label: 'Motion' },
+      { path: '/watchlists', label: 'Watchlists' },
     ],
   },
   {

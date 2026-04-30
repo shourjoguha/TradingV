@@ -25,6 +25,9 @@ import type {
   MacroRatioResponse,
   MacroRefreshResponse,
   MacroSpreadResponse,
+  BoardSummary,
+  BoardDetail,
+  BoardsListResponse,
 } from '../lib/types'
 import { toast } from 'sonner'
 
@@ -634,5 +637,129 @@ export function useMacroSpread(params: {
     },
     enabled: params.enabled !== false && !!params.minuend && !!params.subtrahend,
     staleTime: 5 * 60_000,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Boards / Watchlists (MW-2)
+// ---------------------------------------------------------------------------
+
+export function useBoards() {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['boards', backendId],
+    queryFn: () => apiFetch<BoardsListResponse>('/v1/boards', { backendId }),
+    staleTime: 30_000,
+  })
+}
+
+export function useBoard(boardId: string | undefined) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['board', backendId, boardId],
+    queryFn: () => apiFetch<BoardDetail>(`/v1/boards/${boardId}`, { backendId }),
+    enabled: !!boardId,
+    staleTime: 30_000,
+  })
+}
+
+export function useCreateBoard() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; description?: string }) =>
+      apiFetch<BoardSummary>('/v1/boards', { method: 'POST', body: data, backendId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['boards', backendId] })
+      toast.success('Watchlist created')
+    },
+    onError: (err: any) => toast.error(`Create failed: ${err.detail || err.message}`),
+  })
+}
+
+export function useUpdateBoard() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { id: string; name?: string; description?: string }) =>
+      apiFetch<BoardSummary>(`/v1/boards/${data.id}`, {
+        method: 'PATCH',
+        body: { name: data.name, description: data.description },
+        backendId,
+      }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['boards', backendId] })
+      qc.invalidateQueries({ queryKey: ['board', backendId, vars.id] })
+      toast.success('Watchlist updated')
+    },
+    onError: (err: any) => toast.error(`Update failed: ${err.detail || err.message}`),
+  })
+}
+
+export function useDeleteBoard() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/v1/boards/${id}`, { method: 'DELETE', backendId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['boards', backendId] })
+      toast.success('Watchlist deleted')
+    },
+    onError: (err: any) => toast.error(`Delete failed: ${err.detail || err.message}`),
+  })
+}
+
+export function useAddTickerToBoard() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { boardId: string; ticker: string; notes?: string }) =>
+      apiFetch(`/v1/boards/${data.boardId}/tickers`, {
+        method: 'POST',
+        body: { ticker: data.ticker, notes: data.notes },
+        backendId,
+      }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['boards', backendId] })
+      qc.invalidateQueries({ queryKey: ['board', backendId, vars.boardId] })
+    },
+    onError: (err: any) => toast.error(`Add failed: ${err.detail || err.message}`),
+  })
+}
+
+export function useRemoveTickerFromBoard() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { boardId: string; ticker: string }) =>
+      apiFetch(`/v1/boards/${data.boardId}/tickers/${encodeURIComponent(data.ticker)}`, {
+        method: 'DELETE', backendId,
+      }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['boards', backendId] })
+      qc.invalidateQueries({ queryKey: ['board', backendId, vars.boardId] })
+    },
+    onError: (err: any) => toast.error(`Remove failed: ${err.detail || err.message}`),
+  })
+}
+
+export function useMoveTicker() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { sourceBoardId: string; targetBoardId: string; ticker: string }) =>
+      apiFetch(`/v1/boards/${data.sourceBoardId}/tickers/move`, {
+        method: 'POST',
+        body: { ticker: data.ticker, target_board_id: data.targetBoardId },
+        backendId,
+      }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['boards', backendId] })
+      qc.invalidateQueries({ queryKey: ['board', backendId, vars.sourceBoardId] })
+      qc.invalidateQueries({ queryKey: ['board', backendId, vars.targetBoardId] })
+      toast.success('Ticker moved')
+    },
+    onError: (err: any) => toast.error(`Move failed: ${err.detail || err.message}`),
   })
 }

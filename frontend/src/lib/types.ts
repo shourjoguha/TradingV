@@ -300,3 +300,34 @@ export interface MacroRefreshResponse {
   skipped: number
   failures: string[]
 }
+
+// ---------------------------------------------------------------------------
+// Boards (UI calls them "Watchlists") — Phase MW-2
+// ---------------------------------------------------------------------------
+
+export interface BoardSummary {
+  id: string
+  name: string
+  description: string | null
+  ticker_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface BoardTickerOut {
+  ticker: string
+  notes: string | null
+  added_at: string
+  last_close: number | null
+  last_close_at: string | null
+  pct_1w: number | null
+  quote_fetched_at: string | null
+}
+
+export interface BoardDetail extends BoardSummary {
+  tickers: BoardTickerOut[]
+}
+
+export interface BoardsListResponse {
+  items: BoardSummary[]
+}

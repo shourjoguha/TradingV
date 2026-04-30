@@ -21,6 +21,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    Numeric,
     String,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -47,8 +48,56 @@ class TickerMarketData(Base):
         DateTime(timezone=True), nullable=False
     )
     error: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    # Lightweight quote columns — Phase MW-2. Filled by the daily refresh
+    # path; powers the casual Watchlists pages, Dashboard tiles, and the
+    # sector drill-in. NULL until the next refresh tick after a ticker
+    # is registered.
+    last_close: Mapped[float | None] = mapped_column(Numeric(20, 6), nullable=True)
+    last_close_at: Mapped[datetime.date | None] = mapped_column(Date(), nullable=True)
+    pct_1w: Mapped[float | None] = mapped_column(Numeric(10, 4), nullable=True)
+    quote_fetched_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     __table_args__ = (Index("ix_tmd_iv_percentile", "iv_percentile_1y"),)
+
+
+async def _fetch_quote_yfinance(symbol: str) -> dict:
+    """Lightweight last-close + 1w % change. Single yfinance ``history()``
+    call covering ~10 days; pull last close, find a value ~5 trading days
+    back for the pct_1w base. Returns partial-or-empty on any error;
+    callers leave fields NULL.
+    """
+    def _sync() -> dict:
+        try:
+            import yfinance as yf  # type: ignore
+        except ImportError as e:
+            return {"quote_error": f"yfinance not installed: {e}"}
+        try:
+            t = yf.Ticker(symbol)
+            df = t.history(period="14d", auto_adjust=False)
+        except Exception as e:  # noqa: BLE001
+            return {"quote_error": f"history fetch failed: {e}"}
+        if df is None or df.empty:
+            return {"quote_error": "empty history"}
+
+        out: dict = {}
+        try:
+            last_idx = df.index[-1]
+            last_close = float(df["Close"].iloc[-1])
+            out["last_close"] = last_close
+            out["last_close_at"] = last_idx.date() if hasattr(last_idx, "date") else None
+            # Base for pct_1w: row ~5 trading days back. If the history is
+            # too short (newly-listed ticker) just leave pct_1w NULL.
+            if len(df) >= 6:
+                base_close = float(df["Close"].iloc[-6])
+                if base_close > 0:
+                    out["pct_1w"] = (last_close - base_close) / base_close * 100.0
+        except Exception as e:  # noqa: BLE001
+            out["quote_error"] = f"parse: {e}"
+        return out
+
+    return await asyncio.to_thread(_sync)
 
 
 async def _fetch_yfinance(symbol: str) -> dict:
@@ -121,21 +170,32 @@ async def _fetch_yfinance(symbol: str) -> dict:
 
 
 async def refresh_one(symbol: str) -> dict:
-    """Fetch + upsert metrics for one ticker. Returns the stored row dict."""
-    data = await _fetch_yfinance(symbol.upper())
+    """Fetch + upsert metrics for one ticker. Returns the stored row dict.
+
+    Also fetches the lightweight quote (last_close + pct_1w) so a single
+    refresh hit produces both the IV/earnings snapshot AND the casual-list
+    quote signal. Either side can fail independently — partial rows are OK.
+    """
+    sym = symbol.upper()
+    data = await _fetch_yfinance(sym)
+    quote = await _fetch_quote_yfinance(sym)
     now = datetime.datetime.now(datetime.timezone.utc)
     error = data.get("error")
     async with _db.SessionLocal() as session:
-        existing = await session.get(TickerMarketData, symbol.upper())
+        existing = await session.get(TickerMarketData, sym)
         if existing is None:
             row = TickerMarketData(
-                symbol=symbol.upper(),
+                symbol=sym,
                 iv_30d=data.get("iv_30d"),
                 iv_percentile_1y=data.get("iv_percentile_1y"),
                 next_earnings_date=data.get("next_earnings_date"),
                 source=data.get("source"),
                 fetched_at=now,
                 error=error,
+                last_close=quote.get("last_close"),
+                last_close_at=quote.get("last_close_at"),
+                pct_1w=quote.get("pct_1w"),
+                quote_fetched_at=now if "quote_error" not in quote else None,
             )
             session.add(row)
         else:
@@ -145,6 +205,11 @@ async def refresh_one(symbol: str) -> dict:
             existing.source = data.get("source") or existing.source
             existing.fetched_at = now
             existing.error = error
+            if "quote_error" not in quote:
+                existing.last_close = quote.get("last_close")
+                existing.last_close_at = quote.get("last_close_at")
+                existing.pct_1w = quote.get("pct_1w")
+                existing.quote_fetched_at = now
             row = existing
         await session.commit()
         return {
@@ -156,21 +221,38 @@ async def refresh_one(symbol: str) -> dict:
             ),
             "fetched_at": row.fetched_at.isoformat(),
             "error": row.error,
+            "last_close": float(row.last_close) if row.last_close is not None else None,
+            "last_close_at": row.last_close_at.isoformat() if row.last_close_at else None,
+            "pct_1w": float(row.pct_1w) if row.pct_1w is not None else None,
+            "quote_fetched_at": row.quote_fetched_at.isoformat() if row.quote_fetched_at else None,
         }
 
 
 async def refresh_watchlist() -> dict[str, int]:
-    """Refresh metrics for every active watchlist symbol. Returns stats."""
+    """Refresh metrics for every symbol the app cares about: union of the
+    roster (legacy ``watchlist`` table) AND every board's tickers.
+
+    Phase MW-2 widened this from "watchlist only" so casual-list quotes
+    populate from the same loop. The behaviour for roster tickers is
+    unchanged — IV/earnings still get pulled, plus now last_close + pct_1w.
+    """
+    from sqlalchemy import select as _select
+
+    from app.boards.models import BoardTicker
     from app.watchlist.models import WatchlistEntry
 
     stats = {"scanned": 0, "ok": 0, "failed": 0}
     async with _db.SessionLocal() as session:
-        from sqlalchemy import select as _select
+        roster = set(
+            (await session.execute(_select(WatchlistEntry.symbol))).scalars().all()
+        )
+        board_syms = set(
+            (await session.execute(_select(BoardTicker.ticker))).scalars().all()
+        )
+    symbols = sorted(roster | board_syms)
 
-        rows = (await session.execute(_select(WatchlistEntry.symbol))).scalars().all()
-
-    stats["scanned"] = len(rows)
-    for sym in rows:
+    stats["scanned"] = len(symbols)
+    for sym in symbols:
         try:
             r = await refresh_one(sym)
             if r.get("error"):

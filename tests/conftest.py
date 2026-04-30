@@ -29,6 +29,7 @@ from app.trades import models as _trades_models  # noqa: F401, E402
 from app.market_data import derived as _derived_models  # noqa: F401, E402
 from app.queue import models as _queue_models  # noqa: F401, E402
 from app.macro import models as _macro_models  # noqa: F401, E402
+from app.boards import models as _boards_models  # noqa: F401, E402
 
 
 @pytest_asyncio.fixture
