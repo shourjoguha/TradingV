@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useAccuracyGrid } from '../../hooks/use-api'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Activity } from 'lucide-react'
+import { InfoBubble } from '../common'
 
 // Rolls the last-30-day grid into a single read: average hit-rate, average
 // MAPE, total samples. Operator's "is the model working overall?" answer.
@@ -28,6 +29,7 @@ export function AccuracyTile() {
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Activity className="h-4 w-4 text-violet" />
           Accuracy (30d)
+          <InfoBubble term="composite_accuracy" />
         </CardTitle>
         <Link
           to="/predictions/accuracy"

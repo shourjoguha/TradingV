@@ -5,6 +5,15 @@ import { RatioChart } from './RatioChart'
 import { useMacroRatio, useMacroSeries } from '../../hooks/use-api'
 import { sinceFromYears, type RegimePanel as RegimePanelDef, type RegimeRow } from '../../lib/macro-views'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { InfoBubble } from '../common'
+
+// Maps panel title → glossary key for the axis-level (i) bubble.
+const AXIS_TERMS: Record<string, string> = {
+  Inflation: 'inflation_axis',
+  Growth: 'growth_axis',
+  Liquidity: 'liquidity_axis',
+  Stress: 'stress_axis',
+}
 
 interface RegimePanelProps {
   panel: RegimePanelDef
@@ -103,10 +112,14 @@ function formatValue(v: number): string {
 }
 
 export function RegimePanel({ panel, since }: RegimePanelProps) {
+  const term = AXIS_TERMS[panel.title]
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">{panel.title}</CardTitle>
+        <CardTitle className="text-base flex items-center gap-1">
+          {panel.title}
+          {term && <InfoBubble term={term} />}
+        </CardTitle>
         <CardDescription className="text-xs">{panel.blurb}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">

@@ -13,6 +13,7 @@ import {
   type RegimeRow,
 } from '../lib/macro-views'
 import { RefreshCw, LineChart as LineChartIcon } from 'lucide-react'
+import { InfoBubble } from '../components/common'
 
 type Tab = 'overview' | 'ratios' | 'sectors'
 const TABS: { id: Tab; label: string }[] = [
@@ -43,6 +44,7 @@ export function Macro() {
           <h2 className="text-2xl font-heading font-semibold tracking-tight flex items-center gap-2">
             <LineChartIcon className="h-5 w-5 text-muted-foreground" />
             Macro
+            <InfoBubble term="regime" />
           </h2>
           <p className="text-muted-foreground text-sm">
             Regime context for per-ticker decisions. Twelve curated ratios + sector strip,

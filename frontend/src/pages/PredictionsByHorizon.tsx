@@ -13,7 +13,7 @@ import {
 } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
-import { EmptyState } from '../components/common'
+import { EmptyState, InfoBubble } from '../components/common'
 import {
   Select,
   SelectContent,
@@ -333,10 +333,11 @@ export function PredictionsByHorizon() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Horizon Matrix</CardTitle>
-                <CardDescription>
-                  Each cell: <span className="font-mono">Δ%</span> on{' '}
-                  <span className="font-mono font-medium">{activeField}</span>{' '}
-                  (top), actual close $ below — or predicted close $ in italics when the target date is still in the future.
+                <CardDescription className="inline-flex items-center gap-1 flex-wrap">
+                  <span>Each cell: </span>
+                  <span className="font-mono">Δ%</span>
+                  <InfoBubble term="delta_pct" />
+                  <span>on{' '}<span className="font-mono font-medium">{activeField}</span>{' '}(top), actual close $ below — or predicted close $ in italics when the target date is still in the future.</span>
                   Hover for an OHLC compare.
                   <span className="ml-2 text-green-500">■</span> undershoot
                   <span className="ml-1 text-red-500">■</span> overshoot

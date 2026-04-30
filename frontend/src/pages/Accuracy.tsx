@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button'
 import { Skeleton } from '../components/ui/skeleton'
 import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group'
 import { AlertTriangle, RefreshCw, X } from 'lucide-react'
+import { InfoBubble } from '../components/common'
 
 type DrillKey = { ticker: string; horizon: number; model: string; interval: string } | null
 
@@ -71,7 +72,10 @@ export function Accuracy() {
     <div className="space-y-6">
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
-          <h2 className="font-display text-2xl font-bold tracking-tight">Accuracy</h2>
+          <h2 className="font-display text-2xl font-bold tracking-tight flex items-center gap-2">
+            Accuracy
+            <InfoBubble term="composite_accuracy" />
+          </h2>
           <p className="text-sm text-muted-foreground">
             Per-(ticker, horizon) Kronos performance over the rolling window. Hover a cell to see the per-prediction breakdown.
           </p>
@@ -111,7 +115,16 @@ export function Accuracy() {
       {/* Legend — explains composite color + low-n masking */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span className="font-medium">Cell:</span>
-        <span><span className="font-mono">hit%</span> / <span className="font-mono">MAPE%</span> · <span className="font-mono">n=…</span></span>
+        <span className="inline-flex items-center gap-0.5">
+          <span className="font-mono">hit%</span>
+          <InfoBubble term="hit_rate" />
+          <span> / </span>
+          <span className="font-mono">MAPE%</span>
+          <InfoBubble term="mape" />
+          <span> · </span>
+          <span className="font-mono">n=…</span>
+          <InfoBubble term="sample_count" />
+        </span>
         <span className="ml-2"><span className="inline-block w-3 h-3 rounded-sm bg-success-bg align-middle mr-1" />green: hit ≥ {Math.round(HIT_GREEN*100)}% AND MAPE ≤ {MAPE_GREEN*100}%</span>
         <span><span className="inline-block w-3 h-3 rounded-sm bg-warning-bg align-middle mr-1" />yellow: in-between</span>
         <span><span className="inline-block w-3 h-3 rounded-sm bg-danger-bg align-middle mr-1" />red: hit &lt; {Math.round(HIT_OK*100)}% OR MAPE &gt; {MAPE_RED*100}%</span>
