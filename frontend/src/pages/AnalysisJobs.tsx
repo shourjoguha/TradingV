@@ -556,7 +556,7 @@ export function AnalysisJobs() {
             the right opens the full detail page.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {isLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-10 w-full" />

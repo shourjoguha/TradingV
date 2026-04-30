@@ -381,7 +381,7 @@ export function PredictionsByTarget() {
             <CardHeader>
               <CardTitle className="text-base">Prediction Details</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

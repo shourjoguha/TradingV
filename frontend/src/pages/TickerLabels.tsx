@@ -204,7 +204,7 @@ export function TickerLabels() {
             </DialogContent>
           </Dialog>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {isLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-10 w-full" />
