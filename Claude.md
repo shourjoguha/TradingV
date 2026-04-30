@@ -57,6 +57,7 @@ Personal trading-decision-support system for **one operator**. FastAPI backend r
 | [.claude/glossary.md](.claude/glossary.md)               | Terms used across docs and code                               |
 | [.claude/decisions/](.claude/decisions/)                 | Architecture Decision Records (ADRs)                          |
 | [.claude/roadmap.md](.claude/roadmap.md)                 | What's next (forward-looking)                                 |
+| [.claude/macro-workbench-brainstorm.md](.claude/macro-workbench-brainstorm.md) | Pre-plan: regime-aware research workbench (M-1..M-6 phases)   |
 | [.claude/roadmap-shipped.md](.claude/roadmap-shipped.md) | What's shipped (archive)                                      |
 | [.claude/backlog.md](.claude/backlog.md)                 | Deferred features / known gaps / operator unlocks             |
 | [.claude/tech\_debt.md](.claude/tech_debt.md)            | Code cruft knowingly left in shipped code                     |
