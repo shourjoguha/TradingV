@@ -8,7 +8,7 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ## Decision-tool roadmap — see [.claude/roadmap.md](roadmap.md)
 
-**Status (2026-04-30):** Phases 0-6 SHIPPED. All backend tables + lifespan loops + endpoints + frontend pages live. 254 tests pass. Unlock #2 RESOLVED via self-healing OHLCV fetch (ADR-010); scheduler mid-tick PUT race RESOLVED (ADR-011). Telegram still dormant — see Unlock #1.
+**Status (2026-04-30):** Phases 0-6 SHIPPED. All backend tables + lifespan loops + endpoints + frontend pages live. 269 tests pass. Unlock #2 RESOLVED via self-healing OHLCV fetch (ADR-010); scheduler mid-tick PUT race RESOLVED (ADR-011); **Macro Workbench M-1 (signal layer) shipped** ([macro.md](macro.md), [decisions/012](decisions/012-macro-workbench-storage-shape.md)) — `/v1/macro/{series,ratio,refresh}` live with 38 symbols ingesting daily. Telegram still dormant — see Unlock #1. Next: Macro Workbench M-2 (hypothesis object + view registry) — see [plans/M-2-hypothesis-object.md](plans/M-2-hypothesis-object.md).
 
 | Phase | Title | Status |
 |---|---|---|
@@ -150,6 +150,38 @@ Verified: Railway-originated job pushes both `kind='ticker'` and `kind='result'`
 **Resolution (2026-04-30):** Moved the `next_run_at` advancement out of `_tick` (which computed against a stale config snapshot taken at tick start) and into `record_run`. `record_run` now takes `advance_now` (an instant) instead of `advance_to` (a precomputed value) and recomputes against the freshly-loaded config row. A PUT that lands during a tick is honored on the way out — no more lost slots, no `is_running` flag needed. See [decisions/011](decisions/011-schedule-mid-tick-put-race.md).
 
 **Files:** `app/schedule/service.py::record_run`, `app/schedule/runner.py::_tick`, plus regression tests in `tests/test_schedule.py`.
+
+---
+
+## DB pruning — eviction for working tables  ⚠️ INTERACTIVE TRIGGER
+
+**Status:** Open (captured 2026-04-30). Not urgent at current scale (~300–400 MB total).
+
+**Why deferred:** Trust-bearing tables (`prediction_accuracy`, `trades`, `drift_alerts`)
+deliberately have no TTL — full history is needed for drift detection and per-rule P&L
+attribution. Working tables (queue, fetch_misses, ineligible tasks, old 1h OHLCV) grow
+forever by accident, but the volume is small enough that pruning is premature.
+
+**⚠️ When the operator triggers this item, the implementer MUST present all four options
+below and ask which to implement. Each has different reversibility and behavioral
+implications. Do not silently bundle them.**
+
+| # | Target | Policy proposal | Implication |
+|---|---|---|---|
+| 1 | `submit_queue` | Prune rows where `status IN ('completed','cancelled') AND updated_at < now() - 30d` | Loses queue history (job-id → enqueue-source mapping for audit). Safe — completed work is already mirrored in `analysis_jobs`. |
+| 2 | `analysis_tasks` (ineligible-only) | Prune rows where `status='ineligible' AND finished_at < now() - 90d` | Loses ineligibility forensics ("why didn't NEE@1h fire 4 months ago?"). Acceptable if `_process_task` keeps logging the reason on each new attempt. Does NOT touch `done`/`error` tasks. |
+| 3 | `ohlcv_fetch_misses` (resolved-only) | One-shot cleanup: delete rows where an `ohlcv_bars` row exists at the same `(ticker, interval, target_ts)` | Forensic-only impact. Keeps the table as "list of bars that genuinely never published". Recommended one-shot, then schedule monthly. |
+| 4 | `ohlcv_bars` 1h history beyond 90 days | Prune rows where `interval='1h' AND ts < now() - 90d` | **Highest impact.** Disables 1h-cadence backtests beyond the window. Do NOT pick this if any active hypothesis uses 1h ratios for confirmation. Reversible only by re-fetching from yfinance (which has its own 730d cap). |
+
+**Trigger to revisit:** total DB > 5 GB OR restore-from-dump > 60s OR Railway storage tier
+forced upgrade. None currently true.
+
+**Implementation pattern:** for #1–#3, add a lifespan loop similar to `sync_outbox.purge_loop`
+with a per-table retention setting in `app/core/config.py`. For #4, a one-shot SQL migration
+plus an ongoing rule in `_collect_actuals` that re-anchors the 1h refresh window.
+
+**Files involved:** `app/queue/service.py`, `app/analysis/service.py`,
+`app/accuracy/service.py`, `app/market_data/service.py`, `app/core/config.py`.
 
 ---
 

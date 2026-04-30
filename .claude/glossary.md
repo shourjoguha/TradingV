@@ -32,6 +32,16 @@ Terms used across docs and code. One line each.
 - **submit_queue** — Tier-1 job submission queue. Worker drains FIFO.
 - **ticker_market_data** — Phase 6 derived metrics (IV percentile, earnings dates).
 - **ohlcv_bars** — OHLCV cache. Composite PK `(symbol, interval, ts)`.
+- **macro_series** — Daily close-only macro time-series (yfinance + FRED). UNIQUE `(symbol, ts)`. Powers the Macro Workbench `/v1/macro/*` endpoints. Daily-only by design; not OHLCV. Separate from `ohlcv_bars` — see [decisions/012](decisions/012-macro-workbench-storage-shape.md).
+- **ohlcv_fetch_misses** — Per `(ticker, interval, target_ts)` give-up counter for the self-healing OHLCV fetch in the accuracy evaluator. See [decisions/010](decisions/010-self-healing-ohlcv-fetch.md).
+
+## Macro Workbench
+
+- **regime** — A multi-month/multi-quarter market state that biases ratios and asset returns systematically (e.g. risk-on, debasement, recession). The workbench's job is to surface which regime the data is currently in.
+- **ratio (macro)** — `numerator/denominator` of two `macro_series` symbols, computed at query time. Twelve canonical ratios cover the v1 spec (e.g. `GC=F/SPY`, `RSP/SPY`, `HYG/LQD`).
+- **hypothesis** — Operator-authored thesis about a regime/asset move, with TTL, invalidators, and confirming/violating status. Markdown drafts under `.claude/hypotheses/draft/` until M-2 ships the DB-backed object.
+- **claim_type** — `absolute` | `relative` | `absolute_with_relative_signal`. The third covers the common pattern where the bet is on absolute returns but the early-warning signal is a relative ratio.
+- **precondition (hypothesis)** — Existence dependency: if precondition `violated`, dependent auto-cancels. Different from `parent_id` (sizing dependency, no cascade).
 
 ## Opportunities
 

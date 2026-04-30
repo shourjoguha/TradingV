@@ -40,7 +40,7 @@ Each row: what we picked → what we paid for it → where the escape hatch is d
 | Postgres-only durability | Throughput at >10× scale | [tech_debt.md](tech_debt.md) "Tier 2 queue (Redis + arq)" |
 | In-process workers | Multi-machine resilience (laptop dies → manual restart) | [tech_debt.md](tech_debt.md) Tier-2 path |
 | Compact docs | No unified "what is this app" intro until [CLAUDE.md](../CLAUDE.md) elevator pitch ships | This file + CLAUDE.md elevator pitch |
-| Pragmatic testing (mostly backend, 245 tests) | UI bugs only caught at preview/manual | [backlog.md](backlog.md) — would add Playwright E2E only when scale forces |
+| Pragmatic testing (mostly backend, 269 tests) | UI bugs only caught at preview/manual | [backlog.md](backlog.md) — would add Playwright E2E only when scale forces |
 | Desktop-first frontend | Mobile is via Telegram only (no PWA, no responsive polish) | Mobile hamburger nav added in neumorphism redesign |
 | Belt-and-braces | Code surface bloats over time | Monthly review of [tech_debt.md](tech_debt.md) |
 | Telegram only | No email, no Slack, no push API redundancy | [roadmap-shipped.md](roadmap-shipped.md) Phase 4 — multi-channel deferred until Telegram proves valuable |

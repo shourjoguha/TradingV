@@ -20,8 +20,9 @@ app/
   trades/         manual trade journal + per-rule P&L attribution
   notifications/  Telegram notifier + daily digest loop
   labels/         free-form EAV ticker metadata
+  macro/          Macro Workbench signal layer (yfinance + FRED daily series, ratios on demand)
   api/            router aggregation (mounts v1 + legacy surfaces)
-  main.py         FastAPI app factory + lifespan (8 background loops)
+  main.py         FastAPI app factory + lifespan (9 background loops)
 migrations/       Alembic (source of truth for schema)
 tests/            pytest, SQLite in-memory per test
 backups/          local snapshots + ROLLBACK.md (gitignored except docs)
@@ -52,6 +53,7 @@ backups/          local snapshots + ROLLBACK.md (gitignored except docs)
 | `trades/` | Manual trade journal + per-opportunity-rule P&L attribution. | [trades.md](trades.md) |
 | `notifications/` | Telegram notifier (no-op when unconfigured) + daily digest loop. | [notifications.md](notifications.md) |
 | `labels/` | Free-form EAV metadata on tickers (sector, capsize, etc.). Powers `?labels=k:v` filter on watchlist. | [labels.md](labels.md) |
+| `macro/` | Macro Workbench signal layer: `macro_series` table, yfinance + FRED providers, `/v1/macro/{series,ratio,refresh}`, daily ingestion lifespan. Foundation for the regime-aware research workbench. | [macro.md](macro.md) |
 
 ## Daily forecast pipeline (cross-module flow)
 
