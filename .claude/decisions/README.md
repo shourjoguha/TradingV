@@ -15,6 +15,8 @@ Architecture Decision Records — one file per significant choice, with the why 
 | 007 | [Hardcoded opportunity rules over a DSL](007-hardcoded-opportunity-rules-over-dsl.md) | 2026-04-27 | Accepted |
 | 008 | [Postgres for everything durable; no Redis yet](008-postgres-only-no-redis-yet.md) | ongoing | Accepted |
 | 009 | [Light-only frontend; no dark mode](009-light-only-no-dark-mode.md) | 2026-04-27 | Accepted |
+| 010 | [Self-healing OHLCV fetch via the accuracy evaluator](010-self-healing-ohlcv-fetch.md) | 2026-04-30 | Accepted |
+| 011 | [Choke-point recompute for scheduler mid-tick PUT race](011-schedule-mid-tick-put-race.md) | 2026-04-30 | Accepted |
 
 ## How to add a new ADR
 

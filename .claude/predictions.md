@@ -79,3 +79,12 @@ Response: `{target_date, interval, fields, rows: [{ticker, target_date, made_on,
 
 ## Source-of-truth note
 `analysis_tasks.result_json` is canonical. `prediction_points` is a queryable cache. Backfill regenerates it on demand. If the format ever changes, set `only_missing=false` and re-run.
+
+## Frontend — By Horizon cell semantics
+
+`/predictions/by-horizon` matrix cells:
+
+- **Primary (large):** `Δ%` on the active field (`(pred − actual) / actual × 100`), 1 decimal, signed (e.g. `+1.2%`, `−0.8%`). No `$` prefix — the value is a percentage.
+- **Secondary (small):** **actual close `$X.XX`** when the target date has elapsed; **predicted close `$X.XX`** in italics with a leading `→` and dashed border when the target is still in the future (forecast-only).
+- **Hover:** opens a tooltip with side-by-side OHLC mini-candles (actual vs predicted) plus `made_on` + horizon header. Three sparse price labels (actual close, predicted high, predicted low) anchor the visual without crowding it.
+- **Color:** `Δ > +1%` red (overshoot), `Δ < −1%` green (undershoot), `±1%` grey. Same legend communicates both color and the secondary line.

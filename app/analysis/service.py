@@ -29,7 +29,7 @@ from app.core import db as _db
 from app.core.config import SETTINGS
 from app.kronos import service as kservice
 from app.kronos.adapter import get_adapter
-from app.kronos.registry import load_models
+from app.kronos.registry import get_model, load_models
 from app.kronos.schemas import Eligible, Ineligible
 from app.kronos.validator import EligibilityValidator
 from app.market_data import service as md_service
@@ -324,6 +324,30 @@ async def _process_task(task_id: str, *, horizon_bars: Optional[int]) -> None:
             asset_class = t.asset_class
 
     available_bars = await md_service.count_cached(task.ticker, task.interval)
+
+    # Lazy cold-start warm-up: when the cache is below the model's minimum
+    # history (typical on the first run for an interval — e.g. first 1h
+    # schedule before any 1h bars have ever been fetched), attempt a single
+    # provider refresh and re-count. The validator still has the final say —
+    # if the refresh yields too few bars, INSUFFICIENT_HISTORY surfaces as
+    # before. One attempt only, so a permanently-unavailable combo doesn't
+    # repeatedly hammer the upstream provider.
+    spec = get_model(task.model_id)
+    if spec is not None and available_bars < spec.min_history_bars:
+        try:
+            await md_service.refresh(
+                task.ticker, task.interval, asset_class=asset_class
+            )
+            available_bars = await md_service.count_cached(
+                task.ticker, task.interval
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "lazy ohlcv refresh failed for %s/%s: %s",
+                task.ticker,
+                task.interval,
+                e,
+            )
 
     outcome = EligibilityValidator.check(
         model_id=task.model_id,

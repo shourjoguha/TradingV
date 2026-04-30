@@ -115,3 +115,32 @@ class DriftAlert(Base):
         Index("ix_drift_open", "acknowledged_at", "ticker"),
         Index("ix_drift_ticker_horizon", "ticker", "horizon_offset"),
     )
+
+
+class OhlcvFetchMiss(Base):
+    """Tracks (ticker, interval, target_ts) tuples whose actual OHLCV bar
+    we've tried — and failed — to refresh from the upstream provider.
+
+    Owned by the accuracy evaluator's hourly tick: when a pending prediction
+    has no actual in ``ohlcv_bars``, evaluator triggers a refresh; if the
+    bar still doesn't land, it upserts a row here with ``attempts += 1``.
+    Once ``attempts >= MAX_OHLCV_FETCH_ATTEMPTS`` the evaluator stops
+    refreshing for this target (still re-checks cache cheaply in case the
+    bar arrived via another path).
+
+    Cleared implicitly: when the bar finally lands and accuracy is
+    computed, the row is harmless; we leave it (small table, easy to
+    inspect for diagnostics: "what bars never arrived?").
+    """
+
+    __tablename__ = "ohlcv_fetch_misses"
+
+    ticker: Mapped[str] = mapped_column(String(50), primary_key=True)
+    interval: Mapped[str] = mapped_column(String(8), primary_key=True)
+    target_ts: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), primary_key=True
+    )
+    attempts: Mapped[int] = mapped_column(Integer(), nullable=False, default=0)
+    last_attempt_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

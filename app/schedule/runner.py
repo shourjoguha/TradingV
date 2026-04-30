@@ -94,12 +94,16 @@ async def _tick() -> None:
     now = _now_utc()
     tz = schedule_svc.resolve_tz(cfg.tz_name)
     local_now = now.astimezone(tz)
-    next_after_run = schedule_svc.compute_next_run_at(cfg, now=now + datetime.timedelta(minutes=1))
+    # Recompute the post-tick advance instant, not the value. record_run
+    # reads the freshest config when it computes next_run_at — keeps a
+    # PUT that lands during this tick from being clobbered by a snapshot
+    # taken before the PUT (see ADR-011 / backlog Unlock #3).
+    advance_now = now + datetime.timedelta(minutes=1)
 
     # Watchlist empty guard.
     symbols = await watchlist_svc.list_symbols()
     if not symbols:
-        await schedule_svc.record_run(status="skipped_empty", advance_to=next_after_run)
+        await schedule_svc.record_run(status="skipped_empty", advance_now=advance_now)
         return
 
     # Per-asset-class trading-day filter. Lets a crypto ticker run on
@@ -120,7 +124,7 @@ async def _tick() -> None:
 
         if not eligible:
             await schedule_svc.record_run(
-                status="skipped_weekend", advance_to=next_after_run
+                status="skipped_weekend", advance_now=advance_now
             )
             return
         symbols = eligible
@@ -166,13 +170,13 @@ async def _tick() -> None:
             except Exception as e:  # noqa: BLE001
                 logger.warning("scheduler: post-run accuracy evaluate failed: %s", e)
 
-        await schedule_svc.record_run(status="succeeded", advance_to=next_after_run)
+        await schedule_svc.record_run(status="succeeded", advance_now=advance_now)
     except Exception as e:  # pragma: no cover - defensive
         logger.exception("scheduler: tick failed")
         await schedule_svc.record_run(
             status="failed",
             error=f"{type(e).__name__}: {e}",
-            advance_to=next_after_run,
+            advance_now=advance_now,
         )
 
 

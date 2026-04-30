@@ -22,6 +22,20 @@ from app.predictions.models import PredictionPoint
 HEADERS = {"X-API-Key": "test-key"}
 
 
+@pytest.fixture(autouse=True)
+def _stub_md_refresh(monkeypatch):
+    """The accuracy evaluator now calls md_service.refresh when actuals
+    are missing. Stub it so the suite never hits yfinance over the
+    network. Tests that want to assert refresh-call behavior monkeypatch
+    again locally."""
+    from app.market_data import service as md_service
+
+    async def _noop(*_a, **_kw):
+        return 0
+
+    monkeypatch.setattr(md_service, "refresh", _noop)
+
+
 # ----------------------------------------------------------------------
 # Helpers — bypass the analysis pipeline; insert raw rows.
 # ----------------------------------------------------------------------
@@ -170,6 +184,7 @@ async def test_evaluate_pending_inserts_row_when_actual_present(client):
         "evaluated": 1,
         "skipped_no_actual": 0,
         "skipped_bad_data": 0,
+        "ohlcv_refreshed": 0,
     }
 
     async with _db.SessionLocal() as s:
@@ -318,7 +333,13 @@ async def test_evaluate_route_returns_stats(client):
     r = await client.post("/v1/accuracy/evaluate", headers=HEADERS)
     assert r.status_code == 200
     body = r.json()
-    assert set(body.keys()) == {"scanned", "evaluated", "skipped_no_actual", "skipped_bad_data"}
+    assert set(body.keys()) == {
+        "scanned",
+        "evaluated",
+        "skipped_no_actual",
+        "skipped_bad_data",
+        "ohlcv_refreshed",
+    }
 
 
 @pytest.mark.asyncio
@@ -343,3 +364,177 @@ async def test_pair_route_empty(client):
 async def test_evaluate_requires_auth(client):
     r = await client.post("/v1/accuracy/evaluate")
     assert r.status_code in (401, 403)
+
+
+# ----------------------------------------------------------------------
+# Interval filter — keeps 1h and 1d cadences in separate buckets.
+# ----------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_accuracy_grid_separates_intervals(client):
+    """A ticker with both 1d and 1h evaluations must yield two grid rows
+    (one per interval), not one row that averages them together."""
+    base_ts = datetime.datetime(2026, 4, 21, 0, 0, 0, tzinfo=datetime.timezone.utc)
+
+    # 1d row: predicted 102, actual 105.
+    await _insert_prediction(
+        ticker="AAPL", interval="1d",
+        made_on=(base_ts - datetime.timedelta(days=1)).date(),
+        target_ts=base_ts, horizon_offset=1, predicted_close=102.0, task_id="task-d",
+    )
+    await _insert_actual(ticker="AAPL", interval="1d", ts=base_ts, close=105.0)
+    await _insert_actual(
+        ticker="AAPL", interval="1d",
+        ts=base_ts - datetime.timedelta(days=1), close=100.0,
+    )
+
+    # 1h row: predicted 200, actual 202 — different magnitudes so we can tell
+    # the two grid rows apart.
+    h_target = base_ts + datetime.timedelta(hours=1)
+    await _insert_prediction(
+        ticker="AAPL", interval="1h",
+        made_on=base_ts.date(),
+        target_ts=h_target, horizon_offset=1, predicted_close=200.0, task_id="task-h",
+    )
+    await _insert_actual(ticker="AAPL", interval="1h", ts=h_target, close=202.0)
+    await _insert_actual(ticker="AAPL", interval="1h", ts=base_ts, close=199.0)
+
+    now = base_ts + datetime.timedelta(days=2)
+    await accuracy_service.evaluate_pending(now=now)
+
+    # No filter: two grid rows (1d + 1h), same ticker+horizon but distinct intervals.
+    grid_all = await accuracy_service.accuracy_grid()
+    intervals = sorted(g["interval"] for g in grid_all)
+    assert intervals == ["1d", "1h"]
+    assert all(g["sample_count"] == 1 for g in grid_all)
+
+    # Filter 1d → only the 1d row.
+    grid_d = await accuracy_service.accuracy_grid(interval="1d")
+    assert len(grid_d) == 1
+    assert grid_d[0]["interval"] == "1d"
+
+    # Filter 1h → only the 1h row.
+    grid_h = await accuracy_service.accuracy_grid(interval="1h")
+    assert len(grid_h) == 1
+    assert grid_h[0]["interval"] == "1h"
+
+
+@pytest.mark.asyncio
+async def test_evaluator_triggers_ohlcv_refresh_when_actual_missing(client, monkeypatch):
+    """When the bar isn't in cache, the evaluator should ask the provider
+    to refresh once per (ticker, interval) per tick and re-check."""
+    from app.market_data import service as md_service
+
+    calls: list[tuple[str, str]] = []
+
+    async def tracking_refresh(symbol, interval, **_kw):
+        calls.append((symbol, interval))
+        return 0
+
+    monkeypatch.setattr(md_service, "refresh", tracking_refresh)
+
+    made_on = datetime.date(2026, 4, 20)
+    target_ts = datetime.datetime(2026, 4, 21, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    # Two predictions, same (ticker, interval) but different horizons —
+    # both missing actuals. Should dedupe to ONE refresh call.
+    await _insert_prediction(
+        ticker="AAPL", interval="1d", made_on=made_on,
+        target_ts=target_ts, horizon_offset=1, predicted_close=100.0, task_id="t1",
+    )
+    await _insert_prediction(
+        ticker="AAPL", interval="1d", made_on=made_on,
+        target_ts=target_ts + datetime.timedelta(days=1),
+        horizon_offset=2, predicted_close=101.0, task_id="t2",
+    )
+
+    now = datetime.datetime(2026, 4, 23, tzinfo=datetime.timezone.utc)
+    stats = await accuracy_service.evaluate_pending(now=now)
+
+    # Single refresh call despite two pending predictions for the same key.
+    assert calls == [("AAPL", "1d")]
+    assert stats["ohlcv_refreshed"] == 1
+    assert stats["skipped_no_actual"] == 2
+
+
+@pytest.mark.asyncio
+async def test_evaluator_records_miss_after_failed_refresh(client, monkeypatch):
+    """A pending target whose bar still doesn't land after refresh should
+    create / increment an ``OhlcvFetchMiss`` row."""
+    from app.market_data import service as md_service
+    from app.accuracy.models import OhlcvFetchMiss
+
+    async def noop_refresh(*_a, **_kw):
+        return 0
+
+    monkeypatch.setattr(md_service, "refresh", noop_refresh)
+
+    made_on = datetime.date(2026, 4, 20)
+    target_ts = datetime.datetime(2026, 4, 21, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    await _insert_prediction(
+        ticker="AAPL", interval="1d", made_on=made_on,
+        target_ts=target_ts, horizon_offset=1, predicted_close=100.0,
+    )
+
+    now = datetime.datetime(2026, 4, 23, tzinfo=datetime.timezone.utc)
+    await accuracy_service.evaluate_pending(now=now)
+
+    async with _db.SessionLocal() as s:
+        miss = await s.get(OhlcvFetchMiss, ("AAPL", "1d", target_ts))
+        assert miss is not None
+        assert miss.attempts == 1
+
+    # Second tick → attempts increment.
+    await accuracy_service.evaluate_pending(now=now + datetime.timedelta(hours=1))
+    async with _db.SessionLocal() as s:
+        miss = await s.get(OhlcvFetchMiss, ("AAPL", "1d", target_ts))
+        assert miss.attempts == 2
+
+
+@pytest.mark.asyncio
+async def test_evaluator_gives_up_after_max_attempts(client, monkeypatch):
+    """Once attempts reach ``MAX_OHLCV_FETCH_ATTEMPTS``, no further refresh
+    calls fire for that target — saves the upstream provider from being
+    hammered for bars that will never publish."""
+    from app.market_data import service as md_service
+    from app.accuracy.models import OhlcvFetchMiss
+
+    calls: list[tuple[str, str]] = []
+
+    async def tracking_refresh(symbol, interval, **_kw):
+        calls.append((symbol, interval))
+        return 0
+
+    monkeypatch.setattr(md_service, "refresh", tracking_refresh)
+
+    made_on = datetime.date(2026, 4, 20)
+    target_ts = datetime.datetime(2026, 4, 21, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    await _insert_prediction(
+        ticker="AAPL", interval="1d", made_on=made_on,
+        target_ts=target_ts, horizon_offset=1, predicted_close=100.0,
+    )
+
+    # Pre-seed a miss row at the max-attempts threshold.
+    async with _db.SessionLocal() as s:
+        s.add(OhlcvFetchMiss(
+            ticker="AAPL", interval="1d", target_ts=target_ts,
+            attempts=accuracy_service.MAX_OHLCV_FETCH_ATTEMPTS,
+            last_attempt_at=datetime.datetime(2026, 4, 22, tzinfo=datetime.timezone.utc),
+        ))
+        await s.commit()
+
+    now = datetime.datetime(2026, 4, 23, tzinfo=datetime.timezone.utc)
+    await accuracy_service.evaluate_pending(now=now)
+
+    # No refresh fired despite the missing actual.
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_grid_route_accepts_interval_param(client):
+    """Route exposes the interval filter and passes it through."""
+    r = await client.get("/v1/accuracy/grid?interval=1h", headers=HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["rows"] == []
+    assert body["window_size"] == 30

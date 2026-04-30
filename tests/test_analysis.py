@@ -14,6 +14,22 @@ from app.analysis import service
 HEADERS = {"X-API-Key": "test-key"}
 
 
+@pytest.fixture(autouse=True)
+def _stub_lazy_refresh(monkeypatch):
+    """Analysis tests run with empty OHLCV cache by design — every task hits
+    the lazy-refresh path in `_process_task`. Replace the provider call with
+    a no-op so the suite doesn't hammer yfinance over the network.
+
+    Tests that want to exercise refresh-call behavior monkeypatch this
+    again locally (the local patch wins)."""
+    from app.market_data import service as md_service
+
+    async def _noop(*_args, **_kwargs):
+        return 0
+
+    monkeypatch.setattr(md_service, "refresh", _noop)
+
+
 @pytest.mark.asyncio
 async def test_submit_run_creates_job_and_tasks(client):
     job = await service.submit_run(
@@ -75,6 +91,61 @@ async def test_submit_run_rejects_bad_interval(client):
         json={"tickers": ["AAPL"], "intervals": ["17m"]},
     )
     assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_lazy_refresh_runs_when_cache_below_min_history(client, monkeypatch):
+    """First-time interval cold start: cache empty, lazy refresh attempted
+    once, validator surfaces INSUFFICIENT_HISTORY only if refresh yields
+    too few bars."""
+    from app.market_data import service as md_service
+
+    calls: list[tuple[str, str]] = []
+
+    async def tracking_refresh(symbol, interval, **_kw):
+        calls.append((symbol, interval))
+        return 0  # simulate provider returning no bars
+
+    monkeypatch.setattr(md_service, "refresh", tracking_refresh)
+
+    job = await service.submit_run(
+        tickers=["AAPL"], intervals=["1h"], model_ids=["kronos_base"]
+    )
+
+    # Lazy refresh fired exactly once for the (ticker, interval) pair.
+    assert calls == [("AAPL", "1h")]
+
+    jr = await client.get(f"/v1/analysis/jobs/{job.id}", headers=HEADERS)
+    t = jr.json()["tasks"][0]
+    # Refresh produced 0 bars → still ineligible. The validator (not the
+    # cache check) is the source of truth.
+    assert t["status"] == "ineligible"
+    assert t["ineligible_reason"] == "INSUFFICIENT_HISTORY"
+
+
+@pytest.mark.asyncio
+async def test_lazy_refresh_skipped_when_cache_already_sufficient(client, monkeypatch):
+    """If the cache is already above min_history, no provider call fires."""
+    from app.market_data import service as md_service
+
+    calls: list[tuple[str, str]] = []
+
+    async def tracking_refresh(symbol, interval, **_kw):
+        calls.append((symbol, interval))
+        return 0
+
+    async def fake_count_cached(symbol, interval):
+        return 999  # well above kronos_base.min_history_bars (400)
+
+    monkeypatch.setattr(md_service, "refresh", tracking_refresh)
+    monkeypatch.setattr(md_service, "count_cached", fake_count_cached)
+
+    await service.submit_run(
+        tickers=["AAPL"], intervals=["1h"], model_ids=["kronos_base"]
+    )
+
+    # Cache "had enough" so the lazy path was skipped.
+    assert calls == []
 
 
 @pytest.mark.asyncio

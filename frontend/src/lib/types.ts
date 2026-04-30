@@ -4,6 +4,7 @@ export interface AccuracyGridRow {
   ticker: string
   horizon_offset: number
   model_id: string
+  interval: string
   sample_count: number
   mape: number
   rmse: number

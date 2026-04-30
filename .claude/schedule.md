@@ -50,6 +50,16 @@ This is what makes the comparison endpoints (Phase 5) meaningful — actuals for
 
 Right after `_collect_actuals`, the runner also calls `accuracy.service.evaluate_pending()` (best-effort, log-and-swallow). This pairs newly-cached actuals with elapsed predictions immediately, so the Accuracy tab reflects last night's run by morning rather than waiting up to 1h for the hourly `evaluator_loop` tick.
 
+## Mid-tick PUT race — choke-point recompute
+
+A `PUT /v1/schedule` that lands while `_tick` is mid-execution must not lose the freshly-written value. We solve it by making `record_run` the **only** writer of `next_run_at` at tick boundaries:
+
+- `_tick` computes a single `advance_now = now + 1min` and passes it through.
+- `record_run(advance_now=…)` reloads the config row inside its own session, then calls `compute_next_run_at(cfg, now=advance_now)` — so any operator change to `run_at_local` / `tz_name` / `skip_weekends` / `enabled` that landed during the tick is honored.
+- `update_config` still recomputes immediately on those scheduling-relevant fields (so a PUT outside any tick takes effect right away). When a PUT *and* a tick overlap, `record_run` reads the latest config and writes the right value last; the result matches the operator's intent.
+
+See [decisions/011](decisions/011-schedule-mid-tick-put-race.md) and the regression tests `test_record_run_uses_post_put_config` / `test_record_run_without_advance_leaves_next_run_at` in `tests/test_schedule.py`.
+
 ## Catch-up at startup
 First-iteration of the loop computes `next_run_at` if missing. If it's already in the past (laptop was off through the scheduled time), the loop fires immediately on startup.
 

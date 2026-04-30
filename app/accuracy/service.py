@@ -30,16 +30,24 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.accuracy.models import PredictionAccuracy
+from app.accuracy.models import OhlcvFetchMiss, PredictionAccuracy
 from app.core import db as _db
+from app.market_data import service as md_service
 from app.market_data.models import OhlcvBar
 from app.predictions.models import PredictionPoint
+from app.tickers import service as tickers_svc
 
 logger = logging.getLogger(__name__)
 
 # How often the lifespan loop ticks. Hourly is plenty — actuals only land
 # after each bar closes, and the evaluator is cheap when nothing's pending.
 _DEFAULT_TICK_SECONDS = 60 * 60
+
+# Cap how many times we ask the provider for the same (ticker, interval,
+# target_ts) bar. Hourly tick × 24 = give up after one day of trying. Beyond
+# that the bar likely never existed (delisted ticker, holiday, exchange
+# closure) and retrying just hammers the upstream provider.
+MAX_OHLCV_FETCH_ATTEMPTS = 24
 
 
 def _safe_div(num: float, den: float) -> float | None:
@@ -140,6 +148,76 @@ async def _fetch_baseline_close(
     return await session.scalar(stmt)
 
 
+async def _try_refresh_actual(
+    session: AsyncSession,
+    *,
+    pp: PredictionPoint,
+    refreshed_keys: set[tuple[str, str]],
+    now: datetime.datetime,
+    stats: dict[str, int],
+) -> Optional[float]:
+    """Try to make the bar for ``pp.target_ts`` exist by asking the upstream
+    provider. Returns the new actual close, or None if still missing.
+
+    Side effects:
+    - Calls ``md_service.refresh(ticker, interval)`` at most once per tick
+      per ``(ticker, interval)`` (dedupe via ``refreshed_keys``).
+    - Increments / inserts an ``OhlcvFetchMiss`` row when the refresh
+      doesn't surface the bar.
+    - Skips the refresh entirely once attempts >= ``MAX_OHLCV_FETCH_ATTEMPTS``
+      for this exact ``(ticker, interval, target_ts)`` triple.
+    """
+    miss = await session.get(
+        OhlcvFetchMiss, (pp.ticker, pp.interval, pp.target_ts)
+    )
+    if miss is not None and miss.attempts >= MAX_OHLCV_FETCH_ATTEMPTS:
+        # Already gave up. Cache might still be populated by another path
+        # (manual refresh, schedule runner), so we don't actively skip the
+        # cache re-check; we just don't trigger another provider call.
+        return None
+
+    key = (pp.ticker, pp.interval)
+    if key not in refreshed_keys:
+        refreshed_keys.add(key)
+        # Resolve asset_class for refresh; refresh accepts None and falls
+        # back to ticker registry, so even a brand-new symbol works.
+        try:
+            await md_service.refresh(pp.ticker, pp.interval)
+            stats["ohlcv_refreshed"] += 1
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "accuracy.evaluator: ohlcv refresh failed for %s/%s: %s",
+                pp.ticker,
+                pp.interval,
+                e,
+            )
+
+    actual = await _fetch_actual_close(
+        session,
+        ticker=pp.ticker,
+        interval=pp.interval,
+        target_ts=pp.target_ts,
+    )
+    if actual is not None:
+        return float(actual)
+
+    # Still missing — record / increment the miss.
+    if miss is None:
+        session.add(
+            OhlcvFetchMiss(
+                ticker=pp.ticker,
+                interval=pp.interval,
+                target_ts=pp.target_ts,
+                attempts=1,
+                last_attempt_at=now,
+            )
+        )
+    else:
+        miss.attempts += 1
+        miss.last_attempt_at = now
+    return None
+
+
 async def evaluate_pending(
     *,
     now: Optional[datetime.datetime] = None,
@@ -152,7 +230,15 @@ async def evaluate_pending(
     - No ``PredictionAccuracy`` row exists for this ``prediction_id``
     - The actual close exists in ``ohlcv_bars`` for the exact target timestamp
 
-    Returns ``{"scanned", "evaluated", "skipped_no_actual", "skipped_bad_data"}``.
+    Returns ``{"scanned", "evaluated", "skipped_no_actual", "skipped_bad_data",
+    "ohlcv_refreshed"}``.
+
+    When the bar for a pending prediction's ``target_ts`` is absent from
+    ``ohlcv_bars``, this function attempts a provider refresh once per
+    ``(ticker, interval)`` per tick (deduped within the loop), then re-checks
+    the cache. A ``OhlcvFetchMiss`` row tracks per-target attempt counts so we
+    stop hammering yfinance after ``MAX_OHLCV_FETCH_ATTEMPTS`` for a target
+    that simply never publishes.
 
     Safe to call concurrently — the UNIQUE(prediction_id) constraint is the
     final gate; conflicts are caught and counted under ``skipped_bad_data``.
@@ -163,6 +249,7 @@ async def evaluate_pending(
         "evaluated": 0,
         "skipped_no_actual": 0,
         "skipped_bad_data": 0,
+        "ohlcv_refreshed": 0,
     }
 
     async with _db.SessionLocal() as session:
@@ -179,6 +266,11 @@ async def evaluate_pending(
         rows = (await session.execute(stmt)).scalars().all()
         stats["scanned"] = len(rows)
 
+        # Per-tick dedupe so a watchlist of 40 symbols × 5 horizons all
+        # missing the same day's bars triggers one refresh per (ticker,
+        # interval), not 200.
+        refreshed_keys: set[tuple[str, str]] = set()
+
         for pp in rows:
             actual = await _fetch_actual_close(
                 session,
@@ -186,6 +278,18 @@ async def evaluate_pending(
                 interval=pp.interval,
                 target_ts=pp.target_ts,
             )
+            if actual is None:
+                # Try to make the bar exist. Per (ticker, interval) once per
+                # tick; per (ticker, interval, target_ts) capped at
+                # MAX_OHLCV_FETCH_ATTEMPTS lifetime so unfetchable targets
+                # don't hammer yfinance forever.
+                actual = await _try_refresh_actual(
+                    session,
+                    pp=pp,
+                    refreshed_keys=refreshed_keys,
+                    now=now,
+                    stats=stats,
+                )
             if actual is None:
                 stats["skipped_no_actual"] += 1
                 continue
@@ -278,6 +382,7 @@ async def accuracy_grid(
     tickers: Optional[Iterable[str]] = None,
     horizons: Optional[Iterable[int]] = None,
     model_id: Optional[str] = None,
+    interval: Optional[str] = None,
     last_n: int = 30,
     since: Optional[datetime.date] = None,
 ) -> list[dict[str, Any]]:
@@ -295,11 +400,14 @@ async def accuracy_grid(
     """
     out: list[dict[str, Any]] = []
     async with _db.SessionLocal() as session:
-        # Discover the (ticker, horizon, model) groups that have any data.
+        # Discover the (ticker, horizon, model, interval) groups that have any
+        # data. Interval is part of the grouping key — 1h and 1d cadences must
+        # not be averaged together.
         groups_stmt = select(
             PredictionAccuracy.ticker,
             PredictionAccuracy.horizon_offset,
             PredictionAccuracy.model_id,
+            PredictionAccuracy.interval,
         ).distinct()
         if tickers:
             groups_stmt = groups_stmt.where(PredictionAccuracy.ticker.in_(list(tickers)))
@@ -309,9 +417,11 @@ async def accuracy_grid(
             )
         if model_id:
             groups_stmt = groups_stmt.where(PredictionAccuracy.model_id == model_id)
+        if interval:
+            groups_stmt = groups_stmt.where(PredictionAccuracy.interval == interval)
         groups = (await session.execute(groups_stmt)).all()
 
-        for ticker, horizon, mid in groups:
+        for ticker, horizon, mid, ivl in groups:
             row_stmt = (
                 select(
                     PredictionAccuracy.abs_error_pct,
@@ -323,6 +433,7 @@ async def accuracy_grid(
                     PredictionAccuracy.ticker == ticker,
                     PredictionAccuracy.horizon_offset == horizon,
                     PredictionAccuracy.model_id == mid,
+                    PredictionAccuracy.interval == ivl,
                 )
                 .order_by(PredictionAccuracy.evaluated_at.desc())
                 .limit(last_n)
@@ -351,6 +462,7 @@ async def accuracy_grid(
                     "ticker": ticker,
                     "horizon_offset": horizon,
                     "model_id": mid,
+                    "interval": ivl,
                     "sample_count": n,
                     "mape": mape,
                     "rmse": rmse,
