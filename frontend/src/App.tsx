@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
@@ -11,6 +12,11 @@ import { PredictionsByHorizon } from './pages/PredictionsByHorizon'
 import { Accuracy } from './pages/Accuracy'
 import { Opportunities } from './pages/Opportunities'
 import { Trades } from './pages/Trades'
+import { Skeleton } from './components/ui/skeleton'
+
+// Lazy-load Docs so the markdown bundle (react-markdown + remark) only ships
+// when the operator actually opens the page.
+const Docs = lazy(() => import('./pages/Docs').then((m) => ({ default: m.Docs })))
 
 export function App() {
   return (
@@ -27,6 +33,14 @@ export function App() {
         <Route path="/accuracy" element={<Accuracy />} />
         <Route path="/opportunities" element={<Opportunities />} />
         <Route path="/trades" element={<Trades />} />
+        <Route
+          path="/docs/:slug?"
+          element={
+            <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+              <Docs />
+            </Suspense>
+          }
+        />
       </Routes>
     </Layout>
   )

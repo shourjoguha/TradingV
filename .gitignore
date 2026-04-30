@@ -39,4 +39,6 @@ hf-cache/
 
 # Personal operator runbook (contains keys + workflow notes)
 use_me_guide.md
-docs/
+# Anchored to repo root — `docs/` (unanchored) was also matching
+# frontend/src/docs/ which holds in-app reference markdown.
+/docs/
