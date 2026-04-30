@@ -2,49 +2,73 @@ import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Sparkline } from './Sparkline'
 import { RatioChart } from './RatioChart'
-import { useMacroRatio, useMacroSeries } from '../../hooks/use-api'
-import { sinceFromYears, type RegimePanel as RegimePanelDef, type RegimeRow } from '../../lib/macro-views'
+import { useMacroRatio, useMacroSeries, useMacroSpread } from '../../hooks/use-api'
+import {
+  isRatioRow,
+  isSeriesRow,
+  isSpreadRow,
+  rowSubtitle,
+  type RegimePanel as RegimePanelDef,
+  type RegimeRow,
+} from '../../lib/macro-views'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { InfoBubble } from '../common'
-
-// Maps panel title → glossary key for the axis-level (i) bubble.
-const AXIS_TERMS: Record<string, string> = {
-  Inflation: 'inflation_axis',
-  Growth: 'growth_axis',
-  Liquidity: 'liquidity_axis',
-  Stress: 'stress_axis',
-}
 
 interface RegimePanelProps {
   panel: RegimePanelDef
   /** ISO date — when to start the chart. */
   since: string
-  /** Years window for the focused chart's time-range chips. */
-  focusedYears: number
 }
 
-// Hook router: a row is either a ratio (numerator/denominator) or a single
-// series (symbol). Keeps the consumer simple.
+// Hook router: a row is one of three shapes — ratio, series, or spread.
+// Returns a uniform `points` array regardless of source.
 function useRowData(row: RegimeRow, since: string, enabled = true) {
-  const isRatio = 'numerator' in row
   const ratio = useMacroRatio({
-    numerator: isRatio ? row.numerator : '',
-    denominator: isRatio ? row.denominator : '',
+    numerator: isRatioRow(row) ? row.numerator : '',
+    denominator: isRatioRow(row) ? row.denominator : '',
     since,
-    enabled: enabled && isRatio,
+    enabled: enabled && isRatioRow(row),
   })
   const series = useMacroSeries({
-    symbol: !isRatio ? row.symbol : '',
+    symbol: isSeriesRow(row) ? row.symbol : '',
     since,
-    enabled: enabled && !isRatio,
+    enabled: enabled && isSeriesRow(row),
   })
-  return isRatio
-    ? { points: ratio.data?.points ?? [], isLoading: ratio.isLoading, isError: ratio.isError }
-    : { points: series.data?.points ?? [], isLoading: series.isLoading, isError: series.isError }
+  const spread = useMacroSpread({
+    minuend: isSpreadRow(row) ? row.minuend : '',
+    subtrahend: isSpreadRow(row) ? row.subtrahend : '',
+    since,
+    enabled: enabled && isSpreadRow(row),
+  })
+  if (isRatioRow(row)) {
+    return {
+      points: ratio.data?.points ?? [],
+      isLoading: ratio.isLoading,
+      isError: ratio.isError,
+    }
+  }
+  if (isSpreadRow(row)) {
+    return {
+      points: spread.data?.points ?? [],
+      isLoading: spread.isLoading,
+      isError: spread.isError,
+    }
+  }
+  return {
+    points: series.data?.points ?? [],
+    isLoading: series.isLoading,
+    isError: series.isError,
+  }
 }
 
-function rowSubtitle(row: RegimeRow): string {
-  return 'numerator' in row ? `${row.numerator} ÷ ${row.denominator}` : row.symbol
+// Compact value formatter — keeps long FRED values (millions) readable.
+function formatValue(v: number): string {
+  const abs = Math.abs(v)
+  if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`
+  if (abs >= 10_000) return `${(v / 1000).toFixed(1)}k`
+  if (abs >= 100) return v.toFixed(1)
+  if (abs >= 1) return v.toFixed(3)
+  return v.toFixed(4)
 }
 
 function RegimeRowItem({ row, since }: { row: RegimeRow; since: string }) {
@@ -54,25 +78,32 @@ function RegimeRowItem({ row, since }: { row: RegimeRow; since: string }) {
 
   return (
     <div className="rounded-xl bg-background shadow-inset-sm">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/30 transition-colors rounded-xl"
-        aria-expanded={expanded}
-      >
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/30 transition-colors rounded-xl">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="flex items-center gap-2 min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet rounded-md"
+        >
           {expanded ? (
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           ) : (
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           )}
           <div className="min-w-0">
-            <div className="text-sm font-medium leading-tight truncate">{row.label}</div>
+            <div className="text-sm font-medium leading-tight truncate flex items-center gap-1">
+              {row.label}
+              {row.term && (
+                <span onClick={(e) => e.stopPropagation()} role="presentation">
+                  <InfoBubble term={row.term} />
+                </span>
+              )}
+            </div>
             <div className="text-[10px] font-mono text-muted-foreground truncate">
               {rowSubtitle(row)}
             </div>
           </div>
-        </div>
+        </button>
         <div className="flex items-center gap-3 shrink-0">
           {lastValue != null && (
             <span className="text-xs font-mono tabular-nums text-foreground">
@@ -81,7 +112,7 @@ function RegimeRowItem({ row, since }: { row: RegimeRow; since: string }) {
           )}
           <Sparkline points={data.points} width={120} height={28} weekly />
         </div>
-      </button>
+      </div>
       {expanded && (
         <div className="p-2 border-t border-muted-foreground/10">
           {data.isLoading ? (
@@ -101,24 +132,13 @@ function RegimeRowItem({ row, since }: { row: RegimeRow; since: string }) {
   )
 }
 
-// Compact value formatter — keeps long FRED values (millions) readable.
-function formatValue(v: number): string {
-  const abs = Math.abs(v)
-  if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`
-  if (abs >= 10_000) return `${(v / 1000).toFixed(1)}k`
-  if (abs >= 100) return v.toFixed(1)
-  if (abs >= 1) return v.toFixed(3)
-  return v.toFixed(4)
-}
-
 export function RegimePanel({ panel, since }: RegimePanelProps) {
-  const term = AXIS_TERMS[panel.title]
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-1">
           {panel.title}
-          {term && <InfoBubble term={term} />}
+          {panel.term && <InfoBubble term={panel.term} />}
         </CardTitle>
         <CardDescription className="text-xs">{panel.blurb}</CardDescription>
       </CardHeader>

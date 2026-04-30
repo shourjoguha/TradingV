@@ -123,7 +123,7 @@ function OverviewTab({ since }: { since: string }) {
   return (
     <div className="grid gap-5 md:grid-cols-2">
       {REGIME_PANELS.map((panel) => (
-        <RegimePanel key={panel.title} panel={panel} since={since} focusedYears={5} />
+        <RegimePanel key={panel.title} panel={panel} since={since} />
       ))}
     </div>
   )

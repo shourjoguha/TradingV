@@ -7,12 +7,18 @@
  */
 
 export type RegimeRow =
-  | { id: string; label: string; numerator: string; denominator: string }
-  | { id: string; label: string; symbol: string; source?: 'yfinance' | 'fred' }
+  // Series — single symbol over time.
+  | { id: string; label: string; symbol: string; source?: 'yfinance' | 'fred'; term?: string }
+  // Ratio — numerator ÷ denominator.
+  | { id: string; label: string; numerator: string; denominator: string; term?: string }
+  // Spread — minuend − subtrahend (computed on backend via /v1/macro/spread).
+  | { id: string; label: string; minuend: string; subtrahend: string; term?: string }
 
 export interface RegimePanel {
   title: string
   blurb: string
+  /** Glossary term key for the panel-level InfoBubble (i) circle. */
+  term?: string
   rows: RegimeRow[]
 }
 
@@ -20,37 +26,54 @@ export const REGIME_PANELS: RegimePanel[] = [
   {
     title: 'Inflation',
     blurb: 'Hard-asset vs paper-asset preference. Reflation vs recession.',
+    term: 'inflation_axis',
     rows: [
-      { id: 'gold-spy',    label: 'Gold / SPX',     numerator: 'GC=F', denominator: 'SPY' },
-      { id: 'copper-gold', label: 'Copper / Gold',  numerator: 'HG=F', denominator: 'GC=F' },
-      { id: 'oil-gold',    label: 'Oil / Gold',     numerator: 'CL=F', denominator: 'GC=F' },
+      { id: 'gold-spy',    label: 'Gold / SPX',     numerator: 'GC=F', denominator: 'SPY', term: 'r_gold_spx' },
+      { id: 'copper-gold', label: 'Copper / Gold',  numerator: 'HG=F', denominator: 'GC=F', term: 'r_copper_gold' },
+      { id: 'oil-gold',    label: 'Oil / Gold',     numerator: 'CL=F', denominator: 'GC=F', term: 'r_oil_gold' },
     ],
   },
   {
     title: 'Growth',
     blurb: 'Breadth + risk appetite. Concentration vs participation.',
+    term: 'growth_axis',
     rows: [
-      { id: 'rsp-spy', label: 'Equal-wt / Cap-wt', numerator: 'RSP', denominator: 'SPY' },
-      { id: 'iwm-spy', label: 'Small / Large',     numerator: 'IWM', denominator: 'SPY' },
-      { id: 'eem-spy', label: 'EM / DM',           numerator: 'EEM', denominator: 'SPY' },
+      { id: 'rsp-spy', label: 'Equal-wt / Cap-wt', numerator: 'RSP', denominator: 'SPY', term: 'r_rsp_spy' },
+      { id: 'iwm-spy', label: 'Small / Large',     numerator: 'IWM', denominator: 'SPY', term: 'r_iwm_spy' },
+      { id: 'eem-spy', label: 'EM / DM',           numerator: 'EEM', denominator: 'SPY', term: 'r_eem_spy' },
     ],
   },
   {
     title: 'Liquidity',
-    blurb: 'Fed posture + inflation expectations + curve shape.',
+    blurb: 'Fed posture + curve shape + financial-conditions stress.',
+    term: 'liquidity_axis',
     rows: [
-      { id: 'walcl',  label: 'Fed BS (WALCL)',   symbol: 'WALCL',  source: 'fred' },
-      { id: 't10yie', label: '10Y inflation exp', symbol: 'T10YIE', source: 'fred' },
-      { id: 'wgs10y', label: '10Y Treasury',     symbol: 'WGS10YR', source: 'fred' },
+      { id: 'walcl',  label: 'Fed BS (WALCL)',    symbol: 'WALCL',   source: 'fred',     term: 'r_walcl' },
+      { id: 't10yie', label: '10Y inflation exp', symbol: 'T10YIE',  source: 'fred',     term: 'r_t10yie' },
+      { id: 'wgs10y', label: '10Y Treasury',      symbol: 'WGS10YR', source: 'fred',     term: 'r_wgs10y' },
+      { id: 'mort-spread', label: '30Y mortgage − 10Y', minuend: 'MORTGAGE30US', subtrahend: 'WGS10YR', term: 'r_mortgage_spread' },
     ],
   },
   {
     title: 'Stress',
-    blurb: 'Credit-risk preference + bond-vs-equity bid + dollar regime.',
+    blurb: 'Credit-risk preference + bond-vs-equity bid + dollar regime + equity panic.',
+    term: 'stress_axis',
     rows: [
-      { id: 'hyg-lqd', label: 'HY / IG credit',  numerator: 'HYG', denominator: 'LQD' },
-      { id: 'tlt-spy', label: 'Bonds / Equities', numerator: 'TLT', denominator: 'SPY' },
-      { id: 'dxy',     label: 'US Dollar (DXY)',  symbol: 'DX-Y.NYB' },
+      { id: 'hyg-lqd', label: 'HY / IG credit',   numerator: 'HYG', denominator: 'LQD',   term: 'r_hyg_lqd' },
+      { id: 'tlt-spy', label: 'Bonds / Equities', numerator: 'TLT', denominator: 'SPY',   term: 'r_tlt_spy' },
+      { id: 'dxy',     label: 'US Dollar (DXY)',  symbol: 'DX-Y.NYB',                     term: 'r_dxy' },
+      { id: 'vix',     label: 'VIX (fear gauge)', symbol: '^VIX',                         term: 'r_vix' },
+    ],
+  },
+  {
+    title: 'Inflation regime',
+    blurb: 'Stagflation / inflation-cycle tracking. Real yields, breakevens, producer-vs-consumer prices, broad commodities.',
+    term: 'inflation_regime_axis',
+    rows: [
+      { id: 'dfii10',  label: 'Real 10Y yield',     symbol: 'DFII10',  source: 'fred',                   term: 'r_dfii10' },
+      { id: 't5yie',   label: '5Y breakevens',      symbol: 'T5YIE',   source: 'fred',                   term: 'r_t5yie' },
+      { id: 'ppi-cpi', label: 'PPI / CPI',          numerator: 'PPIACO', denominator: 'CPIAUCSL',        term: 'r_ppi_cpi' },
+      { id: 'dbc-spy', label: 'Commodities / SPY',  numerator: 'DBC', denominator: 'SPY',                term: 'r_dbc_spy' },
     ],
   },
 ]
@@ -83,4 +106,23 @@ export function sinceFromYears(years: number): string {
   const d = new Date()
   d.setFullYear(d.getFullYear() - years)
   return d.toISOString().slice(0, 10)
+}
+
+// Type guards.
+export function isRatioRow(r: RegimeRow): r is Extract<RegimeRow, { numerator: string }> {
+  return 'numerator' in r
+}
+export function isSpreadRow(r: RegimeRow): r is Extract<RegimeRow, { minuend: string }> {
+  return 'minuend' in r
+}
+export function isSeriesRow(r: RegimeRow): r is Extract<RegimeRow, { symbol: string }> {
+  return 'symbol' in r
+}
+
+// Compact subtitle showing the underlying symbols. Reused by RegimePanel
+// + Dashboard tile.
+export function rowSubtitle(r: RegimeRow): string {
+  if (isRatioRow(r)) return `${r.numerator} ÷ ${r.denominator}`
+  if (isSpreadRow(r)) return `${r.minuend} − ${r.subtrahend}`
+  return r.symbol
 }

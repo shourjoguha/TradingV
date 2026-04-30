@@ -24,6 +24,7 @@ import type {
   MacroSeriesResponse,
   MacroRatioResponse,
   MacroRefreshResponse,
+  MacroSpreadResponse,
 } from '../lib/types'
 import { toast } from 'sonner'
 
@@ -607,5 +608,31 @@ export function useMacroRefresh() {
     },
     onError: (err: any) =>
       toast.error(`Macro refresh failed: ${err.detail || err.message}`),
+  })
+}
+
+export function useMacroSpread(params: {
+  minuend: string
+  subtrahend: string
+  since?: string
+  until?: string
+  enabled?: boolean
+}) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: [
+      'macro-spread', backendId, params.minuend, params.subtrahend,
+      params.since, params.until,
+    ],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      s.set('minuend', params.minuend)
+      s.set('subtrahend', params.subtrahend)
+      if (params.since) s.set('since', params.since)
+      if (params.until) s.set('until', params.until)
+      return apiFetch<MacroSpreadResponse>(`/v1/macro/spread?${s}`, { backendId })
+    },
+    enabled: params.enabled !== false && !!params.minuend && !!params.subtrahend,
+    staleTime: 5 * 60_000,
   })
 }

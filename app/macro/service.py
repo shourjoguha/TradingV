@@ -214,6 +214,33 @@ async def get_series(
     return [{"ts": ts, "value": float(value)} for ts, value in rows]
 
 
+async def _fetch_pair(
+    *,
+    a: str,
+    b: str,
+    since: datetime.date,
+    until: Optional[datetime.date],
+) -> tuple[list, list]:
+    """Read two symbols' values in one session for combine ops."""
+    async with _db.SessionLocal() as session:
+        a_stmt = (
+            select(MacroSeries.ts, MacroSeries.value)
+            .where(MacroSeries.symbol == a)
+            .where(MacroSeries.ts >= since)
+        )
+        b_stmt = (
+            select(MacroSeries.ts, MacroSeries.value)
+            .where(MacroSeries.symbol == b)
+            .where(MacroSeries.ts >= since)
+        )
+        if until is not None:
+            a_stmt = a_stmt.where(MacroSeries.ts <= until)
+            b_stmt = b_stmt.where(MacroSeries.ts <= until)
+        a_rows = (await session.execute(a_stmt)).all()
+        b_rows = (await session.execute(b_stmt)).all()
+    return a_rows, b_rows
+
+
 async def compute_ratio(
     *,
     numerator: str,
@@ -228,26 +255,9 @@ async def compute_ratio(
     - Denominator is zero (avoids inf / NaN propagating to clients).
     """
     since = since or _default_since()
-
-    # Two simple selects then join in Python — keeps the SQL trivial and
-    # works identically on SQLite (tests) + Postgres (prod). At ~5y/daily
-    # × ~30 symbols this is sub-millisecond.
-    async with _db.SessionLocal() as session:
-        num_stmt = (
-            select(MacroSeries.ts, MacroSeries.value)
-            .where(MacroSeries.symbol == numerator)
-            .where(MacroSeries.ts >= since)
-        )
-        den_stmt = (
-            select(MacroSeries.ts, MacroSeries.value)
-            .where(MacroSeries.symbol == denominator)
-            .where(MacroSeries.ts >= since)
-        )
-        if until is not None:
-            num_stmt = num_stmt.where(MacroSeries.ts <= until)
-            den_stmt = den_stmt.where(MacroSeries.ts <= until)
-        num_rows = (await session.execute(num_stmt)).all()
-        den_rows = (await session.execute(den_stmt)).all()
+    num_rows, den_rows = await _fetch_pair(
+        a=numerator, b=denominator, since=since, until=until,
+    )
 
     den_map = {ts: float(v) for ts, v in den_rows}
     out: List[Dict[str, Any]] = []
@@ -256,6 +266,71 @@ async def compute_ratio(
         if d is None or d == 0.0:
             continue
         out.append({"ts": ts, "value": float(num_v) / d})
+    out.sort(key=lambda p: p["ts"])
+    return out
+
+
+async def compute_spread(
+    *,
+    minuend: str,
+    subtrahend: str,
+    since: Optional[datetime.date] = None,
+    until: Optional[datetime.date] = None,
+    align_window_days: int = 7,
+) -> List[Dict[str, Any]]:
+    """Forward-fill aligned spread: emit (ts, a − last_b_within_window) pairs.
+
+    Used for difference-style indicators where a ratio doesn't make
+    semantic sense — e.g. ``MORTGAGE30US − WGS10YR`` (mortgage spread)
+    or ``T5YIE − T10YIE`` (breakeven curve shape).
+
+    Many FRED series publish weekly but on different weekdays
+    (MORTGAGE30US on Thursdays, WGS10YR on Fridays) — exact-date
+    inner-join would yield zero overlap. ``align_window_days`` lets the
+    subtrahend's most recent prior value (within the window) align to
+    each minuend ts. Default 7 days covers the weekly-publish case.
+
+    Zero is a valid output (unlike compute_ratio's zero-denominator skip).
+    """
+    since = since or _default_since()
+    # Pre-fetch the subtrahend wider than the requested window so the very
+    # first ``a`` ts can find a recent ``b`` value to align with.
+    pre_since = since - datetime.timedelta(days=align_window_days)
+    a_rows, b_rows = await _fetch_pair(
+        a=minuend, b=subtrahend, since=since, until=until,
+    )
+    # Refetch b including the pre-window if needed.
+    if align_window_days > 0:
+        async with _db.SessionLocal() as session:
+            stmt = (
+                select(MacroSeries.ts, MacroSeries.value)
+                .where(MacroSeries.symbol == subtrahend)
+                .where(MacroSeries.ts >= pre_since)
+            )
+            if until is not None:
+                stmt = stmt.where(MacroSeries.ts <= until)
+            stmt = stmt.order_by(MacroSeries.ts.asc())
+            b_rows = (await session.execute(stmt)).all()
+
+    # Build sorted list once for efficient walk + binary search alignment.
+    b_sorted = sorted(((ts, float(v)) for ts, v in b_rows), key=lambda x: x[0])
+
+    out: List[Dict[str, Any]] = []
+    for ts, a_v in sorted(a_rows, key=lambda x: x[0]):
+        # Find the most-recent b ts <= this a ts, within align_window_days.
+        # Linear walk back from the rightmost candidate; fast enough at our
+        # data volumes (~1k rows / symbol over 5y).
+        best_b: Optional[float] = None
+        for b_ts, b_v in reversed(b_sorted):
+            if b_ts > ts:
+                continue
+            if (ts - b_ts).days > align_window_days:
+                break
+            best_b = b_v
+            break
+        if best_b is None:
+            continue
+        out.append({"ts": ts, "value": float(a_v) - best_b})
     out.sort(key=lambda p: p["ts"])
     return out
 

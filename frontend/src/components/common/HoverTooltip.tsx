@@ -53,7 +53,7 @@ export function HoverTooltip({
           className={`absolute z-30 ${sidePos[side]} pointer-events-none`}
           style={{ width }}
         >
-          <span className="block p-3 rounded-xl bg-card text-foreground shadow-extruded text-xs leading-relaxed text-left">
+          <span className="block p-3 rounded-xl bg-card text-foreground shadow-extruded text-xs leading-relaxed text-left whitespace-normal break-words">
             {content}
           </span>
         </span>

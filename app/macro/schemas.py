@@ -24,6 +24,12 @@ class MacroRatioResponse(BaseModel):
     points: List[MacroPoint]
 
 
+class MacroSpreadResponse(BaseModel):
+    minuend: str
+    subtrahend: str
+    points: List[MacroPoint]
+
+
 class MacroRefreshResponse(BaseModel):
     rows_touched: int
     ok: int

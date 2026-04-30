@@ -67,7 +67,7 @@ function HeadlineTile({ axis }: { axis: typeof REGIME_PANELS[number] }) {
 
 export function RegimeStrip() {
   return (
-    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
       {REGIME_PANELS.map((axis) => (
         <HeadlineTile key={axis.title} axis={axis} />
       ))}

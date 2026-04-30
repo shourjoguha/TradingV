@@ -38,6 +38,9 @@ yfinance:
   - symbol: "DX-Y.NYB"
   - symbol: "EURUSD=X"
   - symbol: "USDJPY=X"
+  # Stagflation / inflation regime — Phase 1.5
+  - symbol: "^VIX"            # equity-stress fear gauge (daily close)
+  - symbol: "DBC"             # broad-commodity ETF (vs SPY for commodity-vs-equity)
   # Hypothesis-specific (LatAm, BTC + MSTR, SaaS)
   - symbol: "ILF"
   - symbol: "EWZ"
@@ -56,3 +59,9 @@ fred:
   - id: "WGS10YR"             # 10Y Treasury constant maturity
   - id: "WGS2YR"              # 2Y Treasury constant maturity
   - id: "WTREGEN"             # Treasury General Account
+  # Stagflation / inflation regime — Phase 1.5
+  - id: "DFII10"              # 10Y real yield (TIPS-implied)
+  - id: "T5YIE"               # 5Y breakevens — faster-moving inflation expectation
+  - id: "PPIACO"              # producer price index, all commodities
+  - id: "CPIAUCSL"            # consumer price index, all urban
+  - id: "MORTGAGE30US"        # 30Y fixed-rate mortgage avg (vs WGS10YR for spread)

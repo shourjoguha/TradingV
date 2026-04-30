@@ -217,6 +217,127 @@ async def test_compute_ratio_inner_joins_on_date(
 
 
 @pytest.mark.asyncio
+async def test_compute_spread_inner_joins_on_date(client, monkeypatch, tiny_registry):
+    """compute_spread emits (ts, a − b). Zero is a valid output (unlike ratio)."""
+
+    async def yf_fetch(self, symbol, since=None):
+        # MORTGAGE30US-style: 6.5%, 6.4%, 6.6%
+        return [
+            (datetime.date(2026, 4, 1), 6.5),
+            (datetime.date(2026, 4, 2), 6.4),
+            (datetime.date(2026, 4, 3), 6.6),
+        ]
+
+    async def fred_fetch(self, symbol, since=None):
+        # WGS10YR-style: 4.0%, 4.0%, 4.6%  → spread 2.5, 2.4, 2.0
+        return [
+            (datetime.date(2026, 4, 1), 4.0),
+            (datetime.date(2026, 4, 2), 4.0),
+            (datetime.date(2026, 4, 3), 4.6),
+        ]
+
+    monkeypatch.setattr(YFinanceMacroProvider, "fetch", yf_fetch)
+    monkeypatch.setattr(FREDProvider, "fetch", fred_fetch)
+    await macro_service.refresh("TEST_YF")
+    await macro_service.refresh("TEST_FRED")
+
+    spread = await macro_service.compute_spread(
+        minuend="TEST_YF",
+        subtrahend="TEST_FRED",
+        since=datetime.date(2026, 4, 1),
+    )
+    assert [round(p["value"], 2) for p in spread] == [2.5, 2.4, 2.0]
+
+
+@pytest.mark.asyncio
+async def test_compute_spread_aligns_within_window(client, monkeypatch, tiny_registry):
+    """Real-world case: MORTGAGE30US publishes Thursdays, WGS10YR publishes
+    Fridays. Exact-date inner-join finds zero overlap. The 7-day forward-
+    fill window aligns each Thursday to the prior Friday's b value.
+    """
+    # Thursdays
+    async def yf_fetch(self, symbol, since=None):
+        return [
+            (datetime.date(2026, 4, 9), 6.5),
+            (datetime.date(2026, 4, 16), 6.4),
+            (datetime.date(2026, 4, 23), 6.6),
+        ]
+
+    # Fridays of the prior week
+    async def fred_fetch(self, symbol, since=None):
+        return [
+            (datetime.date(2026, 4, 3), 4.0),
+            (datetime.date(2026, 4, 10), 4.0),
+            (datetime.date(2026, 4, 17), 4.6),
+        ]
+
+    monkeypatch.setattr(YFinanceMacroProvider, "fetch", yf_fetch)
+    monkeypatch.setattr(FREDProvider, "fetch", fred_fetch)
+    await macro_service.refresh("TEST_YF")
+    await macro_service.refresh("TEST_FRED")
+
+    spread = await macro_service.compute_spread(
+        minuend="TEST_YF",
+        subtrahend="TEST_FRED",
+        since=datetime.date(2026, 4, 1),
+    )
+    # Apr 9 (Thu) → Apr 3 (Fri, 6 days back) = 6.5 − 4.0 = 2.5
+    # Apr 16 (Thu) → Apr 10 (Fri, 6 days back) = 6.4 − 4.0 = 2.4
+    # Apr 23 (Thu) → Apr 17 (Fri, 6 days back) = 6.6 − 4.6 = 2.0
+    assert [round(p["value"], 2) for p in spread] == [2.5, 2.4, 2.0]
+
+
+@pytest.mark.asyncio
+async def test_compute_spread_skips_when_either_side_missing(
+    client, monkeypatch, tiny_registry,
+):
+    async def yf_fetch(self, symbol, since=None):
+        return [
+            (datetime.date(2026, 4, 1), 100.0),
+            (datetime.date(2026, 4, 2), 101.0),
+        ]
+
+    async def fred_fetch(self, symbol, since=None):
+        return [(datetime.date(2026, 4, 2), 50.0)]  # only one date overlaps
+
+    monkeypatch.setattr(YFinanceMacroProvider, "fetch", yf_fetch)
+    monkeypatch.setattr(FREDProvider, "fetch", fred_fetch)
+    await macro_service.refresh("TEST_YF")
+    await macro_service.refresh("TEST_FRED")
+
+    spread = await macro_service.compute_spread(
+        minuend="TEST_YF",
+        subtrahend="TEST_FRED",
+        since=datetime.date(2026, 4, 1),
+    )
+    assert spread == [{"ts": datetime.date(2026, 4, 2), "value": 51.0}]
+
+
+@pytest.mark.asyncio
+async def test_route_get_spread_round_trip(client, monkeypatch, tiny_registry):
+    async def yf_fetch(self, symbol, since=None):
+        return [(datetime.date(2026, 4, 1), 6.5)]
+
+    async def fred_fetch(self, symbol, since=None):
+        return [(datetime.date(2026, 4, 1), 4.0)]
+
+    monkeypatch.setattr(YFinanceMacroProvider, "fetch", yf_fetch)
+    monkeypatch.setattr(FREDProvider, "fetch", fred_fetch)
+    await macro_service.refresh("TEST_YF")
+    await macro_service.refresh("TEST_FRED")
+
+    r = await client.get(
+        "/v1/macro/spread?minuend=TEST_YF&subtrahend=TEST_FRED&since=2026-04-01",
+        headers=HEADERS,
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["minuend"] == "TEST_YF"
+    assert body["subtrahend"] == "TEST_FRED"
+    assert body["points"] == [{"ts": "2026-04-01", "value": 2.5}]
+
+
+@pytest.mark.asyncio
 async def test_compute_ratio_skips_zero_denominator(
     client, monkeypatch, tiny_registry
 ):

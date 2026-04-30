@@ -55,10 +55,15 @@ yfinance can return >10k daily bars for old tickers. Postgres caps a single bind
 ## Routes
 
 ```
-GET   /v1/macro/series?symbol=&since=&until=                   one symbol's cached values
-GET   /v1/macro/ratio?numerator=&denominator=&since=&until=    ratio computed on demand
-POST  /v1/macro/refresh?symbol=                                manual refresh; default = all
+GET   /v1/macro/series?symbol=&since=&until=                              one symbol's cached values
+GET   /v1/macro/ratio?numerator=&denominator=&since=&until=               ratio computed on demand
+GET   /v1/macro/spread?minuend=&subtrahend=&since=&until=                 difference computed on demand
+POST  /v1/macro/refresh?symbol=                                            manual refresh; default = all
 ```
+
+### Spread alignment (the weekday-mismatch case)
+
+`/v1/macro/spread` forward-fills the subtrahend within a 7-day window so weekly FRED series that publish on different weekdays (e.g. `MORTGAGE30US` Thursdays vs `WGS10YR` Fridays) line up correctly. Without this, exact-date inner-join produces zero overlap. Tested in `test_compute_spread_aligns_within_window`.
 
 All routes require `verify_api_key`. Empty results return 200 with `points: []` (consistent with `/v1/predictions/by-horizon` empty-state).
 
@@ -105,7 +110,7 @@ curl -X POST -H "X-API-Key: $API_KEY" "http://localhost:8000/v1/macro/refresh"
 
 Three sub-tabs, neumorphic palette preserved, no new chart deps (reuses `lightweight-charts ^4.2.1` already in `package.json`).
 
-- **Overview** — 4 regime panels (Inflation / Growth / Liquidity / Stress) each holding 3 sparkline rows. Click a row to inline-expand a focused line chart.
+- **Overview** — 5 regime panels (Inflation / Growth / Liquidity / Stress / **Inflation regime**) each holding 3-4 sparkline rows. Each row supports three shapes: ratio, single series, or **spread** (a−b, weekday-aligned). Click a row to inline-expand a focused line chart. Each panel and each row carries an `<InfoBubble>` reading from `frontend/src/lib/glossary.ts` so hovering an `(i)` icon reveals the definition without leaving the page.
 - **Ratios** — one focused chart at a time with a quick-switch dropdown across all 12 ratios.
 - **Sectors** — 9-cell sector-vs-SPY strip. Cell color = Δ% vs window-start (green up / red down / yellow flat). Click to expand chart inline.
 

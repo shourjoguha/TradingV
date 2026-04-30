@@ -27,7 +27,7 @@ export function InfoBubble({ term, side = 'top', size = 12 }: InfoBubbleProps) {
   return (
     <HoverTooltip
       side={side}
-      width={260}
+      width={320}
       content={
         <div className="space-y-1.5">
           <div className="font-semibold">{entry.short}</div>

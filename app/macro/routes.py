@@ -18,6 +18,7 @@ from app.macro.schemas import (
     MacroRatioResponse,
     MacroRefreshResponse,
     MacroSeriesResponse,
+    MacroSpreadResponse,
 )
 
 router = APIRouter(prefix="/macro", tags=["macro"])
@@ -52,6 +53,24 @@ async def get_ratio(
     return MacroRatioResponse(
         numerator=numerator,
         denominator=denominator,
+        points=[MacroPoint(ts=r["ts"], value=r["value"]) for r in rows],
+    )
+
+
+@router.get("/spread", response_model=MacroSpreadResponse)
+async def get_spread(
+    minuend: str = Query(..., min_length=1, max_length=64),
+    subtrahend: str = Query(..., min_length=1, max_length=64),
+    since: Optional[datetime.date] = Query(None),
+    until: Optional[datetime.date] = Query(None),
+    _api_key: str = Depends(verify_api_key),
+) -> MacroSpreadResponse:
+    rows = await service.compute_spread(
+        minuend=minuend, subtrahend=subtrahend, since=since, until=until,
+    )
+    return MacroSpreadResponse(
+        minuend=minuend,
+        subtrahend=subtrahend,
         points=[MacroPoint(ts=r["ts"], value=r["value"]) for r in rows],
     )
 

@@ -287,6 +287,12 @@ export interface MacroRatioResponse {
   points: MacroPoint[]
 }
 
+export interface MacroSpreadResponse {
+  minuend: string
+  subtrahend: string
+  points: MacroPoint[]
+}
+
 export interface MacroRefreshResponse {
   rows_touched: number
   ok: number
