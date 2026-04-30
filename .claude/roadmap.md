@@ -4,7 +4,7 @@
 
 ## Active
 
-_(Empty — last sprint completed.)_
+_(Empty — last sprint completed. Next likely promotion: Macro Workbench M-1, gated on the operator seeding 3 real hypotheses as drafts under [`hypotheses/draft/`](hypotheses/draft/).)_
 
 ## Next candidates (not committed)
 
@@ -13,7 +13,13 @@ Order is approximate. Promotion to "Active" requires deliberation + plan. Most c
 | # | Candidate | Trigger | Estimate |
 |---|---|---|---|
 | 7 | Telegram bot setup + drift alert verification | Operator wants push notifications | ~5 min ([backlog.md](backlog.md) Unlock #1) |
-| 8 | OHLCV on-demand refresh in evaluator | Accuracy dashboard stays empty after 1 week of scheduled runs | ~30 min ([backlog.md](backlog.md) Unlock #2) |
+| 8 | ~~OHLCV on-demand refresh in evaluator~~ | ✅ shipped 2026-04-30 ([decisions/010](decisions/010-self-healing-ohlcv-fetch.md)) | — |
+| 8a | **Macro Workbench M-1 — Signal layer** (12 ratios + 6 FRED series + 9 sector ratios; nightly cron; `/v1/macro/series`) | Operator-initiated; brainstorm 2026-04-30 | ~1-2 days ([macro-workbench-brainstorm.md](macro-workbench-brainstorm.md)) |
+| 8b | **Macro Workbench M-2 — Hypothesis object + view registry** (schema + 5 seeded views + CRUD + UI) | After M-1 | ~2-3 days |
+| 8c | **Macro Workbench M-3 — Wire into Opportunities + Trades** (per-hypothesis tagging on rows; per-hypothesis P&L) | After M-2 + at least 3 active hypotheses | ~1-2 days |
+| 8d | **Macro Workbench M-4 — `POST /v1/research/ask` LLM endpoint** (view-scoped DB context; Anthropic API) | After M-3; the unique-wedge layer | ~1-2 days |
+| 8e | Macro Workbench M-5 — 13F + Form-4 ingestion | After M-4 ships and is in use | TBD |
+| 8f | Macro Workbench M-6 — Hypothesis backtest engine | After M-5 + > 6 closed trades tagged with hypotheses | TBD |
 | 9 | Concurrency-gate removal | Queue runs cleanly for 4 weeks with zero `acquire_slot` failures | ~30 min ([tech_debt.md](tech_debt.md)) |
 | 10 | schedule_config column drop (`pending_run`, `retry_minutes`) | Bundled with the next schedule_config schema change | ~15 min ([tech_debt.md](tech_debt.md)) |
 | 11 | Tier-2 queue (Redis + arq) | Queue depth > 5 sustained OR GPU inference lands | ~1-2 days ([tech_debt.md](tech_debt.md)) |
