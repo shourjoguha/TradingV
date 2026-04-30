@@ -1,6 +1,6 @@
 # Multi-Watchlist + Lightweight Quotes + Sector Drill-In
 
-> **Status:** Active. Started 2026-05-01.
+> **Status:** ✅ ALL THREE SUB-PHASES SHIPPED 2026-05-01.
 > **Brainstorm:** chat session 2026-05-01 (after stagflation panel work).
 > **Cross-session resume:** read this file → check `git log` since `522bbd6` → next-pending todo identifies where to resume. Each sub-phase commits independently.
 

@@ -28,6 +28,7 @@ import type {
   BoardSummary,
   BoardDetail,
   BoardsListResponse,
+  QuotesResponse,
 } from '../lib/types'
 import { toast } from 'sonner'
 
@@ -761,5 +762,20 @@ export function useMoveTicker() {
       toast.success('Ticker moved')
     },
     onError: (err: any) => toast.error(`Move failed: ${err.detail || err.message}`),
+  })
+}
+
+export function useQuotes(symbols: string[]) {
+  const { backendId } = useBackend()
+  const csv = symbols.join(',')
+  return useQuery({
+    queryKey: ['quotes', backendId, csv],
+    queryFn: () =>
+      apiFetch<QuotesResponse>(
+        `/v1/quotes?symbols=${encodeURIComponent(csv)}`,
+        { backendId },
+      ),
+    enabled: symbols.length > 0,
+    staleTime: 60_000,
   })
 }

@@ -331,3 +331,19 @@ export interface BoardDetail extends BoardSummary {
 export interface BoardsListResponse {
   items: BoardSummary[]
 }
+
+// ---------------------------------------------------------------------------
+// Bulk quotes (last_close + pct_1w) — Phase MW-2/MW-3
+// ---------------------------------------------------------------------------
+
+export interface QuotePoint {
+  symbol: string
+  last_close: number | null
+  last_close_at: string | null
+  pct_1w: number | null
+  quote_fetched_at: string | null
+}
+
+export interface QuotesResponse {
+  items: QuotePoint[]
+}
