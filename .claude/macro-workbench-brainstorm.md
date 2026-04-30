@@ -74,10 +74,16 @@ Schema sketch — first pass, will harden in plan phase:
 ```
 hypothesis(
   id              UUID PRIMARY KEY,
+  slug            TEXT UNIQUE NOT NULL,      -- stable, URL-safe identifier
+  parent_id       UUID REFERENCES hypothesis(id), -- nullable; sizing-dependency (parent governs structural, child governs tactical)
+  precondition_id UUID REFERENCES hypothesis(id), -- nullable; existence-dependency (precondition violated → this auto-cancels with reason 'precondition_failed')
   name            TEXT NOT NULL,
   thesis_text     TEXT NOT NULL,             -- markdown, free-form
   expected_dir    TEXT NOT NULL,             -- 'long' | 'short' | 'spread' | 'regime_shift'
-  ratios          JSONB NOT NULL,            -- ['GC=F/SPY', 'WALCL', ...]
+  claim_type      TEXT NOT NULL,             -- 'absolute' | 'relative' | 'absolute_with_relative_signal'
+  primary_metric  TEXT,                      -- the symbol/ratio whose move = success
+  tracking_signal TEXT,                      -- early-warning ratio (often relative even when claim is absolute)
+  ratios          JSONB NOT NULL,            -- full list of ratios/series watched
   invalidators    JSONB,                     -- conditions that auto-flip status to violated
   source_url      TEXT,                      -- link to the original commentary
   status          TEXT NOT NULL,             -- 'active' | 'confirming' | 'violated' | 'stale' | 'cancelled'
@@ -104,6 +110,22 @@ hypothesis_evaluation(
 - Invalidators (e.g. `"GC=F/SPY < its 200dma"`) flip → `'violated'`.
 - Confirming evidence (e.g. ratio crossing a threshold in expected direction) flips → `'confirming'`.
 - Manual `POST /v1/hypotheses/{id}/cancel` with reason.
+
+**Parent / child semantics (`parent_id`) — sizing dependency:**
+- A child can be `violated` while the parent stays `active`. Child invalidators are deliberately tighter than the parent's; they govern *tactical* sizing while the parent governs *structural* sizing.
+- Cancelling a parent does NOT auto-cancel children — operator decides whether to re-anchor the children to a new parent or close them.
+- Use case: same thesis at two horizons (e.g. 18mo tactical confirmation + 36mo structural). See seeded `latam-breakout-18m` ⇢ `latam-breakout-36m`.
+
+**Precondition semantics (`precondition_id`) — existence dependency:**
+- If the precondition becomes `violated` (or `cancelled`), the dependent hypothesis **auto-cancels** with reason `precondition_failed`. Cascade is one-way; cancelling the dependent does not affect the precondition.
+- Different from parent/child: parent failure does NOT cascade; precondition failure DOES.
+- Use case: a tactical timing claim that gates a magnitude claim. See seeded `btc-bottom-3m` ⇢ `btc-rally-24m` (24mo rally is meaningless if no bottom forms in 3mo).
+- Operator can manually resurrect a dependent (after re-filing the precondition) — auto-cancellation captures `cancelled_reason = 'precondition_failed'` so it's visible in the lifecycle log.
+
+**Claim type semantics:**
+- `absolute` — success = the primary metric goes up/down regardless of comparison.
+- `relative` — success = ratio outperforms; absolute level irrelevant.
+- `absolute_with_relative_signal` — claim is absolute, but `tracking_signal` is relative because relative breakdowns lead absolute ones (early warning). Common shape for long-horizon theses.
 
 ## The View Registry (Layer 2)
 
