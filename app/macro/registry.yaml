@@ -1,0 +1,58 @@
+# Macro Workbench symbol registry — Phase M-1.
+#
+# Operator-curated. Adding a symbol = add a YAML entry, run a refresh.
+# Ratios are computed at query time (not stored), so no entry per ratio.
+#
+# Cross-reference: every symbol referenced by a hypothesis in
+# .claude/hypotheses/draft/*.md is present here. Future hypotheses can
+# reference symbols not in this list — refresh_all() will skip the
+# unknown ones (warn + count under `failed`) rather than fail.
+
+yfinance:
+  # Inflation axis
+  - symbol: "GC=F"            # gold front-month
+  - symbol: "HG=F"            # copper
+  - symbol: "CL=F"            # WTI crude
+  - symbol: "SI=F"            # silver
+  # Growth / breadth axis
+  - symbol: "SPY"
+  - symbol: "RSP"
+  - symbol: "IWM"
+  - symbol: "EEM"
+  - symbol: "EFA"
+  # Stress axis
+  - symbol: "HYG"
+  - symbol: "LQD"
+  - symbol: "TLT"
+  # Sectors (for the 9-cell sector-vs-SPY strip)
+  - symbol: "XLK"
+  - symbol: "XLF"
+  - symbol: "XLE"
+  - symbol: "XLV"
+  - symbol: "XLI"
+  - symbol: "XLP"
+  - symbol: "XLY"
+  - symbol: "XLU"
+  - symbol: "XLB"
+  # Currency / dollar
+  - symbol: "DX-Y.NYB"
+  - symbol: "EURUSD=X"
+  - symbol: "USDJPY=X"
+  # Hypothesis-specific (LatAm, BTC + MSTR, SaaS)
+  - symbol: "ILF"
+  - symbol: "EWZ"
+  - symbol: "EWW"
+  - symbol: "BTC-USD"
+  - symbol: "MSTR"
+  - symbol: "OKTA"
+  - symbol: "PATH"
+  - symbol: "IGV"
+
+fred:
+  # Liquidity / rates / debt
+  - id: "WALCL"               # Fed balance sheet
+  - id: "M2SL"                # M2 money stock
+  - id: "T10YIE"              # 10Y inflation expectations
+  - id: "WGS10YR"             # 10Y Treasury constant maturity
+  - id: "WGS2YR"              # 2Y Treasury constant maturity
+  - id: "WTREGEN"             # Treasury General Account

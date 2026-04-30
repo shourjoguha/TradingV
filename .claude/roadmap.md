@@ -4,7 +4,7 @@
 
 ## Active
 
-_(Empty — last sprint completed. Next likely promotion: Macro Workbench M-1, gated on the operator seeding 3 real hypotheses as drafts under [`hypotheses/draft/`](hypotheses/draft/).)_
+**Macro Workbench M-2 (next).** M-1 signal layer shipped 2026-04-30 (38 symbols cached, `/v1/macro/{series,ratio,refresh}` live, daily ingestion loop running). M-2 plans the hypothesis object + view registry — see [`plans/M-2-hypothesis-object.md`](plans/M-2-hypothesis-object.md) outline. Gated on operator promotion (no hard prerequisites — five real hypothesis drafts already on disk under [`hypotheses/draft/`](hypotheses/draft/)).
 
 ## Next candidates (not committed)
 
@@ -14,7 +14,7 @@ Order is approximate. Promotion to "Active" requires deliberation + plan. Most c
 |---|---|---|---|
 | 7 | Telegram bot setup + drift alert verification | Operator wants push notifications | ~5 min ([backlog.md](backlog.md) Unlock #1) |
 | 8 | ~~OHLCV on-demand refresh in evaluator~~ | ✅ shipped 2026-04-30 ([decisions/010](decisions/010-self-healing-ohlcv-fetch.md)) | — |
-| 8a | **Macro Workbench M-1 — Signal layer** (12 ratios + 6 FRED series + 9 sector ratios; nightly cron; `/v1/macro/series`) | Operator-initiated; brainstorm 2026-04-30 | ~1-2 days ([macro-workbench-brainstorm.md](macro-workbench-brainstorm.md)) |
+| 8a | ~~Macro Workbench M-1 — Signal layer~~ | ✅ shipped 2026-04-30 ([macro.md](macro.md), [decisions/012](decisions/012-macro-workbench-storage-shape.md)) | — |
 | 8b | **Macro Workbench M-2 — Hypothesis object + view registry** (schema + 5 seeded views + CRUD + UI) | After M-1 | ~2-3 days |
 | 8c | **Macro Workbench M-3 — Wire into Opportunities + Trades** (per-hypothesis tagging on rows; per-hypothesis P&L) | After M-2 + at least 3 active hypotheses | ~1-2 days |
 | 8d | **Macro Workbench M-4 — `POST /v1/research/ask` LLM endpoint** (view-scoped DB context; Anthropic API) | After M-3; the unique-wedge layer | ~1-2 days |

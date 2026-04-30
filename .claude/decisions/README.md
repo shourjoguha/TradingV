@@ -17,6 +17,7 @@ Architecture Decision Records — one file per significant choice, with the why 
 | 009 | [Light-only frontend; no dark mode](009-light-only-no-dark-mode.md) | 2026-04-27 | Accepted |
 | 010 | [Self-healing OHLCV fetch via the accuracy evaluator](010-self-healing-ohlcv-fetch.md) | 2026-04-30 | Accepted |
 | 011 | [Choke-point recompute for scheduler mid-tick PUT race](011-schedule-mid-tick-put-race.md) | 2026-04-30 | Accepted |
+| 012 | [Separate `macro_series` table over reusing `ohlcv_bars`](012-macro-workbench-storage-shape.md) | 2026-04-30 | Accepted |
 
 ## How to add a new ADR
 

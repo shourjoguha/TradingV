@@ -40,6 +40,7 @@ Personal trading-decision-support system for **one operator**. FastAPI backend r
 | `/v1/accuracy/*`, `prediction_accuracy` + `drift_alerts` tables                    | [.claude/accuracy.md](.claude/accuracy.md)                     |
 | `/v1/opportunities*`, signal generator, rule engine                                | [.claude/opportunities.md](.claude/opportunities.md)           |
 | `/v1/trades*`, manual trade journal, P\&L attribution                              | [.claude/trades.md](.claude/trades.md)                         |
+| `/v1/macro/*`, `macro_series` table, yfinance + FRED ingestion                     | [.claude/macro.md](.claude/macro.md)                           |
 | Telegram notifier, drift alerts, daily digest                                      | [.claude/notifications.md](.claude/notifications.md)           |
 | `/v1/tickers/{sym}/labels*`, free-form ticker metadata                             | [.claude/labels.md](.claude/labels.md)                         |
 | DB schema changes / new migration                                                  | [.claude/migrations.md](.claude/migrations.md)                 |

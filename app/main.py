@@ -119,6 +119,18 @@ async def lifespan(_app: FastAPI):
 
         opps_task = asyncio.create_task(_opps_loop(), name="opportunities-tick")
 
+        # Daily macro signal-layer ingestion — yfinance + FRED. Phase M-1
+        # of the Macro Workbench (see .claude/macro-workbench-brainstorm.md).
+        # Idempotent upserts; first tick fires immediately for catch-up,
+        # then daily.
+        from app.macro import service as _macro_service
+
+        macro_stop = asyncio.Event()
+        macro_task = asyncio.create_task(
+            _macro_service.ingestion_loop(stop_event=macro_stop),
+            name="macro-ingestion",
+        )
+
         # Submit-queue worker — single-flight FIFO drain. Boot recovery
         # first: any 'running' rows from a crashed prior process flip back
         # to 'pending' so this worker re-picks them.
@@ -151,6 +163,8 @@ async def lifespan(_app: FastAPI):
         opps_task.cancel()
         queue_stop.set()
         queue_task.cancel()
+        macro_stop.set()
+        macro_task.cancel()
 
     except Exception as e:
         logger.error("startup error: %s", e)
