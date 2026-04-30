@@ -1,6 +1,6 @@
 # Pages
 
-11 routes. All under `src/pages/`. Routing in `src/App.tsx`.
+12 routes. All under `src/pages/`. Routing in `src/App.tsx`.
 
 | Route | File | Endpoints | Notes |
 |---|---|---|---|
@@ -13,8 +13,9 @@
 | `/opportunities` | `Opportunities.tsx` | `GET /v1/opportunities`, `PATCH /v1/opportunities/{id}` | Tabs (open/acted/dismissed/expired). Action buttons: Acted (with optional jump to `/trades?from=<oppId>`) + Dismiss (modal with reason). Color-coded predicted move + confidence. |
 | `/trades` | `Trades.tsx` | `GET/POST /v1/trades`, `PATCH /v1/trades/{id}` | P&L summary cards (Total / Closed / Open). Table with close-trade modal + log-trade modal. Prefilled from opportunity when navigated with `?from=<oppId>`. |
 | `/tickers/:symbol/labels` | `TickerLabels.tsx` | `GET/PUT /v1/tickers/{sym}/labels`, `DELETE /v1/tickers/{sym}/labels/{key}` | Curated key dropdown + free-form. JSON-aware value editor (bool toggle / list builder / string fallback). |
-| `/analysis` | `AnalysisJobs.tsx` | `GET /v1/analysis/jobs`, `POST /v1/analysis/run`, `GET/DELETE /v1/analysis/queue*` | Paginated table + Queue card above (running + pending, cancel button on pending). Run-now toast: "Queued: <id>". See [queue.md](../queue.md). |
-| `/analysis/:jobId` | `AnalysisJobDetail.tsx` | `GET /v1/analysis/jobs/{id}` | Task list + per-task `result_json.forecast` viewer. |
+| `/analysis` | `AnalysisJobs.tsx` | `GET /v1/analysis/jobs`, `POST /v1/analysis/run`, `GET/DELETE /v1/analysis/queue*` | Expandable-row history table. Columns: friendly Run summary (sym count · intervals · model), Outcome bar (stacked done/running/ineligible/error counts, lazy-fetched per row on expand), smart When (Today/Yesterday/MMM D), Duration, Open-detail button. Click row to inline-expand task breakdown without leaving the page. Queue card above. Run-now toast: "Queued: <id>". See [queue.md](../queue.md). |
+| `/analysis/:jobId` | `AnalysisJobDetail.tsx` | `GET /v1/analysis/jobs/{id}` | Task list + per-task `result_json.forecast` viewer. Mostly used as deep-link / sharing target now that the list page exposes the same task breakdown inline. |
+| `/docs/:slug?` | `Docs.tsx` (lazy) | none — markdown bundled at build time | Reference hub. Sticky TOC (h2/h3 scroll-spy). Document switcher (segmented control). Font-size adjuster `A− / A / A+` persisted in `localStorage('docs.fontSize')`. Markdown rendered via `react-markdown` + `remark-gfm` + `rehype-slug`. v1 docs: `metrics` (live) + `how-to-use` (stub). Lazy-loaded so the markdown bundle only ships when the page is opened. Add a doc by dropping `frontend/src/docs/<slug>.md` and registering it in `frontend/src/docs/index.ts`. |
 
 ## Conventions
 
