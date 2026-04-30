@@ -101,6 +101,29 @@ curl -X POST -H "X-API-Key: $API_KEY" "http://localhost:8000/v1/macro/refresh"
 - `app/main.py` (lifespan task wiring)
 - `app/api/router.py` (router registration)
 
+## Frontend (`/macro`, lazy-loaded)
+
+Three sub-tabs, neumorphic palette preserved, no new chart deps (reuses `lightweight-charts ^4.2.1` already in `package.json`).
+
+- **Overview** — 4 regime panels (Inflation / Growth / Liquidity / Stress) each holding 3 sparkline rows. Click a row to inline-expand a focused line chart.
+- **Ratios** — one focused chart at a time with a quick-switch dropdown across all 12 ratios.
+- **Sectors** — 9-cell sector-vs-SPY strip. Cell color = Δ% vs window-start (green up / red down / yellow flat). Click to expand chart inline.
+
+Time-range chips: `1Y / 3Y / 5Y / 10Y / Max`. Default 5Y. Sparklines render at weekly close (cheaper, crisper at small size); focused charts use full daily data.
+
+Sidebar entry placed between Trades and Docs.
+
+Single source of truth for which ratios live where: `frontend/src/lib/macro-views.ts` — edit the array, get a new row in the UI.
+
+Files:
+- `frontend/src/pages/Macro.tsx` — page shell + sub-tab routing.
+- `frontend/src/components/macro/{Sparkline,RatioChart,RegimePanel,SectorStrip}.tsx`.
+- `frontend/src/lib/macro-views.ts` — config.
+- `frontend/src/hooks/use-api.ts` — `useMacroSeries`, `useMacroRatio`, `useMacroRefresh`.
+- `frontend/src/lib/types.ts` — `MacroPoint`, `MacroSeriesResponse`, `MacroRatioResponse`, `MacroRefreshResponse`.
+
+What's deliberately deferred (M-2 territory): hypothesis-aware tagging on ratios, composite "regime label" (single number), event annotations on the timeline.
+
 ## What this enables (next phases)
 
 - M-2: hypothesis object + view registry. Reads ratios via `compute_ratio()`. No data-shape coupling.

@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, List, Clock, TrendingUp, Grid3x3, FlaskConical,
   Activity, Target, Receipt, Menu, X, AlertTriangle, BookOpen,
+  LineChart as LineChartIcon,
 } from 'lucide-react'
 import { BackendToggle } from './BackendToggle'
 import { useHealth } from '../hooks/use-api'
@@ -43,6 +44,7 @@ const NAV = [
   { path: '/accuracy', label: 'Accuracy', icon: Activity },
   { path: '/opportunities', label: 'Opportunities', icon: Target },
   { path: '/trades', label: 'Trades', icon: Receipt },
+  { path: '/macro', label: 'Macro', icon: LineChartIcon },
   { path: '/docs', label: 'Docs', icon: BookOpen },
   { path: '/analysis', label: 'Analysis', icon: FlaskConical },
 ]

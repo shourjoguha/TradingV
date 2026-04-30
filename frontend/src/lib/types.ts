@@ -265,3 +265,32 @@ export interface AnalysisTask {
 export interface HealthResponse {
   status: string
 }
+
+// ---------------------------------------------------------------------------
+// Macro Workbench (M-1)
+// ---------------------------------------------------------------------------
+
+export interface MacroPoint {
+  ts: string // ISO date (YYYY-MM-DD)
+  value: number
+}
+
+export interface MacroSeriesResponse {
+  symbol: string
+  source: string | null
+  points: MacroPoint[]
+}
+
+export interface MacroRatioResponse {
+  numerator: string
+  denominator: string
+  points: MacroPoint[]
+}
+
+export interface MacroRefreshResponse {
+  rows_touched: number
+  ok: number
+  failed: number
+  skipped: number
+  failures: string[]
+}

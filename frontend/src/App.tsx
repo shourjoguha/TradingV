@@ -18,6 +18,9 @@ import { Skeleton } from './components/ui/skeleton'
 // when the operator actually opens the page.
 const Docs = lazy(() => import('./pages/Docs').then((m) => ({ default: m.Docs })))
 
+// Lazy-load Macro so lightweight-charts ships only when the operator opens it.
+const Macro = lazy(() => import('./pages/Macro').then((m) => ({ default: m.Macro })))
+
 export function App() {
   return (
     <Layout>
@@ -38,6 +41,14 @@ export function App() {
           element={
             <Suspense fallback={<Skeleton className="h-40 w-full" />}>
               <Docs />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/macro/:tab?"
+          element={
+            <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+              <Macro />
             </Suspense>
           }
         />

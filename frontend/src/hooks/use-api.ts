@@ -21,6 +21,9 @@ import type {
   Trade,
   QueueItem,
   QueueStats,
+  MacroSeriesResponse,
+  MacroRatioResponse,
+  MacroRefreshResponse,
 } from '../lib/types'
 import { toast } from 'sonner'
 
@@ -530,5 +533,79 @@ export function useRunAnalysis() {
       })
     },
     onError: (err: any) => toast.error(`Run failed: ${err.detail || err.message}`),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Macro Workbench (M-1)
+// ---------------------------------------------------------------------------
+
+export function useMacroSeries(params: {
+  symbol: string
+  since?: string
+  until?: string
+  enabled?: boolean
+}) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['macro-series', backendId, params.symbol, params.since, params.until],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      s.set('symbol', params.symbol)
+      if (params.since) s.set('since', params.since)
+      if (params.until) s.set('until', params.until)
+      return apiFetch<MacroSeriesResponse>(`/v1/macro/series?${s}`, { backendId })
+    },
+    enabled: params.enabled !== false && !!params.symbol,
+    staleTime: 5 * 60_000, // 5 min — macro updates daily
+  })
+}
+
+export function useMacroRatio(params: {
+  numerator: string
+  denominator: string
+  since?: string
+  until?: string
+  enabled?: boolean
+}) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: [
+      'macro-ratio', backendId, params.numerator, params.denominator,
+      params.since, params.until,
+    ],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      s.set('numerator', params.numerator)
+      s.set('denominator', params.denominator)
+      if (params.since) s.set('since', params.since)
+      if (params.until) s.set('until', params.until)
+      return apiFetch<MacroRatioResponse>(`/v1/macro/ratio?${s}`, { backendId })
+    },
+    enabled: params.enabled !== false && !!params.numerator && !!params.denominator,
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useMacroRefresh() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (symbol?: string) => {
+      const qs = symbol ? `?symbol=${encodeURIComponent(symbol)}` : ''
+      return apiFetch<MacroRefreshResponse>(`/v1/macro/refresh${qs}`, {
+        method: 'POST', backendId,
+      })
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['macro-series', backendId] })
+      qc.invalidateQueries({ queryKey: ['macro-ratio', backendId] })
+      const msg = data.failed === 0
+        ? `Refreshed ${data.ok} symbols (${data.rows_touched.toLocaleString()} rows)`
+        : `Refreshed ${data.ok} ok / ${data.failed} failed (${data.rows_touched.toLocaleString()} rows)`
+      toast.success(msg)
+    },
+    onError: (err: any) =>
+      toast.error(`Macro refresh failed: ${err.detail || err.message}`),
   })
 }

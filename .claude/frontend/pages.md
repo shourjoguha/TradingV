@@ -1,6 +1,6 @@
 # Pages
 
-12 routes. All under `src/pages/`. Routing in `src/App.tsx`.
+13 routes. All under `src/pages/`. Routing in `src/App.tsx`.
 
 | Route | File | Endpoints | Notes |
 |---|---|---|---|
@@ -16,6 +16,7 @@
 | `/analysis` | `AnalysisJobs.tsx` | `GET /v1/analysis/jobs`, `POST /v1/analysis/run`, `GET/DELETE /v1/analysis/queue*` | Expandable-row history table. Columns: friendly Run summary (sym count · intervals · model), Outcome bar (stacked done/running/ineligible/error counts, lazy-fetched per row on expand), smart When (Today/Yesterday/MMM D), Duration, Open-detail button. Click row to inline-expand task breakdown without leaving the page. Queue card above. Run-now toast: "Queued: <id>". See [queue.md](../queue.md). |
 | `/analysis/:jobId` | `AnalysisJobDetail.tsx` | `GET /v1/analysis/jobs/{id}` | Task list + per-task `result_json.forecast` viewer. Mostly used as deep-link / sharing target now that the list page exposes the same task breakdown inline. |
 | `/docs/:slug?` | `Docs.tsx` (lazy) | none — markdown bundled at build time | Reference hub. Sticky TOC (h2/h3 scroll-spy). Document switcher (segmented control). Font-size adjuster `A− / A / A+` persisted in `localStorage('docs.fontSize')`. Markdown rendered via `react-markdown` + `remark-gfm` + `rehype-slug`. v1 docs: `metrics` (live) + `how-to-use` (stub). Lazy-loaded so the markdown bundle only ships when the page is opened. Add a doc by dropping `frontend/src/docs/<slug>.md` and registering it in `frontend/src/docs/index.ts`. |
+| `/macro/:tab?` | `Macro.tsx` (lazy) | `GET /v1/macro/{series,ratio}`, `POST /v1/macro/refresh` | Macro Workbench signal-layer UI. Three sub-tabs: **Overview** (4 regime panels — Inflation / Growth / Liquidity / Stress — each with 3 sparkline rows; click a row to inline-expand a focused chart), **Ratios** (full-size lightweight-chart with quick-switch dropdown across all 12 ratios), **Sectors** (9-cell sector-vs-SPY strip; cell color = Δ% vs window-start; click to expand). Time-range chips `1Y / 3Y / 5Y / 10Y / Max` (default 5Y). Refresh button posts to backend. Sparklines hand-rolled SVG at weekly resolution; focused charts use `lightweight-charts ^4.2.1` themed for the neumorphic palette. Single source of truth for which ratios live where: `frontend/src/lib/macro-views.ts`. Lazy-loaded. |
 
 ## Conventions
 
