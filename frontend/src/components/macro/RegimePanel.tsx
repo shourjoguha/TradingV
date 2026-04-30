@@ -79,6 +79,10 @@ function RegimeRowItem({ row, since }: { row: RegimeRow; since: string }) {
   return (
     <div className="rounded-xl bg-background shadow-inset-sm">
       <div className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/30 transition-colors rounded-xl">
+        {/* Toggle area — chevron + label/subtitle. Kept as a button for
+            keyboard a11y. Info bubble lives OUTSIDE this button so its
+            own button isn't nested (browsers reject that and swallow the
+            inner button's hover events). */}
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
@@ -91,19 +95,19 @@ function RegimeRowItem({ row, since }: { row: RegimeRow; since: string }) {
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           )}
           <div className="min-w-0">
-            <div className="text-sm font-medium leading-tight truncate flex items-center gap-1">
+            <div className="text-sm font-medium leading-tight truncate">
               {row.label}
-              {row.term && (
-                <span onClick={(e) => e.stopPropagation()} role="presentation">
-                  <InfoBubble term={row.term} />
-                </span>
-              )}
             </div>
             <div className="text-[10px] font-mono text-muted-foreground truncate">
               {rowSubtitle(row)}
             </div>
           </div>
         </button>
+        {row.term && (
+          <span className="shrink-0">
+            <InfoBubble term={row.term} />
+          </span>
+        )}
         <div className="flex items-center gap-3 shrink-0">
           {lastValue != null && (
             <span className="text-xs font-mono tabular-nums text-foreground">

@@ -28,6 +28,30 @@ Roadmap doc has locked decisions (metrics, drift threshold, channel, sequencing)
 
 ---
 
+## Re-evaluate active hypotheses every 12 months
+
+**What:** Each hypothesis under [`.claude/hypotheses/draft/`](hypotheses/draft/) (and later under the M-2 DB-backed object) carries a `ttl_months` value. Long-horizon ones (24-36mo regime / breakout theses) deserve a **mid-life review** at the 12-month mark even when none of the named invalidators have fired. Markets reorganise around new macro narratives faster than thesis-text can adapt; a 12-month checkpoint is the discipline lever that keeps the workbench from becoming "always-bullish-on-X" decoration.
+
+**Trigger / cadence:** Every 12 months from `created_at`, or sooner if any cross-hypothesis development warrants it (e.g. precondition cascade, regime shift on the dedicated panel). When M-2 ships, this lives as a `next_review_at` field on the hypothesis row and a banner on the `/macro` page.
+
+**Process when a review fires:**
+1. Re-read the hypothesis text against the current `tracking_signal` and `ratios` data — does the *thesis* still describe what's happening?
+2. Confirm the four invalidator categories are still the right ones. If you'd word them differently today, update them.
+3. Check confirming-evidence section for staleness ("multi-decade trendline broken" was true 12 months ago — is it still?).
+4. Decide: keep, modify, or cancel-and-replace.
+
+**Active hypotheses to re-review:**
+- `latam-breakout-36m.md` — review by 2027-04-30
+- `latam-breakout-18m.md` — review by 2027-04-30 (or earlier — it's the tactical confirmation)
+- `saas-mission-critical-2x-18m.md` — review by 2027-04-30
+- `btc-bottom-3m.md` — short TTL, doesn't need a 12mo review (it'll resolve sooner)
+- `btc-rally-24m.md` — review by 2027-04-30
+- `stagflation-regime-24m.md` — review by 2027-05-01
+
+**Trigger to revisit (this backlog item):** automatic — schedule a one-time agent for 2027-04-30 once M-2's `next_review_at` is in the schema. Until then, manual review.
+
+---
+
 ## Unlock #1 — Telegram bot setup (~5 min) — DEFERRED
 
 **What:** Drift alerts + daily digest are coded + live but no-op until `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` env vars are set on Railway (and optionally laptop). Notifier logs once at startup that it's not configured, then stays silent. Code is deploy-safe in this state.

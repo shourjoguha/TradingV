@@ -12,6 +12,17 @@
 export interface GlossaryEntry {
   short: string
   long: string
+  /**
+   * Directional reading guide. Helps a reader with no context understand
+   * which direction is bullish/bearish, and what level (if any) is the
+   * "line in the sand". Renders in the InfoBubble popover when present.
+   */
+  directional?: {
+    up: string
+    down: string
+    /** Optional "line in the sand" — a level / threshold that flips the regime. */
+    threshold?: string
+  }
   docHref?: string
 }
 
@@ -116,84 +127,170 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   // --- Inflation panel rows ---
   r_gold_spx: {
     short: 'Gold vs equity',
-    long: 'Ratio of gold front-month futures to SPX. Rising = capital rotating from equities into hard assets, classic debasement / late-cycle / stagflation signal. Falling = risk-on, equity bid wins.',
-    docHref: '/docs/metrics#predictions',
+    long: 'Ratio of gold front-month futures to SPX. Tracks whether capital is rotating into hard assets or paper claims.',
+    directional: {
+      up: 'Gold outperforming SPX — classic debasement / late-cycle / stagflation signal. Bullish hard assets and gold-correlated names; pressure on long-duration tech.',
+      down: 'Equities winning vs gold — risk-on regime, growth bid intact. Bearish for the debasement thesis.',
+      threshold: 'A multi-year trendline break upward marks a structural breakout (Costa\'s thesis). Below the 200-day SMA = regime fading.',
+    },
   },
   r_copper_gold: {
     short: 'Reflation vs recession',
-    long: 'Copper rises with global growth; gold rises on fear / debasement. Rising ratio = reflation / growth bid; falling = recession / hard-asset hedge. Often leads the 10-year Treasury yield by weeks.',
+    long: 'Copper rises with global growth; gold rises on fear or debasement. Often leads the 10-year Treasury yield by several weeks.',
+    directional: {
+      up: 'Reflation / growth bid — supportive of cyclicals, industrials, EM. Higher rates likely to follow.',
+      down: 'Recession-bid; gold winning means flight to hard-asset hedges. Watch for credit stress and yield-curve flattening to confirm.',
+    },
   },
   r_oil_gold: {
     short: 'Energy-led vs monetary inflation',
-    long: 'Distinguishes inflation driven by energy prices (rising ratio) from monetary debasement broadly (falling ratio while gold leads). Helps tell a stagflation story apart from a pure-debasement story.',
+    long: 'Distinguishes inflation driven by energy supply (oil leading) from broad monetary debasement (gold leading).',
+    directional: {
+      up: 'Energy-led inflation — bullish energy producers (XLE), pressure on consumers + transportation.',
+      down: 'Monetary debasement dominating; oil glut or demand destruction. Often a recession tell when sustained.',
+      threshold: 'Above ~0.04 suggests a real energy shock; below ~0.02 = oil weakness or excess supply.',
+    },
   },
 
   // --- Growth panel rows ---
   r_rsp_spy: {
     short: 'Breadth: equal-weight vs cap-weight',
-    long: 'When RSP outperforms SPY, the average stock is participating. When SPY outperforms RSP, a handful of mega-caps are dragging the index. Narrow rallies are fragile — this is the cleanest single-line breadth proxy.',
+    long: 'Equal-weight S&P 500 (RSP) vs cap-weight (SPY). The cleanest single-line breadth proxy.',
+    directional: {
+      up: 'Average stock participating — healthy rally with broad participation.',
+      down: 'Narrow rally; a handful of mega-caps carrying the index. Fragile — corrections often follow narrow leadership.',
+      threshold: 'Cross below the 200-day SMA = breadth breakdown warning. Sustained underperformance for 60+ days is a serious risk-off signal.',
+    },
   },
   r_iwm_spy: {
     short: 'Small-cap risk appetite',
-    long: 'Russell 2000 small-caps vs S&P 500. Rising = animal spirits returning; small caps are sensitive to credit, growth, and risk preference. Falling = de-risking; investors retreat to safety + scale.',
+    long: 'Russell 2000 small-caps vs S&P 500 large-caps. Small caps are credit-sensitive and growth-sensitive — they tell you about risk appetite below the surface.',
+    directional: {
+      up: 'Animal spirits returning; risk-on. Bullish for cyclicals, financials, regionals.',
+      down: 'De-risking; investors retreating to scale and safety. Watch for credit-stress confirmation.',
+    },
   },
   r_eem_spy: {
     short: 'EM vs developed',
-    long: 'Emerging-markets vs US large caps. Driven by USD strength (inverse), commodity cycles, and global growth. Multi-year regimes tend to swing — the LatAm / EM-leadership thesis lives here.',
+    long: 'Emerging-markets vs US large caps. Driven inversely by USD strength, plus commodity cycles and global growth.',
+    directional: {
+      up: 'EM outperforming — usually means USD weakening and commodity cycle alive. Cross-confirms the LatAm thesis.',
+      down: 'Flight to US; strong dollar regime pressures EM and commodity exporters.',
+      threshold: 'Multi-year trendline breaks here are decade-defining regime shifts (e.g. 2002–2010 EM bull, 2011+ US dominance).',
+    },
   },
 
   // --- Liquidity panel rows ---
   r_walcl: {
     short: 'Fed balance sheet',
-    long: 'Total assets on the Fed\'s balance sheet. Expanding = liquidity tailwind for risk assets; contracting = quantitative tightening, multiples compress. Slow-moving but the strongest single liquidity input.',
+    long: 'Total assets on the Fed\'s balance sheet. Slow-moving but the strongest single liquidity input.',
+    directional: {
+      up: 'Expanding (QE) — liquidity tailwind for risk assets. Multiples expand; long-duration growth + crypto benefit most.',
+      down: 'Quantitative tightening — multiples compress, especially long-duration tech. Risk-off bias.',
+      threshold: 'Year-over-year change matters more than level. Sharp contractions (>5% YoY) historically precede risk-off regimes.',
+    },
   },
   r_t10yie: {
     short: '10Y inflation expectations',
-    long: 'Market-implied 10-year average inflation, derived from TIPS spreads. Rising = inflation expectations un-anchoring upward; falling = disinflation. Watch this with real yields for the cleanest regime read.',
+    long: 'Market-implied 10-year average inflation, derived from TIPS spreads. The market\'s consensus on what inflation will average over the next decade.',
+    directional: {
+      up: 'Expectations un-anchoring upward — bullish gold / commodities, bearish bonds. Fed credibility under question.',
+      down: 'Disinflation expectations — bond bid, growth-equity bid (multiples expand on lower discount rates).',
+      threshold: 'Above 2.5% sustained = above Fed\'s tolerance ceiling, policy concern. Below 2.0% = transitory regime returning.',
+    },
   },
   r_wgs10y: {
     short: '10Y Treasury yield',
-    long: 'Long-end nominal yield. Rising = either growth bid or inflation premium; falling = flight to safety or growth scare. Read alongside breakevens and real yields to know which.',
+    long: 'Long-end nominal yield. Read alongside breakevens and real yields to know which factor is driving moves.',
+    directional: {
+      up: 'Either growth bid or inflation premium rising. Bad for duration; good for banks and value cyclicals.',
+      down: 'Flight to safety or growth scare. Bond bid; supports long-duration multiples.',
+      threshold: '5% widely watched as a "new regime" line — sustained moves above suggest structural inflation regime.',
+    },
   },
   r_mortgage_spread: {
     short: 'Mortgage stress over Treasury',
-    long: '30-year fixed-rate mortgage minus 10-year Treasury yield. Normally ~150-200bps. When this blows out, MBS investors are demanding risk premium beyond rates — financial-conditions tightening that the headline 10Y doesn\'t reveal. Stagflation\'s quiet killer because housing locks up first.',
+    long: '30-year fixed-rate mortgage minus 10-year Treasury yield. Normal range ~150-200bps. When this blows out, MBS investors are demanding risk premium beyond rates — financial-conditions tightening that the headline 10Y doesn\'t reveal.',
+    directional: {
+      up: 'Stress widening — housing market tightens, refis stop, consumer balance-sheet drag intensifies. A quiet stagflation killer.',
+      down: 'Stress easing — refi activity picks up, housing-market liquidity returns.',
+      threshold: 'Above 250bps sustained = stress regime (we\'re here). A sustained move back to ~180bps = normalisation.',
+    },
   },
 
   // --- Stress panel rows ---
   r_hyg_lqd: {
     short: 'High-yield vs investment-grade',
-    long: 'High-yield credit ETF vs investment-grade. When HY outperforms IG, credit is hungry for risk; when HY breaks down vs IG, default fears are creeping in. Often leads equity sell-offs by weeks.',
+    long: 'High-yield credit ETF vs investment-grade. Credit signals often lead equity sell-offs by weeks.',
+    directional: {
+      up: 'HY outperforming IG — credit hungry for risk; no default fears. Bullish for risk assets generally.',
+      down: 'HY breaking down vs IG — default fears creeping in. Often the cleanest leading indicator of a coming equity correction.',
+      threshold: 'Cross below 200-day SMA = canary chirping. Sustained breakdown for 60 days + rising VIX = serious risk-off setup.',
+    },
   },
   r_tlt_spy: {
     short: 'Bond bid vs equity bid',
-    long: 'Long-duration Treasuries vs S&P 500. Rising = rotating into safety / disinflation expectations; falling = equity bid wins. The classic risk-on / risk-off see-saw.',
+    long: 'Long-duration Treasuries vs S&P 500. The classic risk-on / risk-off see-saw.',
+    directional: {
+      up: 'Rotating into bonds — flight to safety or disinflation expectations driving duration bid.',
+      down: 'Equity bid winning — risk-on. Watch for whether yields are rising too (growth bid) or stable (multiple expansion).',
+    },
   },
   r_dxy: {
     short: 'US Dollar regime',
-    long: 'Trade-weighted DXY index. Strong dollar pressures EM, commodities, and US multinational earnings. Multi-year regimes anchor everything else — the LatAm and BTC theses both depend on this rolling over.',
+    long: 'Trade-weighted USD index. The most important macro variable — strong dollar pressures EM, commodities, multinational earnings.',
+    directional: {
+      up: 'USD strength — bearish for EM, gold, commodities, multinationals. Disinflationary for the rest of the world.',
+      down: 'USD weakness — tailwind for hard assets, EM, multinational earnings. Confirms the LatAm and BTC theses.',
+      threshold: '110+ sustained = pressure regime (multinationals warn). Sub-95 = clear weakness regime. ~100 is breakeven.',
+    },
   },
   r_vix: {
     short: 'Equity panic gauge',
-    long: 'CBOE Volatility Index, daily close. Spikes with sell-offs; quiet under 15, complacent under 12, panicked above 30. The single number that says "is the market pricing in risk?". Different from credit stress — VIX is equity panic, HYG/LQD is fixed-income panic.',
+    long: 'CBOE Volatility Index, daily close. The single number that says "is the market pricing in risk?". Different from credit stress (HYG/LQD) — VIX is equity panic specifically.',
+    directional: {
+      up: 'Fear rising. Often a contrarian buy signal when sustained, but a confirmation of risk-off when paired with credit stress + breadth breakdown.',
+      down: 'Calm or complacency. Below 12 = warning sign of fragility (the calm before storms).',
+      threshold: '<12 complacent · 15-20 normal · 20-30 elevated · >30 panic. >40 is rare crisis territory.',
+    },
   },
 
   // --- Inflation regime panel rows (NEW for stagflation tracking) ---
   r_dfii10: {
     short: '10Y real yield',
-    long: 'TIPS-implied 10-year real yield (nominal − inflation expectations). The single sharpest stagflation tell: when nominal yields rise but real yields fall, inflation expectations are running away. Negative real yields = financial repression / debasement environment, gold and commodities thrive.',
+    long: 'TIPS-implied 10-year real yield (nominal − inflation expectations). The single sharpest stagflation tell.',
+    directional: {
+      up: 'Real yields rising — disinflationary / aggressive Fed. Tough for gold, duration, and the stagflation thesis.',
+      down: 'Real yields falling or negative — debasement environment. Bullish gold, commodities, real assets.',
+      threshold: 'Above 2.5% sustained = Volcker-style policy success (kills the stagflation thesis). Negative real yields = structural debasement regime.',
+    },
   },
   r_t5yie: {
     short: '5Y inflation expectations',
-    long: 'Faster-moving cousin of T10YIE. The 5Y is more responsive to actual inflation prints; divergence between 5Y and 10Y breakevens means expectations are shifting at one horizon and not the other — important for distinguishing transitory from structural inflation.',
+    long: 'Faster-moving cousin of T10YIE. More responsive to actual inflation prints.',
+    directional: {
+      up: 'Near-term inflation expectations rising — supply-chain pressure or wage-price spiral. Divergence above T10YIE = market thinks inflation is transitory but elevated.',
+      down: 'Cooling — disinflation regime returning.',
+      threshold: 'Above 2.5% sustained = un-anchored expectations (Fed credibility risk). Below 2.0% = back to "transitory" regime.',
+    },
   },
   r_ppi_cpi: {
     short: 'Producer prices over consumer prices',
-    long: 'Producer Price Index ÷ Consumer Price Index. PPI leads CPI by ~3-6 months because producers pass costs through to consumers. Rising ratio = cost-push inflation in the supply chain; corporate margins about to get squeezed. Best single "stagflation is in the pipeline" signal.',
+    long: 'PPI leads CPI by ~3-6 months because producers eventually pass costs through. Best single "stagflation is in the pipeline" signal.',
+    directional: {
+      up: 'Cost-push inflation building in the supply chain. Corporate margins about to get squeezed; CPI prints likely to rise within 2 quarters.',
+      down: 'Cost-push relief — input prices easing faster than output prices. Margin recovery story.',
+      threshold: 'Rolling 6mo rate-of-change > 0 for 3+ consecutive months = pressure building. < 0 for 90 days = pressure dissipating, stagflation thesis weakens.',
+    },
   },
   r_dbc_spy: {
     short: 'Broad commodities vs equities',
-    long: 'Commodities ETF (energy, ag, metals weighted) over SPY. Different from Gold/SPX in that it captures the energy + agricultural commodity story that drives real-economy inflation. When this rises, real assets are eating equity returns — the stagflation playbook in one line.',
+    long: 'Commodities ETF (energy, ag, metals weighted) over SPY. Different from Gold/SPX — captures the energy + agricultural story that drives real-economy inflation.',
+    directional: {
+      up: 'Real assets eating equity returns — stagflation playbook winning. Energy + materials sectors typically lead.',
+      down: 'Equities winning — commodity cycle topping or disinflation regime.',
+      threshold: 'Cross above 200-day SMA = durable trend up. Sustained for 12 months = structural commodity cycle (1970s, 2000-2008, possibly now).',
+    },
   },
 
   // --- Opportunities + Trades ---

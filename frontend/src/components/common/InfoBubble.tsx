@@ -29,13 +29,31 @@ export function InfoBubble({ term, side = 'top', size = 12 }: InfoBubbleProps) {
       side={side}
       width={320}
       content={
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <div className="font-semibold">{entry.short}</div>
           <div className="text-muted-foreground">{entry.long}</div>
+          {entry.directional && (
+            <div className="space-y-1 pt-1.5 border-t border-muted-foreground/15">
+              <div className="flex gap-1.5">
+                <span className="text-success font-mono text-[10px] mt-0.5 shrink-0">▲</span>
+                <span><span className="font-medium">Up:</span> {entry.directional.up}</span>
+              </div>
+              <div className="flex gap-1.5">
+                <span className="text-danger font-mono text-[10px] mt-0.5 shrink-0">▼</span>
+                <span><span className="font-medium">Down:</span> {entry.directional.down}</span>
+              </div>
+              {entry.directional.threshold && (
+                <div className="flex gap-1.5">
+                  <span className="text-warning font-mono text-[10px] mt-0.5 shrink-0">⚑</span>
+                  <span><span className="font-medium">Watch:</span> {entry.directional.threshold}</span>
+                </div>
+              )}
+            </div>
+          )}
           {entry.docHref && (
             <Link
               to={entry.docHref}
-              className="inline-block mt-1 text-violet hover:underline pointer-events-auto"
+              className="inline-block mt-1 text-violet hover:underline"
             >
               Read more →
             </Link>
