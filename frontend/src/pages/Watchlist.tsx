@@ -75,10 +75,12 @@ export function Watchlist() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-heading font-semibold tracking-tight">
-            Watchlist
+            Roster
           </h2>
-          <p className="text-muted-foreground">
-            Manage tickers for prediction and analysis.
+          <p className="text-muted-foreground text-sm">
+            Tickers fed to Kronos by the daily scheduled run. Adding here
+            spawns prediction work — for casual tracking use{' '}
+            <a href="/watchlists" className="underline hover:text-foreground">Watchlists</a>{' '}instead.
           </p>
         </div>
       </div>
@@ -204,8 +206,8 @@ export function Watchlist() {
             </Table>
           ) : (
             <EmptyState
-              title="Watchlist empty"
-              description="Add tickers above to start tracking them in scheduled runs."
+              title="Roster empty"
+              description="Add tickers above to include them in the daily Kronos run."
             />
           )}
         </CardContent>

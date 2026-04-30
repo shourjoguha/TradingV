@@ -60,7 +60,7 @@ const NAV_GROUPS: NavEntry[] = [
     label: 'Admin',
     icon: Zap,
     children: [
-      { path: '/watchlist', label: 'Watchlist' },
+      { path: '/roster', label: 'Roster' },
       { path: '/schedule', label: 'Schedule' },
       { path: '/health', label: 'Health' },
     ],

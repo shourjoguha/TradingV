@@ -36,8 +36,8 @@ export function App() {
         <Route path="/predictions/:tab?" element={<Predictions />} />
         <Route path="/motion/:tab?" element={<Motion />} />
 
-        {/* Admin group — Watchlist / Schedule / Health */}
-        <Route path="/watchlist" element={<Watchlist />} />
+        {/* Admin group — Roster / Schedule / Health */}
+        <Route path="/roster" element={<Watchlist />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/health" element={<AnalysisJobs />} />
         <Route path="/health/:jobId" element={<AnalysisJobDetail />} />
@@ -61,6 +61,7 @@ export function App() {
         <Route path="/trades"                 element={<Navigate to="/motion/trades" replace />} />
         <Route path="/analysis"               element={<Navigate to="/health" replace />} />
         <Route path="/analysis/:jobId"        element={<LegacyAnalysisDetailRedirect />} />
+        <Route path="/watchlist"              element={<Navigate to="/roster" replace />} />
       </Routes>
     </Layout>
   )
