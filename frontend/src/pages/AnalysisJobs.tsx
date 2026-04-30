@@ -52,6 +52,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import type { AnalysisJob, AnalysisTask } from '../lib/types'
+import { EmptyState } from '../components/common'
 
 // ---------------------------------------------------------------------------
 // Smart-time helpers — collapse a timestamp into "Today HH:mm", "Yesterday
@@ -581,10 +582,11 @@ export function AnalysisJobs() {
               </TableBody>
             </Table>
           ) : (
-            <div className="text-center py-12 text-sm text-muted-foreground rounded-2xl shadow-inset-sm flex flex-col items-center">
-              <FlaskConical className="h-8 w-8 mb-2 text-muted-foreground/50" />
-              No analysis jobs found. Run a new analysis to get started.
-            </div>
+            <EmptyState
+              icon={FlaskConical}
+              title="No analysis jobs yet"
+              description="Run a new analysis from the New Analysis button above to get started."
+            />
           )}
         </CardContent>
       </Card>

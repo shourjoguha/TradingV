@@ -14,6 +14,7 @@ import {
 } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { EmptyState } from '../components/common'
 import { Label } from '../components/ui/label'
 import { Skeleton } from '../components/ui/skeleton'
 import {
@@ -210,9 +211,10 @@ export function TickerLabels() {
               <Skeleton className="h-10 w-full" />
             </div>
           ) : !labels || Object.keys(labels).length === 0 ? (
-            <div className="text-center py-12 text-sm text-muted-foreground rounded-2xl shadow-inset-sm">
-              No labels found for {safeSymbol}.
-            </div>
+            <EmptyState
+              title={`No labels for ${safeSymbol}`}
+              description="Add a label below to start tagging this ticker."
+            />
           ) : (
             <Table>
               <TableHeader>

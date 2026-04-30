@@ -7,6 +7,7 @@ import {
   useDeleteTicker,
 } from '../hooks/use-api'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { EmptyState } from '../components/common'
 import {
   Table,
   TableBody,
@@ -202,9 +203,10 @@ export function Watchlist() {
               </TableBody>
             </Table>
           ) : (
-            <div className="text-center py-12 text-sm text-muted-foreground rounded-2xl shadow-inset-sm">
-              No tickers in watchlist. Add some to get started.
-            </div>
+            <EmptyState
+              title="Watchlist empty"
+              description="Add tickers above to start tracking them in scheduled runs."
+            />
           )}
         </CardContent>
       </Card>
