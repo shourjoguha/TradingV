@@ -32,6 +32,73 @@ import {
 import { Skeleton } from '../components/ui/skeleton'
 import { Badge } from '../components/ui/badge'
 import { Grid3x3 } from 'lucide-react'
+
+type Ohlc = { open?: number; high?: number; low?: number; close?: number; volume?: number }
+
+// Side-by-side mini candles for "actual" vs "prediction". Sparse labels: 3
+// non-adjacent reference points across the two candles (actual close, pred
+// high, pred low) so the eye lands on anchors without clutter.
+function MiniCandleCompare({ actual, predicted }: { actual: Ohlc | null; predicted: Ohlc | null }) {
+  const vals = [actual?.high, actual?.low, predicted?.high, predicted?.low]
+    .filter((v): v is number => typeof v === 'number')
+  if (vals.length === 0) return <div className="text-[10px] text-muted-foreground">no data</div>
+  const max = Math.max(...vals)
+  const min = Math.min(...vals)
+  const span = Math.max(max - min, 1e-6)
+  const W = 160
+  const H = 90
+  const pad = 14
+  const innerH = H - pad * 2
+  const y = (v: number) => pad + (1 - (v - min) / span) * innerH
+  const candle = (o: Ohlc | null, x: number, label: string) => {
+    if (!o || o.open == null || o.high == null || o.low == null || o.close == null) {
+      return (
+        <g>
+          <text x={x} y={H - 2} textAnchor="middle" fontSize="9" className="fill-muted-foreground">{label}</text>
+        </g>
+      )
+    }
+    const up = o.close >= o.open
+    const fill = up ? 'fill-success' : 'fill-danger'
+    const stroke = up ? 'stroke-success' : 'stroke-danger'
+    const bodyTop = Math.min(y(o.open), y(o.close))
+    const bodyBot = Math.max(y(o.open), y(o.close))
+    const bodyH = Math.max(bodyBot - bodyTop, 1.5)
+    return (
+      <g>
+        <line x1={x} x2={x} y1={y(o.high)} y2={y(o.low)} className={stroke} strokeWidth={1.2} />
+        <rect x={x - 8} y={bodyTop} width={16} height={bodyH} className={fill} rx={1.5} />
+        <text x={x} y={H - 2} textAnchor="middle" fontSize="9" className="fill-muted-foreground">{label}</text>
+      </g>
+    )
+  }
+  // 3 sparse refs: actual.close, predicted.high, predicted.low
+  const refs: { v: number | undefined; x: number; y: number; anchor: 'start' | 'end'; label: string }[] = [
+    { v: actual?.close, x: 36, y: actual?.close != null ? y(actual.close) : 0, anchor: 'end', label: actual?.close != null ? `$${actual.close.toFixed(2)}` : '' },
+    { v: predicted?.high, x: W - 36, y: predicted?.high != null ? y(predicted.high) : 0, anchor: 'start', label: predicted?.high != null ? `H $${predicted.high.toFixed(2)}` : '' },
+    { v: predicted?.low, x: W - 36, y: predicted?.low != null ? y(predicted.low) : 0, anchor: 'start', label: predicted?.low != null ? `L $${predicted.low.toFixed(2)}` : '' },
+  ]
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="font-mono">
+      {candle(actual, 40, 'Actual')}
+      {candle(predicted, W - 40, 'Predicted')}
+      {refs.map((r, i) =>
+        r.v == null ? null : (
+          <text
+            key={i}
+            x={r.x}
+            y={r.y + 3}
+            textAnchor={r.anchor}
+            fontSize="9"
+            className="fill-foreground"
+          >
+            {r.label}
+          </text>
+        ),
+      )}
+    </svg>
+  )
+}
 const FIELD_OPTIONS = ['open', 'high', 'low', 'close', 'volume'] as const
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 type FieldKey = 'open' | 'high' | 'low' | 'close' | 'volume'
@@ -67,7 +134,10 @@ export function PredictionsByHorizon() {
     tickers,
     interval,
     model_id: modelId && modelId !== '__all__' ? modelId : undefined,
-    fields: fields.join(',') || undefined,
+    // Always request OHLC so the hover tooltip can render full candles. The
+    // active field chip still drives which value the cell's Δ% is derived
+    // from — that's a presentation choice, not an API filter.
+    fields: 'ohlc',
     made_on_dow: madeOnDow.length > 0 ? madeOnDow.join(',') : undefined,
   }
   const { data: predictions, isLoading } = usePredictionsByHorizon(queryParams)
@@ -263,13 +333,13 @@ export function PredictionsByHorizon() {
               <div>
                 <CardTitle>Horizon Matrix</CardTitle>
                 <CardDescription>
-                  Delta % between predicted{' '}
+                  Each cell: <span className="font-mono">Δ%</span> on{' '}
                   <span className="font-mono font-medium">{activeField}</span>{' '}
-                  and actual.
+                  (top), actual close $ below — or predicted close $ in italics when the target date is still in the future.
+                  Hover for an OHLC compare.
                   <span className="ml-2 text-green-500">■</span> undershoot
-                  <span className="ml-2 text-red-500">■</span> overshoot
-                  <span className="ml-2 text-muted-foreground">■</span> within
-                  ±1%
+                  <span className="ml-1 text-red-500">■</span> overshoot
+                  <span className="ml-1 text-muted-foreground">■</span> within ±1%
                 </CardDescription>
               </div>
               <Badge variant="outline" className="font-mono text-xs">
@@ -345,13 +415,22 @@ export function PredictionsByHorizon() {
                             </TableCell>
                           )
                         }
+                        const actualOhlc = (row?.actual as Ohlc | null) ?? null
+                        const predOhlc = (row?.prediction as Ohlc | null) ?? null
                         if (actualVal == null) {
                           // Forward-looking: prediction exists but target date hasn't elapsed yet.
+                          // Italic predicted close on a single horizontal line.
                           return (
                             <TableCell key={h} className="text-center p-0">
-                              <div className="w-full h-full p-3 font-mono text-xs flex flex-col items-center justify-center text-muted-foreground bg-background shadow-inset-sm">
-                                <div className="font-medium">${predVal.toFixed(2)}</div>
-                                <div className="text-[10px] opacity-60 mt-0.5">forecast</div>
+                              <div className="group relative w-full h-full px-3 py-4 font-mono flex flex-row items-baseline justify-center gap-2 text-muted-foreground bg-background shadow-inset-sm border border-dashed border-muted-foreground/20">
+                                <span className="text-base font-semibold leading-none">→</span>
+                                <span className="text-sm italic tabular-nums opacity-90">${predVal.toFixed(2)}</span>
+                                <div className="invisible group-hover:visible absolute z-30 top-full left-1/2 -translate-x-1/2 mt-1 p-2 rounded-xl bg-card shadow-extruded text-left pointer-events-none">
+                                  <div className="text-[10px] text-muted-foreground mb-1">
+                                    {row?.ticker} · T-{h} · made {row?.made_on ?? '?'} · forecast only
+                                  </div>
+                                  <MiniCandleCompare actual={null} predicted={predOhlc} />
+                                </div>
                               </div>
                             </TableCell>
                           )
@@ -367,14 +446,20 @@ export function PredictionsByHorizon() {
                         return (
                           <TableCell key={h} className="text-center p-0">
                             <div
-                              className={`w-full h-full p-3 font-mono text-xs flex flex-col items-center justify-center ${colorClass}`}
+                              className={`group relative w-full h-full px-3 py-4 font-mono flex flex-row items-baseline justify-center gap-2 ${colorClass}`}
                             >
-                              <div className="font-medium">
+                              <span className="text-base font-semibold tabular-nums leading-none">
                                 {deltaPct > 0 ? '+' : ''}
-                                {deltaPct.toFixed(2)}%
-                              </div>
-                              <div className="text-[10px] opacity-60 mt-0.5">
-                                ${predVal.toFixed(2)}
+                                {deltaPct.toFixed(1)}%
+                              </span>
+                              <span className="text-sm tabular-nums opacity-90">
+                                ${actualVal.toFixed(2)}
+                              </span>
+                              <div className="invisible group-hover:visible absolute z-30 top-full left-1/2 -translate-x-1/2 mt-1 p-2 rounded-xl bg-card shadow-extruded text-left pointer-events-none">
+                                <div className="text-[10px] text-muted-foreground mb-1">
+                                  {row?.ticker} · T-{h} · made {row?.made_on ?? '?'}
+                                </div>
+                                <MiniCandleCompare actual={actualOhlc} predicted={predOhlc} />
                               </div>
                             </div>
                           </TableCell>

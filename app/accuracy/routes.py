@@ -43,6 +43,11 @@ async def grid(
     tickers: Optional[str] = Query(None, description="CSV. Default: all tickers."),
     horizons: Optional[str] = Query(None, description="CSV of int offsets. Default: all."),
     model_id: Optional[str] = Query(None),
+    interval: Optional[str] = Query(
+        None,
+        description="Filter by bar interval (e.g. '1d', '1h'). Default: all intervals "
+        "as separate rows so 1h and 1d cadences are never averaged together.",
+    ),
     last_n: int = Query(30, ge=1, le=500),
     since: Optional[datetime.date] = Query(None),
     _api_key: str = Depends(verify_api_key),
@@ -51,6 +56,7 @@ async def grid(
         tickers=_parse_csv_strings(tickers),
         horizons=_parse_csv_ints(horizons),
         model_id=model_id,
+        interval=interval,
         last_n=last_n,
         since=since,
     )

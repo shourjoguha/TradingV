@@ -18,9 +18,10 @@ Orchestrates Kronos inference over (ticker × interval × model) fan-out. Every 
 
 1. Upsert every ticker (source `analysis`) — idempotent; persists for future dropdowns.
 2. Fan out to tasks = tickers × intervals × model_ids.
-3. For each task: `EligibilityValidator.check(...)` against current OHLCV cache size. Ineligible → `status="ineligible"`, populates `ineligible_reason` + `ineligible_message`. Eligible → `adapter.predict(...)`.
-4. On task done → `predictions.service.explode_task` materialises `result_json.forecast[]` into `prediction_points` rows (best-effort, won't roll back the task).
-5. Parent `status="done"` once every task resolves.
+3. For each task: count cached OHLCV bars for `(ticker, interval)`. If below the model's `min_history_bars` (cold start — typical on the first run for a new interval such as `1h`), trigger **one** lazy `md_service.refresh()` to warm the cache, then re-count. Self-healing — eliminates the chicken-and-egg case where the schedule runner used to refresh OHLCV only *after* predictions completed. One attempt only, so a permanently-unavailable combo doesn't repeatedly hammer the upstream provider.
+4. `EligibilityValidator.check(...)` runs against the (possibly refreshed) bar count. Ineligible → `status="ineligible"`, populates `ineligible_reason` + `ineligible_message`. Eligible → `adapter.predict(...)`.
+5. On task done → `predictions.service.explode_task` materialises `result_json.forecast[]` into `prediction_points` rows (best-effort, won't roll back the task).
+6. Parent `status="done"` once every task resolves.
 
 Returns `{job_id, task_count, status}` immediately. Poll `GET /v1/analysis/jobs/{id}` for state + partial results (response includes `origin`).
 

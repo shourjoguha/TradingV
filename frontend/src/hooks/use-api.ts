@@ -297,6 +297,7 @@ export function useAccuracyGrid(params?: {
   tickers?: string
   horizons?: string
   model_id?: string
+  interval?: string
   last_n?: number
 }) {
   const { backendId } = useBackend()
@@ -307,6 +308,7 @@ export function useAccuracyGrid(params?: {
       if (params?.tickers) s.set('tickers', params.tickers)
       if (params?.horizons) s.set('horizons', params.horizons)
       if (params?.model_id) s.set('model_id', params.model_id)
+      if (params?.interval) s.set('interval', params.interval)
       if (params?.last_n) s.set('last_n', String(params.last_n))
       const qs = s.toString() ? `?${s}` : ''
       return apiFetch<AccuracyGridResponse>(`/v1/accuracy/grid${qs}`, { backendId })

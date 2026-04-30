@@ -8,7 +8,7 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 
 ## Decision-tool roadmap — see [.claude/roadmap.md](roadmap.md)
 
-**Status (2026-04-27):** Phases 0-6 SHIPPED. All backend tables + lifespan loops + endpoints + frontend pages live. 224 tests pass. Awaiting live data + operator unlocks (see next entries) to validate behavior.
+**Status (2026-04-30):** Phases 0-6 SHIPPED. All backend tables + lifespan loops + endpoints + frontend pages live. 254 tests pass. Unlock #2 RESOLVED via self-healing OHLCV fetch (ADR-010); scheduler mid-tick PUT race RESOLVED (ADR-011). Telegram still dormant — see Unlock #1.
 
 | Phase | Title | Status |
 |---|---|---|
@@ -18,7 +18,7 @@ Deferred decisions and known-but-unaddressed gaps. Each entry: what, why deferre
 | 1.3 | drift detection + Telegram alerts (backend) | ✅ live (Telegram dormant — see unlock #1) |
 | 2.1 | empty states | ✅ live |
 | 2.2 | lightweight-charts v5 upgrade | DEFERRED — not on critical path |
-| 3.1 | opportunities + signal generator | ✅ live (waiting on accuracy data — see unlock #2) |
+| 3.1 | opportunities + signal generator | ✅ live (self-healing OHLCV — see unlock #2 RESOLVED) |
 | 3.2 | /opportunities frontend | ✅ live |
 | 4 | daily Telegram digest | ✅ live (dormant until Telegram set up) |
 | 5 | trade journal (backend + frontend) | ✅ live |
@@ -48,29 +48,13 @@ Roadmap doc has locked decisions (metrics, drift threshold, channel, sequencing)
 
 ---
 
-## Unlock #2 — Accuracy/opportunities can't compute (no actuals in OHLCV cache) — DEFERRED
+## Unlock #2 — Self-healing OHLCV fetch  ✅ RESOLVED
 
-**What:** First live smoke test (post-deploy) showed:
-- `POST /v1/accuracy/evaluate` → `{scanned: 12, evaluated: 0, skipped_no_actual: 12}`
-- `POST /v1/opportunities/generate` → `{scanned: 12, evaluated: 0, skipped_no_baseline: 12}`
+**Resolution (2026-04-30):** Option A landed. Accuracy evaluator's hourly tick now calls `md_service.refresh()` when a pending prediction's actual is missing — deduped per `(ticker, interval)` per tick, capped per `(ticker, interval, target_ts)` lifetime via `ohlcv_fetch_misses` (max 24 attempts ≈ one day at hourly cadence). Same lazy refresh added to the analysis pipeline (`_process_task`) so cold-start intervals like 1h get warmed automatically. See [decisions/010](decisions/010-self-healing-ohlcv-fetch.md).
 
-Same root cause: existing `prediction_points` reference `target_ts` and `made_on` dates for which `ohlcv_bars` was never refreshed. The evaluator needs both the actual close at `target_ts` AND the baseline close at `made_on` to compute error + direction. The opportunity generator needs `made_on` baseline to compute predicted move %.
+Baseline (`made_on` close) for opportunities is still cache-only today; same approach can extend there if needed (low priority — usually present once analysis lazy-refresh ran).
 
-**Two options to fix:**
-
-### Option A — On-demand OHLCV refresh inside the evaluator (~30 min, recommended)
-
-When `_fetch_actual_close()` returns None, call `market_data.service.refresh()` for that `(ticker, interval, target_date)` window, then retry the lookup. Same for baseline. Add a per-tick cap (e.g. 20 refreshes max) so a backlog doesn't hammer yfinance. Self-healing — first evaluator tick after deploy fills in everything available.
-
-**Files:** `app/accuracy/service.py::_fetch_actual_close` + `_fetch_baseline_close` + `evaluate_pending`. Add `max_refresh` param + counter.
-
-### Option B — Wait for the schedule runner
-
-Each scheduled run pulls fresh OHLCV for the input window (last N days). Eventually those windows cover the historical `target_ts` + `made_on` values currently missing. Free but slow — won't backfill weeks of history.
-
-**Recommendation:** Option A. It's a small, idempotent change that makes the dashboard fillable from day one and is a one-time cost.
-
-**Trigger to revisit:** as soon as you want the accuracy dashboard to show non-empty rows. Likely after observing whether Option B fills in naturally over a few schedule cycles — if it does, Option A is unnecessary.
+**Files:** `app/accuracy/service.py::evaluate_pending` + `_try_refresh_actual`, `app/accuracy/models.py::OhlcvFetchMiss`, `migrations/versions/0018_ohlcv_fetch_misses.py`, `app/analysis/service.py::_process_task`.
 
 ---
 
@@ -161,23 +145,11 @@ Verified: Railway-originated job pushes both `kind='ticker'` and `kind='result'`
 
 ---
 
-## Scheduler loses today's slot if PUT /v1/schedule lands during execution window
+## Scheduler loses today's slot if PUT /v1/schedule lands during execution window  ✅ RESOLVED
 
-**What:** When `PUT /v1/schedule` is called while the daily scheduler is mid-execution (roughly 30-min trigger window), it recomputes `next_run_at` and advances it past today, permanently losing that day's slot. Example: run fires at 21:33 UTC, PUT lands at 21:34, recalculates → 2026-04-30 23:30 UTC, skipping the remainder of today.
+**Resolution (2026-04-30):** Moved the `next_run_at` advancement out of `_tick` (which computed against a stale config snapshot taken at tick start) and into `record_run`. `record_run` now takes `advance_now` (an instant) instead of `advance_to` (a precomputed value) and recomputes against the freshly-loaded config row. A PUT that lands during a tick is honored on the way out — no more lost slots, no `is_running` flag needed. See [decisions/011](decisions/011-schedule-mid-tick-put-race.md).
 
-**Status:** Open (discovered 2026-04-29 during manual fire-now test).
-
-**Why deferred:** One-operator tool; schedule changes are rare. Workaround: fire-now is idempotent, so re-run manually if a PUT accidentally lands mid-execution. Still bad UX — should defer the recomputation.
-
-**Options:**
-1. **Defer recomputation** (~10 min): Wrap `next_run_at` update in a check: if `is_running`, defer to end-of-execution. Add `recompute_pending` flag to `schedule_config`. Runner checks at loop exit.
-2. **Retry window** (~5 min): After a PUT lands during execution, don't advance `next_run_at`; let the retry_minutes logic fire again if the current slot hasn't completed. Simpler but couples the logic tighter.
-
-**Recommendation:** Option 1. Cleaner separation, prevents any race condition where the slot is lost between the PUT and the end of execution.
-
-**Files involved:** `app/schedule/runner.py` (main runner loop + `is_running` state), `app/schedule/routes.py` (PUT handler).
-
-**Trigger to revisit:** when schedule changes become more frequent (e.g. operator-driven A/B testing of run times).
+**Files:** `app/schedule/service.py::record_run`, `app/schedule/runner.py::_tick`, plus regression tests in `tests/test_schedule.py`.
 
 ---
 

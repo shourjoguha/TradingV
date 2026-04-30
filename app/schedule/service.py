@@ -169,9 +169,21 @@ async def set_pending(value: bool) -> None:
 
 
 async def record_run(
-    *, status: str, error: Optional[str] = None, advance_to: Optional[datetime.datetime] = None
+    *,
+    status: str,
+    error: Optional[str] = None,
+    advance_now: Optional[datetime.datetime] = None,
 ) -> None:
-    """Persist last_run_* + (optional) next_run_at."""
+    """Persist last_run_* + (optional) recompute next_run_at.
+
+    When ``advance_now`` is provided, ``next_run_at`` is recomputed *here*
+    against the freshly-loaded config — not against a snapshot precomputed
+    by the caller. This is the choke point that keeps a mid-tick
+    ``PUT /v1/schedule`` from being silently overwritten: the PUT lands
+    between tick start and end, ``record_run`` reads the post-PUT row,
+    and ``compute_next_run_at`` reflects the operator's new
+    ``run_at_local`` / ``tz_name`` / ``enabled`` / ``skip_weekends``.
+    """
     await ensure_config()
     async with _db.SessionLocal() as session:
         cfg = await session.get(ScheduleConfig, SINGLETON_ID)
@@ -180,8 +192,8 @@ async def record_run(
         cfg.last_run_at = _now_utc()
         cfg.last_run_status = status
         cfg.last_run_error = error
-        if advance_to is not None:
-            cfg.next_run_at = advance_to
+        if advance_now is not None:
+            cfg.next_run_at = compute_next_run_at(cfg, now=advance_now)
         if status == "succeeded":
             cfg.pending_run = False
         await session.commit()

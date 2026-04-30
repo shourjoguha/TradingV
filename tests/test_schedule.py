@@ -120,6 +120,61 @@ async def test_ensure_config_idempotent(client):
 
 
 @pytest.mark.asyncio
+async def test_record_run_uses_post_put_config(client):
+    """Regression: PUT during _tick must not lose today's slot.
+
+    Sequence:
+    - cfg starts at run_at_local=21:30; first scheduled slot fires.
+    - Mid-tick (still 21:34 UTC), an operator PUTs run_at_local=23:30.
+    - The runner finishes its tick and calls record_run(advance_now=21:35).
+    - Expectation: next_run_at should reflect the NEW 23:30 today, not
+      yesterday's stale advance computed from the pre-PUT config.
+    """
+    # Seed a config to a known time so compute_next_run_at is deterministic.
+    await schedule_svc.update_config(
+        enabled=True,
+        tz_name="UTC",
+        run_at_local=datetime.time(21, 30),
+        intervals=["1d"],
+        model_ids=["kronos_base"],
+        skip_weekends=False,  # always weekday-eligible
+    )
+
+    # Operator PUTs new run_at_local mid-tick.
+    await schedule_svc.update_config(run_at_local=datetime.time(23, 30))
+
+    # Runner's _tick finishes and calls record_run with advance_now just
+    # after the original slot. record_run must read the post-PUT row and
+    # recompute against 23:30, landing today.
+    advance_now = datetime.datetime(2026, 4, 30, 21, 35, tzinfo=datetime.timezone.utc)
+    await schedule_svc.record_run(status="succeeded", advance_now=advance_now)
+
+    cfg = await schedule_svc.get_config()
+    # SQLite drops tzinfo on round-trip; compare naive components.
+    actual_naive = cfg.next_run_at.replace(tzinfo=None)
+    expected_naive = datetime.datetime(2026, 4, 30, 23, 30)
+    assert actual_naive == expected_naive, (
+        f"next_run_at should land on today's 23:30 UTC, got {cfg.next_run_at}"
+    )
+    assert cfg.last_run_status == "succeeded"
+
+
+@pytest.mark.asyncio
+async def test_record_run_without_advance_leaves_next_run_at(client):
+    """When advance_now is None, record_run touches last_run_* but not next_run_at."""
+    await schedule_svc.update_config(
+        enabled=True, run_at_local=datetime.time(21, 30), skip_weekends=False,
+    )
+    cfg_before = await schedule_svc.get_config()
+    await schedule_svc.record_run(status="failed", error="boom")
+    cfg_after = await schedule_svc.get_config()
+
+    assert cfg_after.next_run_at == cfg_before.next_run_at
+    assert cfg_after.last_run_status == "failed"
+    assert cfg_after.last_run_error == "boom"
+
+
+@pytest.mark.asyncio
 async def test_update_config_recomputes_next_run_at(client):
     cfg = await schedule_svc.update_config(enabled=True)
     assert cfg.enabled is True
