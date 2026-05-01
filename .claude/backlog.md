@@ -220,7 +220,7 @@ plus an ongoing rule in `_collect_actuals` that re-anchors the 1h refresh window
 
 **Why deferred:** No active drift today. M-2 is the only module that surfaced the issue, and we cleaned it up by hand. Net cost so far: one bad afternoon. Acceptable to defer behind real product work.
 
-**Trigger to revisit:** Next time we add a migration that *alters* an existing table (column add, constraint change, index add) — that's the failure mode `create_all` cannot mitigate, so we should remove it before then. Or after one more "boot vs alembic" race. Either signal is enough.
+**Trigger to revisit:** Next time we add a migration that *alters* an existing table (column add, constraint change, index add) — that's the failure mode `create_all` cannot mitigate, so we should remove it before then. Or after one more "boot vs alembic" race. **Update 2026-05-02:** triggered again on the Phase 2 migration `0022_hypothesis_node_links` (table auto-created by `create_all`, alembic at 0021, manual drop + upgrade required). **Second occurrence in 24 hours.** This issue should now be promoted from "open" to "next available 30-min window" — recommendation: pull it forward of Phase 3 work.
 
 **Implementation pointers:**
 - `app/main.py` lifespan — delete the `engine.begin() / run_sync(Base.metadata.create_all)` block.

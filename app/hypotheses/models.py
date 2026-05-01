@@ -125,3 +125,44 @@ class HypothesisEvaluation(Base):
             "evaluated_at",
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — vault link
+# ---------------------------------------------------------------------------
+
+VALID_STANCES = ("supports", "challenges", "context")
+VALID_ADDED_BY = ("operator", "auto")
+
+
+class HypothesisNodeLink(Base):
+    """Pointer from a hypothesis row to a markdown note in the operator's
+    knowledge vault.
+
+    Vault path is canonical (e.g. ``Newsletters/lyn-alden/2026-w19.md``);
+    not FK-enforced because the indexer's cache lives in a separate SQLite
+    DB. The TradingView API validates against the indexer at write time.
+    """
+
+    __tablename__ = "hypothesis_node_links"
+
+    hypothesis_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("hypothesis.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    vault_path: Mapped[str] = mapped_column(String(500), primary_key=True)
+    stance: Mapped[str] = mapped_column(String(16), nullable=False)
+    added_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    added_by: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default="operator"
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_hypothesis_node_links_vault_path",
+            "vault_path",
+        ),
+    )
