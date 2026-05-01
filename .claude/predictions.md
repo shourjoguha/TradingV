@@ -62,15 +62,19 @@ Response:
 ```
 
 ### `GET /v1/predictions/by-horizon`
-Multi-ticker grid: for one `target_date`, return predictions made N calendar days before across N tickers. Missing cells yield `prediction: null` (not omitted).
+Multi-ticker grid. Two interpretations of `target_date`, controlled by `mode`:
+
+- `mode=target` (default; legacy): picked date = the prediction target. For each horizon `h`, `made_on = target − h`. **All cells in a (ticker) row share one actual** (= bar at the picked target).
+- `mode=anchor`: picked date = the **made-on** day. For each horizon `h`, `target = anchor + h`. Each cell does its own actual lookup, so columns whose target has elapsed render colored Δ% while still-future columns render hollow predicted-only — without forcing the operator to backdate the picker. This is the natural "show me my forecasts' progress" view.
 
 Query params:
-- `target_date` (required)
+- `target_date` (required) — semantic depends on `mode`
 - `horizons` — CSV positive ints, e.g. `1,2,3,4,5`
 - `tickers` — CSV, e.g. `AAPL,MSFT,NVDA`
+- `mode` — `target` | `anchor` (default `target`)
 - `interval`, `model_id`, `fields`, `made_on_dow` — same as above
 
-Response: `{target_date, interval, fields, rows: [{ticker, target_date, made_on, days_ago, actual, prediction}, ...]}`. Length = `len(tickers) × len(horizons)`.
+Response: `{target_date, interval, fields, mode, rows: [{ticker, target_date, made_on, days_ago, actual, prediction}, ...]}`. Length = `len(tickers) × len(horizons)`. In anchor mode, `target_date` on each row reflects the **per-cell** target (= anchor + h); the top-level `target_date` echoes the picked anchor.
 
 ### Field selector grammar
 - Presets: `o|h|l|c|v|a|ohlc|ohlcv|all`
@@ -82,9 +86,19 @@ Response: `{target_date, interval, fields, rows: [{ticker, target_date, made_on,
 
 ## Frontend — By Horizon cell semantics
 
-`/predictions/by-horizon` matrix cells:
+`/predictions/by-horizon` matrix cells (page uses `mode=anchor`):
 
-- **Primary (large):** `Δ%` on the active field (`(pred − actual) / actual × 100`), 1 decimal, signed (e.g. `+1.2%`, `−0.8%`). No `$` prefix — the value is a percentage.
-- **Secondary (small):** **actual close `$X.XX`** when the target date has elapsed; **predicted close `$X.XX`** in italics with a leading `→` and dashed border when the target is still in the future (forecast-only).
-- **Hover:** opens a tooltip with side-by-side OHLC mini-candles (actual vs predicted) plus `made_on` + horizon header. Three sparse price labels (actual close, predicted high, predicted low) anchor the visual without crowding it.
-- **Color:** `Δ > +1%` red (overshoot), `Δ < −1%` green (undershoot), `±1%` grey. Same legend communicates both color and the secondary line.
+- **Picker semantic:** "Anchor (made-on)" — the day the forecasts were generated. Default = today (UTC). One-click **Today** link resets it.
+- **Column header:** `+Nd` plus the per-column target date (e.g. `+1d / 04/29`). Computed from anchor + horizon.
+- **Primary (large):** `Δ%` on the active field (`(pred − actual) / actual × 100`), 1 decimal, signed (e.g. `+1.2%`, `−0.8%`). Rendered only when the per-cell target has elapsed (actual exists).
+- **Secondary (small):** **actual close `$X.XX`** when target elapsed; **predicted close `$X.XX`** in italics with a leading `→` and dashed border when target is still in the future. The decision is per-cell (anchor mode), not per-row — a single anchor can show colored cells in early columns and hollow cells in later ones.
+- **Hover:** opens a tooltip with side-by-side OHLC mini-candles (actual vs predicted) plus per-cell target header. Forward-looking cells show only the predicted candle (actual is null).
+- **Color:** `Δ > +1%` red (overshoot), `Δ < −1%` green (undershoot), `±1%` grey.
+- **No row-level Actual column.** In anchor mode the actual varies per cell; surfacing one row-level value is misleading.
+
+## Frontend — By Target
+
+- Auto-picks first watchlist (roster) symbol on first load; sticky once user picks.
+- Watchlist source: read from `useWatchlist().entries` consistently (the hook also exposes `items` as an alias; **prefer `entries`** to avoid undefined-on-strict-checks).
+- Chart prediction lines: 2-point segment (made_on → target_date) only when `made_on < target_date`. Same-day or future-dated `made_on` falls back to a single dot at target_date — guards against lightweight-charts' strictly-ascending-time assertion.
+- React-query caches are never sorted in place. Always `[...arr].sort(...)`.

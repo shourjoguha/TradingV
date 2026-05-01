@@ -60,6 +60,15 @@ async def by_horizon(
     model_id: Optional[str] = Query(None),
     fields: Optional[str] = Query(None),
     made_on_dow: Optional[str] = Query(None),
+    mode: str = Query(
+        "target",
+        description=(
+            "How to interpret target_date. "
+            "'target' (default): all cells share target_date; made_on = target - h. "
+            "'anchor': target_date is the made-on day; each cell's target = anchor + h "
+            "(per-column actual lookup, forward-looking matrix)."
+        ),
+    ),
     _api_key: str = Depends(verify_api_key),
 ) -> dict[str, Any]:
     try:
@@ -76,6 +85,9 @@ async def by_horizon(
     parsed_fields = comparison.parse_fields(fields)
     parsed_dow = comparison.parse_dow_filter(made_on_dow)
 
+    if mode not in ("target", "anchor"):
+        raise HTTPException(status_code=400, detail="mode must be 'target' or 'anchor'")
+
     rows = await comparison.by_horizon(
         target_date=target_date,
         horizons=parsed_horizons,
@@ -84,11 +96,13 @@ async def by_horizon(
         model_id=model_id,
         made_on_dow=parsed_dow,
         fields=parsed_fields,
+        mode=mode,
     )
     return {
         "target_date": target_date.isoformat(),
         "interval": interval,
         "fields": list(parsed_fields),
+        "mode": mode,
         "rows": rows,
     }
 

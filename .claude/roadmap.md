@@ -4,7 +4,7 @@
 
 ## Active
 
-**Macro Workbench M-2 (next).** M-1 signal layer shipped 2026-04-30 (38 symbols cached, `/v1/macro/{series,ratio,refresh}` live, daily ingestion loop running). M-2 plans the hypothesis object + view registry — see [`plans/M-2-hypothesis-object.md`](plans/M-2-hypothesis-object.md) outline. Gated on operator promotion (no hard prerequisites — five real hypothesis drafts already on disk under [`hypotheses/draft/`](hypotheses/draft/)).
+**Phase 2 — Content layer (next).** M-2 hypothesis object shipped 2026-05-01 — see [hypotheses.md](hypotheses.md) and [decisions/013](decisions/013-hypothesis-object.md). Sidebar widget live; full `/hypotheses` page intentionally deferred until ≥10 active rows justify it. Three-phase roadmap captured in [`plans/M-2-then-content-then-llm.md`](plans/M-2-then-content-then-llm.md): Phase 2 (content layer with Class-A timeless + Class-B time-decayed), Phase 3 (hybrid local-MLX + Claude-API stack with structured action recommendations). Both gated on a collaborative-brainstorm session at promotion.
 
 ## Next candidates (not committed)
 
@@ -15,7 +15,9 @@ Order is approximate. Promotion to "Active" requires deliberation + plan. Most c
 | 7 | Telegram bot setup + drift alert verification | Operator wants push notifications | ~5 min ([backlog.md](backlog.md) Unlock #1) |
 | 8 | ~~OHLCV on-demand refresh in evaluator~~ | ✅ shipped 2026-04-30 ([decisions/010](decisions/010-self-healing-ohlcv-fetch.md)) | — |
 | 8a | ~~Macro Workbench M-1 — Signal layer~~ | ✅ shipped 2026-04-30 ([macro.md](macro.md), [decisions/012](decisions/012-macro-workbench-storage-shape.md)) | — |
-| 8b | **Macro Workbench M-2 — Hypothesis object + view registry** (schema + 5 seeded views + CRUD + UI) | After M-1 | ~2-3 days |
+| 8b | ~~Macro Workbench M-2 — Hypothesis object + view registry~~ | ✅ shipped 2026-05-01 ([hypotheses.md](hypotheses.md), [views.md](views.md), [decisions/013](decisions/013-hypothesis-object.md)) | — |
+| 8b.1 | **Phase 2 — Content layer** (timeless PDF/EPUB + time-decayed newsletters/videos, pgvector embeddings, FK to hypothesis) | After M-2 + collaborative brainstorm | ~3-4 days |
+| 8b.2 | **Phase 3 — Hybrid LLM stack** (MLX embeddings + Claude API reasoning with `recommend_action` tool-use; operator-approved action flow) | After Phase 2 + collaborative brainstorm | ~4-5 days |
 | 8c | **Macro Workbench M-3 — Wire into Opportunities + Trades** (per-hypothesis tagging on rows; per-hypothesis P&L) | After M-2 + at least 3 active hypotheses | ~1-2 days |
 | 8d | **Macro Workbench M-4 — `POST /v1/research/ask` LLM endpoint** (view-scoped DB context; Anthropic API) | After M-3; the unique-wedge layer | ~1-2 days |
 | 8e | Macro Workbench M-5 — 13F + Form-4 ingestion | After M-4 ships and is in use | TBD |

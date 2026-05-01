@@ -7,7 +7,16 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Pin React to one copy. react-day-picker (and similar libs)
+      // resolved through hoisted node_modules can otherwise pull their
+      // own React, triggering "Invalid hook call" at runtime.
+      react: path.resolve(__dirname, './node_modules/react'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
     },
+    dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    include: ['react-day-picker', 'date-fns'],
   },
   server: {
     port: 3000,

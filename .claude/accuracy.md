@@ -99,6 +99,8 @@ The composite logic exists because hit-rate alone is misleading: a model can be 
 
 **Interval toggle (`1d | 1h | all`)** above the table filters rows by interval so 1h-cadence runs are never averaged into 1d statistics.
 
-**Hover tooltip** (no click needed): hovering or focusing a cell opens an inline drilldown panel below the matrix with per-prediction error rows. Click also pins the panel; the close button dismisses it. Drift-alert banner at top with one-click ack. Manual "Evaluate" button. Window-size selector (10/30/100/500).
+**Hover-to-open drilldown.** Hovering, focusing, or clicking a cell opens an inline drilldown panel below the matrix with per-prediction error rows. **Closing is explicit-only via the × button** — `onMouseLeave` / `onBlur` close handlers were removed because the panel-mount layout shift caused a blink loop on bottom-row buttons (panel mounts → page extends → cursor leaves button → close → page shrinks → cursor over button again → reopen → ∞). Hovering a different cell replaces drill state in place.
+
+Drift-alert banner at top with one-click ack. Manual "Evaluate" button. Window-size selector (10/30/100/500).
 
 Thresholds and `MIN_N` live as constants at the top of `frontend/src/pages/Accuracy.tsx` for easy tuning.

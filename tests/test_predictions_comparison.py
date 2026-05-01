@@ -351,3 +351,68 @@ async def test_by_horizon_400_on_empty_tickers(client):
         params={"target_date": "2026-05-05", "horizons": "1", "tickers": ""},
     )
     assert r.status_code in (400, 422)
+
+
+@pytest.mark.asyncio
+async def test_by_horizon_anchor_mode_per_cell_targets(client):
+    """In anchor mode, picked date is the made-on; each column's target =
+    anchor + h. Per-cell actual is fetched at the per-cell target."""
+    anchor = datetime.date(2026, 5, 5)
+    # Two predictions made on the anchor day for h=1 (target=5/6) and h=3
+    # (target=5/8).
+    await _seed_run(
+        job_id="ja-1", task_id="ta-1", ticker="AAPL",
+        made_on=anchor,
+        forecast_targets=[(anchor + datetime.timedelta(days=1), 201.0)],
+    )
+    await _seed_run(
+        job_id="ja-3", task_id="ta-3", ticker="AAPL",
+        made_on=anchor,
+        forecast_targets=[(anchor + datetime.timedelta(days=3), 203.0)],
+    )
+    # Actual exists for h=1 (target 5/6) but not h=3 (target 5/8 still future).
+    await _seed_actual(
+        ticker="AAPL", target_date=anchor + datetime.timedelta(days=1), close=210.0,
+    )
+
+    r = await client.get(
+        "/v1/predictions/by-horizon", headers=HEADERS,
+        params={
+            "target_date": anchor.isoformat(),
+            "horizons": "1,2,3",
+            "tickers": "AAPL",
+            "mode": "anchor",
+        },
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["mode"] == "anchor"
+    rows = body["rows"]
+    by_h = {row["days_ago"]: row for row in rows}
+    # h=1: target=5/6, actual exists, prediction exists
+    assert by_h[1]["target_date"] == "2026-05-06"
+    assert by_h[1]["made_on"] == anchor.isoformat()
+    assert by_h[1]["prediction"]["close"] == 201.0
+    assert by_h[1]["actual"]["close"] == 210.0
+    # h=2: target=5/7, no prediction was seeded, no actual either
+    assert by_h[2]["target_date"] == "2026-05-07"
+    assert by_h[2]["prediction"] is None
+    assert by_h[2]["actual"] is None
+    # h=3: target=5/8, prediction exists but actual is null (still future)
+    assert by_h[3]["target_date"] == "2026-05-08"
+    assert by_h[3]["prediction"]["close"] == 203.0
+    assert by_h[3]["actual"] is None
+
+
+@pytest.mark.asyncio
+async def test_by_horizon_400_on_unknown_mode(client):
+    r = await client.get(
+        "/v1/predictions/by-horizon", headers=HEADERS,
+        params={
+            "target_date": "2026-05-05",
+            "horizons": "1",
+            "tickers": "AAPL",
+            "mode": "bogus",
+        },
+    )
+    assert r.status_code == 400

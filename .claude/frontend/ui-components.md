@@ -2,9 +2,16 @@
 
 `src/components/ui/*` — shadcn-style primitives, **handwritten** (not installed via `npx shadcn add`). All implement the **Neumorphism design system** — see "Theming" below.
 
-## Currently shipped (16)
+## Currently shipped
 
-`badge`, `button`, `card`, `dialog`, `input`, `label`, `select`, `skeleton`, `sonner` (Toaster), `switch`, `table`, `textarea`, `toggle`, `toggle-group`. Also `BackendToggle` (composite, in `components/`).
+`badge`, `button`, `calendar`, `card`, `date-picker`, `dialog`, `input`, `label`, `multi-select`, `popover`, `select`, `skeleton`, `sonner` (Toaster), `switch`, `table`, `textarea`, `toggle`, `toggle-group`. Also `BackendToggle` (composite, in `components/`).
+
+### Floating surfaces — `popover`, `calendar`, `date-picker`, `multi-select`
+
+- `popover.tsx` — Radix Popover wrapper. Content reads as an extruded card (`shadow-extruded`, `rounded-2xl`, `bg-card`) so floating UIs sit visually above the page surface (which is itself a same-color clay).
+- `calendar.tsx` — `react-day-picker` v9 with neumorphic skin: violet extruded selected day, inset hover/focus on day buttons, inset chevron nav buttons. `optimizeDeps` and a single-React alias in [vite.config.ts](../../frontend/vite.config.ts) prevent the hoisted-React duplicate that triggers "Invalid hook call" with this lib.
+- `date-picker.tsx` — composes `Popover` + `Calendar` + an Input-styled trigger button. Value/onChange take ISO `YYYY-MM-DD` strings (matches existing page state shape). UTC-stable: parses and emits via `Date.UTC` so anchor-mode date math doesn't drift across timezones.
+- `multi-select.tsx` — searchable popover list with chip preview in the trigger (max 4 chips + "+N more" overflow), per-row checkmarks, "X selected" footer, Clear action. Trigger min-height grows with chip count; popover width matches trigger via `--radix-popover-trigger-width`.
 
 ## Pattern
 

@@ -10,6 +10,8 @@ Reference brainstorm: chat session 2026-04-27.
 
 ## Retrospective notes (1 line per phase)
 
+- **Macro Workbench M-2** (hypothesis object + view registry, 2026-05-01): smooth. 23 new tests, full suite 314 green, no regressions. Sidebar widget shipped instead of full page (operator decision — defer until ≥10 active rows). 5 seed drafts ingestible via `scripts/seed_hypotheses.py` with `manual` placeholder DSL; operator hand-authors invalidator DSL via PATCH. ADR [013](decisions/013-hypothesis-object.md) captures the 10 locked decisions.
+- **Macro Workbench M-1** (signal layer, 2026-04-30): smooth. 38 symbols cached, `/v1/macro/{series,ratio,refresh}` live, daily ingestion loop running.
 - **Phase 0** (snapshot): smooth. Tag + DB dump + bundle archive + ROLLBACK.md. Operator-driven Railway dump deferred (used Railway's built-in backup feature).
 - **Phase 1.1** (accuracy backfill): smooth. 15 new tests covered math + integration; idempotency via `UNIQUE(prediction_id)` worked first try.
 - **Phase 1.2** (`/accuracy` UI): smooth. Heatmap + drilldown built before live data — proved the "build-now-iterate-on-data" approach.

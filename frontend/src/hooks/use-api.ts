@@ -28,6 +28,13 @@ import type {
   BoardSummary,
   BoardDetail,
   BoardsListResponse,
+  Hypothesis,
+  HypothesisListResponse,
+  HypothesisSummary,
+  HypothesisStatus,
+  ClaimType,
+  InvalidatorSpec,
+  ViewsResponse,
   QuotesResponse,
 } from '../lib/types'
 import { toast } from 'sonner'
@@ -224,6 +231,7 @@ export function usePredictionsByHorizon(params: {
   model_id?: string
   fields?: string
   made_on_dow?: string
+  mode?: 'target' | 'anchor'
 }) {
   const { backendId } = useBackend()
   return useQuery({
@@ -777,5 +785,81 @@ export function useQuotes(symbols: string[]) {
       ),
     enabled: symbols.length > 0,
     staleTime: 60_000,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Hypotheses — M-2
+// ---------------------------------------------------------------------------
+
+export function useHypotheses(filters?: {
+  status?: HypothesisStatus
+  axis?: string
+  claim_type?: ClaimType
+}) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['hypotheses', backendId, filters],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (filters?.status) s.set('status', filters.status)
+      if (filters?.axis) s.set('axis', filters.axis)
+      if (filters?.claim_type) s.set('claim_type', filters.claim_type)
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<HypothesisListResponse>(`/v1/hypotheses${qs}`, { backendId })
+    },
+    staleTime: 60_000,
+  })
+}
+
+export function useHypothesisSummary() {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['hypothesis-summary', backendId],
+    queryFn: () =>
+      apiFetch<HypothesisSummary>(`/v1/hypotheses/summary`, { backendId }),
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000, // 5min poll keeps the sidebar fresh
+  })
+}
+
+export function useHypothesis(id: string | null | undefined) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['hypothesis', backendId, id],
+    queryFn: () =>
+      apiFetch<Hypothesis>(`/v1/hypotheses/${id}`, { backendId }),
+    enabled: !!id,
+    staleTime: 60_000,
+  })
+}
+
+export function useCancelHypothesis() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      apiFetch(`/v1/hypotheses/${id}/cancel`, {
+        method: 'POST',
+        body: { reason },
+        backendId,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hypotheses', backendId] })
+      qc.invalidateQueries({ queryKey: ['hypothesis-summary', backendId] })
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Views — M-2
+// ---------------------------------------------------------------------------
+
+export function useViews() {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['views', backendId],
+    queryFn: () => apiFetch<ViewsResponse>(`/v1/views`, { backendId }),
+    staleTime: 5 * 60_000,
   })
 }

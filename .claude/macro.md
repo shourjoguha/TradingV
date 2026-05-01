@@ -112,7 +112,7 @@ Three sub-tabs, neumorphic palette preserved, no new chart deps (reuses `lightwe
 
 - **Overview** — 5 regime panels (Inflation / Growth / Liquidity / Stress / **Inflation regime**) each holding 3-4 sparkline rows. Each row supports three shapes: ratio, single series, or **spread** (a−b, weekday-aligned). Click a row to inline-expand a focused line chart. Each panel and each row carries an `<InfoBubble>` reading from `frontend/src/lib/glossary.ts` so hovering an `(i)` icon reveals the definition without leaving the page.
 - **Ratios** — one focused chart at a time with a quick-switch dropdown across all 12 ratios.
-- **Sectors** — 9-cell sector-vs-SPY strip. Cell color = Δ% vs window-start (green up / red down / yellow flat). Click to expand chart inline.
+- **Sectors** — 9-cell sector-vs-SPY strip. Cell color = Δ% vs window-start (green up / red down / yellow flat). Click to expand chart inline. Cell layout is `truncate`+`overflow-hidden` so long sector labels (e.g. "Discretionary") clip cleanly without bleeding into the next tile, and `<Sparkline showPct={false}>` because the cell already shows its own delta to the left of the sparkline — passing `showPct` was rendering two pcts per tile.
 
 Time-range chips: `1Y / 3Y / 5Y / 10Y / Max`. Default 5Y. Sparklines render at weekly close (cheaper, crisper at small size); focused charts use full daily data.
 
@@ -122,7 +122,7 @@ Single source of truth for which ratios live where: `frontend/src/lib/macro-view
 
 Files:
 - `frontend/src/pages/Macro.tsx` — page shell + sub-tab routing.
-- `frontend/src/components/macro/{Sparkline,RatioChart,RegimePanel,SectorStrip}.tsx`.
+- `frontend/src/components/macro/{Sparkline,RatioChart,RegimePanel,SectorStrip}.tsx`. `<Sparkline>` exposes `showPct?: boolean` (default `true`) so callers that already render a delta beside it (SectorStrip) can opt out and avoid double-rendering.
 - `frontend/src/lib/macro-views.ts` — config.
 - `frontend/src/hooks/use-api.ts` — `useMacroSeries`, `useMacroRatio`, `useMacroRefresh`.
 - `frontend/src/lib/types.ts` — `MacroPoint`, `MacroSeriesResponse`, `MacroRatioResponse`, `MacroRefreshResponse`.

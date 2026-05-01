@@ -212,37 +212,65 @@ async def by_horizon(
     model_id: Optional[str] = None,
     made_on_dow: Optional[tuple[int, ...]] = None,
     fields: tuple[str, ...] = _DEFAULT_FIELDS,
+    mode: str = "target",
 ) -> list[dict[str, Any]]:
-    """For each (ticker × horizon), fetch the prediction made N calendar days
-    before ``target_date`` plus the actual bar. ``horizons`` are positive
-    integers (1 = "made the day before target", 5 = "5 days before").
+    """For each (ticker × horizon), fetch a prediction + the matching actual bar.
 
-    Returns a flat list — one row per (ticker, horizon) cell. Missing
-    predictions yield rows with ``prediction=null``.
+    Two interpretations of the picked date, controlled by ``mode``:
+
+    - ``mode='target'`` (default, legacy): picked date = the target. For each
+      horizon ``h``, ``made_on = target - h``. All cells in a (ticker) row
+      share the same actual bar.
+    - ``mode='anchor'``: picked date = the made-on (anchor) day. For each
+      horizon ``h``, ``target_date = anchor + h``; actual is fetched per cell
+      at that target. This makes the matrix forward-looking: every column has
+      its own target date, so columns whose target has elapsed render with a
+      real actual while still-future columns render hollow without forcing
+      the operator to backdate the picker.
+
+    ``horizons`` are positive integers in days. Returns a flat list — one row
+    per (ticker, horizon) cell. Missing predictions yield ``prediction=null``;
+    missing actuals yield ``actual=null``.
     """
     horizons = sorted(set(h for h in horizons if h > 0))
     syms = [normalize_symbol(t) for t in tickers if t]
     if not syms or not horizons:
         return []
+    if mode not in ("target", "anchor"):
+        raise ValueError(f"unknown mode: {mode!r}")
 
     out: list[dict[str, Any]] = []
     async with _db.SessionLocal() as session:
         for sym in syms:
-            actual_row = await _fetch_actual(
-                session, ticker=sym, interval=interval, target_date=target_date
-            )
-            actual = _bar_dict(actual_row, fields)
+            # In target mode, actual is shared across the row; cache once.
+            shared_actual: Optional[dict[str, Any]] = None
+            if mode == "target":
+                actual_row = await _fetch_actual(
+                    session, ticker=sym, interval=interval, target_date=target_date
+                )
+                shared_actual = _bar_dict(actual_row, fields)
 
             for h in horizons:
-                made_on = target_date - datetime.timedelta(days=h)
+                if mode == "target":
+                    made_on = target_date - datetime.timedelta(days=h)
+                    cell_target = target_date
+                    cell_actual = shared_actual
+                else:  # anchor
+                    made_on = target_date  # picked date IS the anchor
+                    cell_target = target_date + datetime.timedelta(days=h)
+                    actual_row = await _fetch_actual(
+                        session, ticker=sym, interval=interval, target_date=cell_target,
+                    )
+                    cell_actual = _bar_dict(actual_row, fields)
+
                 if made_on_dow is not None and made_on.weekday() not in made_on_dow:
                     out.append(
                         {
                             "ticker": sym,
-                            "target_date": target_date.isoformat(),
+                            "target_date": cell_target.isoformat(),
                             "made_on": made_on.isoformat(),
                             "days_ago": h,
-                            "actual": actual,
+                            "actual": cell_actual,
                             "prediction": None,
                         }
                     )
@@ -253,7 +281,7 @@ async def by_horizon(
                     .where(
                         and_(
                             PredictionPoint.ticker == sym,
-                            PredictionPoint.target_date == target_date,
+                            PredictionPoint.target_date == cell_target,
                             PredictionPoint.made_on == made_on,
                             PredictionPoint.interval == interval,
                         )
@@ -268,10 +296,10 @@ async def by_horizon(
                 out.append(
                     {
                         "ticker": sym,
-                        "target_date": target_date.isoformat(),
+                        "target_date": cell_target.isoformat(),
                         "made_on": made_on.isoformat(),
                         "days_ago": h,
-                        "actual": actual,
+                        "actual": cell_actual,
                         "prediction": _prediction_dict(pp, fields) if pp else None,
                     }
                 )

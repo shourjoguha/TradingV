@@ -51,20 +51,20 @@ function SectorCell({ symbol, label, since, expanded, onClick }: SectorCellProps
     <button
       type="button"
       onClick={onClick}
-      className={`w-full px-3 py-3 rounded-2xl transition-transform hover:-translate-y-[1px] text-left ${bgClass} ${
+      className={`w-full px-3 py-3 rounded-2xl transition-transform hover:-translate-y-[1px] text-left overflow-hidden ${bgClass} ${
         expanded ? 'ring-2 ring-violet/40' : ''
       }`}
       aria-expanded={expanded}
     >
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <span className="font-medium text-sm">{label}</span>
-        <span className="font-mono text-[10px] opacity-80">{symbol}</span>
+      <div className="flex items-center justify-between gap-2 mb-1 min-w-0">
+        <span className="font-medium text-sm truncate">{label}</span>
+        <span className="font-mono text-[10px] opacity-80 shrink-0">{symbol}</span>
       </div>
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 overflow-hidden">
         <span className="font-mono text-xs tabular-nums">
           {delta == null ? '—' : `${delta > 0 ? '+' : ''}${delta.toFixed(1)}%`}
         </span>
-        <Sparkline points={points} width={70} height={22} weekly />
+        <Sparkline points={points} width={70} height={22} weekly showPct={false} />
       </div>
     </button>
   )

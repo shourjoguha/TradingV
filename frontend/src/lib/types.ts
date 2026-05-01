@@ -347,3 +347,95 @@ export interface QuotePoint {
 export interface QuotesResponse {
   items: QuotePoint[]
 }
+
+// ---------------------------------------------------------------------------
+// Hypotheses — M-2
+// ---------------------------------------------------------------------------
+
+export type HypothesisStatus =
+  | 'active'
+  | 'expired'
+  | 'invalidated'
+  | 'cancelled'
+  | 'manual_closed'
+
+export type ClaimType = 'regime' | 'tactical' | 'single_name' | 'breakout'
+
+export interface InvalidatorSpec {
+  op:
+    | 'ratio_below_sma'
+    | 'series_above_threshold'
+    | 'series_below_threshold'
+    | 'series_change_pct'
+    | 'manual'
+  args: Record<string, unknown>
+}
+
+export interface HypothesisEvaluation {
+  id: string
+  evaluated_at: string
+  status_before: HypothesisStatus
+  status_after: HypothesisStatus
+  reason: string
+  invalidator_result: Record<string, unknown> | null
+}
+
+export interface Hypothesis {
+  id: string
+  slug: string
+  title: string
+  claim_type: ClaimType
+  axis: string
+  parent_id: string | null
+  precondition_id: string | null
+  primary_metric: string
+  tracking_signal: string
+  invalidator: InvalidatorSpec
+  ttl_months: number
+  created_at: string
+  expires_at: string
+  status: HypothesisStatus
+  body_md: string | null
+  recent_evaluations: HypothesisEvaluation[]
+}
+
+export interface HypothesisListResponse {
+  items: Hypothesis[]
+  count: number
+}
+
+export interface HypothesisSummary {
+  active: number
+  expired: number
+  invalidated: number
+  cancelled: number
+  manual_closed: number
+  at_risk: number
+}
+
+// ---------------------------------------------------------------------------
+// Views — M-2
+// ---------------------------------------------------------------------------
+
+export interface ViewPanel {
+  kind: 'ratio' | 'series' | 'spread' | 'hypothesis_filter'
+  numerator?: string
+  denominator?: string
+  symbol?: string
+  sma_days?: number
+  threshold?: number
+  axis?: string
+}
+
+export interface ViewSpec {
+  id: string
+  title: string
+  default_axis: string | null
+  panels: ViewPanel[]
+  body: string | null
+}
+
+export interface ViewsResponse {
+  items: ViewSpec[]
+  count: number
+}

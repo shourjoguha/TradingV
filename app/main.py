@@ -23,6 +23,11 @@ from app.opportunities import models as _opportunities_models  # noqa: F401
 from app.trades import models as _trades_models  # noqa: F401
 from app.market_data import derived as _derived_models  # noqa: F401
 from app.queue import models as _queue_models  # noqa: F401
+from app.hypotheses import models as _hypothesis_models  # noqa: F401
+# Macro models are already imported via app.macro.* downstream; explicit
+# import here for create_all parity with the test conftest.
+from app.macro import models as _macro_models  # noqa: F401
+from app.boards import models as _board_models  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,6 +38,12 @@ async def lifespan(_app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
+        # Parse the markdown view registry once at boot. Errors fail the
+        # boot loudly so the operator sees the broken file immediately.
+        from app.views import parser as _views_parser
+
+        _views_parser.reload()
 
         from app.core.config import SETTINGS
 
@@ -131,6 +142,41 @@ async def lifespan(_app: FastAPI):
             name="macro-ingestion",
         )
 
+        # Daily hypothesis tick — TTL expiry → invalidator eval → cascade.
+        # M-2. Runs every 24h; first tick deferred 5 minutes after boot to
+        # let macro ingestion get a head start on day 0.
+        from app.hypotheses import service as _hyp_service
+
+        hyp_stop = asyncio.Event()
+
+        async def _hyp_loop() -> None:
+            try:
+                await asyncio.wait_for(hyp_stop.wait(), timeout=5 * 60)
+                if hyp_stop.is_set():
+                    return
+            except asyncio.TimeoutError:
+                pass
+            while True:
+                try:
+                    async with _db_pkg.SessionLocal() as session:
+                        stats = await _hyp_service.run_daily_tick(session)
+                        await session.commit()
+                    logger.info("hypothesis tick: %s", stats)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("hypothesis tick failed: %s", e)
+                try:
+                    await asyncio.wait_for(hyp_stop.wait(), timeout=24 * 60 * 60)
+                    if hyp_stop.is_set():
+                        return
+                except asyncio.TimeoutError:
+                    continue
+
+        from app.core import db as _db_pkg
+
+        hyp_task = asyncio.create_task(_hyp_loop(), name="hypothesis-tick")
+
         # Submit-queue worker — single-flight FIFO drain. Boot recovery
         # first: any 'running' rows from a crashed prior process flip back
         # to 'pending' so this worker re-picks them.
@@ -165,6 +211,8 @@ async def lifespan(_app: FastAPI):
         queue_task.cancel()
         macro_stop.set()
         macro_task.cancel()
+        hyp_stop.set()
+        hyp_task.cancel()
 
     except Exception as e:
         logger.error("startup error: %s", e)

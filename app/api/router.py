@@ -16,6 +16,8 @@ from app.trades.routes import router as trades_router
 from app.queue.routes import router as queue_router
 from app.macro.routes import router as macro_router
 from app.boards.routes import router as boards_router
+from app.hypotheses.routes import router as hypotheses_router
+from app.views.routes import router as views_router
 
 api_router = APIRouter()
 # Legacy (unversioned) — keep for existing TradingView webhook URL.
@@ -39,4 +41,6 @@ v1_router.include_router(trades_router)
 v1_router.include_router(queue_router)
 v1_router.include_router(macro_router)
 v1_router.include_router(boards_router)
+v1_router.include_router(hypotheses_router)
+v1_router.include_router(views_router)
 api_router.include_router(v1_router)

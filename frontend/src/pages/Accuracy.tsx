@@ -77,7 +77,7 @@ export function Accuracy() {
             <InfoBubble term="composite_accuracy" />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Per-(ticker, horizon) Kronos performance over the rolling window. Hover a cell to see the per-prediction breakdown.
+            Per-(ticker, horizon) Kronos performance over the rolling window. Hover a cell to open the per-prediction breakdown; click the × to dismiss.
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -191,10 +191,14 @@ export function Accuracy() {
                     return (
                       <td key={h} className="px-1 py-1 text-center">
                         <button
+                          // Hover/focus open only; close requires explicit
+                          // click on the X. onMouseLeave/onBlur close caused
+                          // a layout-shift loop on bottom-row buttons: panel
+                          // mounts → page grows → cursor no longer over the
+                          // button → close → page shrinks → cursor over
+                          // button again → re-open → blink.
                           onMouseEnter={() => setDrill({ ticker: t, horizon: h, model: row.model_id, interval: row.interval })}
-                          onMouseLeave={() => setDrill(null)}
                           onFocus={() => setDrill({ ticker: t, horizon: h, model: row.model_id, interval: row.interval })}
-                          onBlur={() => setDrill(null)}
                           onClick={() => setDrill({ ticker: t, horizon: h, model: row.model_id, interval: row.interval })}
                           className={`w-full px-2 py-3 rounded-xl text-xs transition-all duration-200 hover:-translate-y-[1px] ${colorCls}`}
                           aria-label={`${t} +${h} ${row.interval} hit ${fmtPct(row.hit_rate, 0)} mape ${fmtPct(row.mape)} n=${row.sample_count}`}

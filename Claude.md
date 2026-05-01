@@ -42,6 +42,8 @@ Personal trading-decision-support system for **one operator**. FastAPI backend r
 | `/v1/trades*`, manual trade journal, P\&L attribution                              | [.claude/trades.md](.claude/trades.md)                         |
 | `/v1/macro/*`, `macro_series` table, yfinance + FRED ingestion                     | [.claude/macro.md](.claude/macro.md)                           |
 | `/v1/boards*` ("Watchlists" UI), casual ticker lists, `last_close`+`pct_1w` quotes | [.claude/boards.md](.claude/boards.md)                         |
+| `/v1/hypotheses*`, `hypothesis` + `hypothesis_evaluation` tables, invalidator DSL  | [.claude/hypotheses.md](.claude/hypotheses.md)                 |
+| `/v1/views*`, markdown view registry under `app/views/registry/`                   | [.claude/views.md](.claude/views.md)                           |
 | Telegram notifier, drift alerts, daily digest                                      | [.claude/notifications.md](.claude/notifications.md)           |
 | `/v1/tickers/{sym}/labels*`, free-form ticker metadata                             | [.claude/labels.md](.claude/labels.md)                         |
 | DB schema changes / new migration                                                  | [.claude/migrations.md](.claude/migrations.md)                 |

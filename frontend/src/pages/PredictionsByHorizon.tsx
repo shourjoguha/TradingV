@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from '../components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group'
+import { DatePicker } from '../components/ui/date-picker'
+import { MultiSelect } from '../components/ui/multi-select'
 import {
   Table,
   TableBody,
@@ -103,13 +105,20 @@ function MiniCandleCompare({ actual, predicted }: { actual: Ohlc | null; predict
 const FIELD_OPTIONS = ['open', 'high', 'low', 'close', 'volume'] as const
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 type FieldKey = 'open' | 'high' | 'low' | 'close' | 'volume'
+function intervalSuffix(interval: string): string {
+  if (interval === '1h') return 'h'
+  if (interval === '15m') return 'q' // 15-min quarters; rare in this view
+  return 'd'
+}
 export function PredictionsByHorizon() {
   const [targetDate, setTargetDate] = useState(() => {
-    // Predictions are forward-looking: a daily run made today targets tomorrow+ (T-1 onwards).
-    // Default to tomorrow (UTC) so the user sees the run that fired last.
-    const d = new Date()
-    d.setUTCDate(d.getUTCDate() + 1)
-    return d.toISOString().split('T')[0]
+    // Default to TODAY (UTC) so the matrix shows actuals AND predictions
+    // overlapping for any operator who ran the scheduler ≥1 day ago. With
+    // target=tomorrow (the previous default) actuals are always null
+    // because tomorrow's bar doesn't exist yet — the matrix degenerates
+    // to "predictions only", which the user reasonably perceives as a
+    // bug. To eyeball just-fired forecasts, advance the date manually.
+    return new Date().toISOString().split('T')[0]
   })
   const [horizons, setHorizons] = useState('1,2,3,4,5')
   const [tickers, setTickers] = useState('')
@@ -140,6 +149,12 @@ export function PredictionsByHorizon() {
     // from — that's a presentation choice, not an API filter.
     fields: 'ohlc',
     made_on_dow: madeOnDow.length > 0 ? madeOnDow.join(',') : undefined,
+    // Anchor mode: picked date is the day forecasts were made; each column's
+    // target = anchor + horizon. Per-column actual lookup, so columns with
+    // elapsed targets render colored Δ% while still-future columns render
+    // hollow predicted-only — without forcing the operator to backdate the
+    // picker. This matches the "show me my forecasts' progress" mental model.
+    mode: 'anchor' as const,
   }
   const { data: predictions, isLoading } = usePredictionsByHorizon(queryParams)
   const horizonsList = horizons
@@ -166,7 +181,9 @@ export function PredictionsByHorizon() {
           Predictions by Horizon
         </h2>
         <p className="text-muted-foreground">
-          Compare prediction accuracy across different time horizons.
+          Pick the day forecasts were made (anchor). Each column is a forecast offset
+          — target = anchor + N. Cells whose target has elapsed show actual + Δ%; still-future
+          cells render hollow with predicted close only.
         </p>
       </div>
 
@@ -175,52 +192,36 @@ export function PredictionsByHorizon() {
         <CardContent className="p-6 space-y-5">
           <div className="grid gap-6 md:grid-cols-4">
             <div className="space-y-2">
-              <Label>Target Date</Label>
-              <Input
-                type="date"
-                value={targetDate}
-                onChange={(e) => setTargetDate(e.target.value)}
-                className="font-mono"
-              />
+              <div className="flex items-center justify-between gap-2">
+                <Label>Anchor (made-on)</Label>
+                <button
+                  type="button"
+                  onClick={() => setTargetDate(new Date().toISOString().split('T')[0])}
+                  className="text-[10px] font-mono text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                  title="Reset to today (UTC). Pick an earlier anchor to see columns whose targets have already elapsed."
+                >
+                  Today
+                </button>
+              </div>
+              <DatePicker value={targetDate} onChange={setTargetDate} />
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label>Tickers (comma separated)</Label>
-              <div className="space-y-1.5">
-                <Input
-                  value={tickers}
-                  onChange={(e) => { setTickers(e.target.value); setTickersTouched(true) }}
-                  className="font-mono uppercase"
-                  placeholder="AAPL, MSFT, GOOGL"
-                />
-                {watchlist?.items && watchlist.items.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {watchlist.items.slice(0, 12).map((item) => (
-                      <button
-                        key={item.symbol}
-                        type="button"
-                        onClick={() => {
-                          const current = tickers
-                            .split(',')
-                            .map((s) => s.trim().toUpperCase())
-                            .filter(Boolean)
-                          if (!current.includes(item.symbol)) {
-                            setTickers([...current, item.symbol].join(','))
-                            setTickersTouched(true)
-                          }
-                        }}
-                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-                      >
-                        +{item.symbol}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Label>Tickers</Label>
+              <MultiSelect
+                options={(watchlist?.entries ?? []).map((e) => ({ value: e.symbol }))}
+                value={tickersList}
+                onChange={(next) => {
+                  setTickers(next.join(','))
+                  setTickersTouched(true)
+                }}
+                placeholder="Select tickers from your roster…"
+                searchPlaceholder="Search tickers…"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label>Horizons (days ago)</Label>
+              <Label>Horizons (days forward)</Label>
               <Input
                 value={horizons}
                 onChange={(e) => setHorizons(e.target.value)}
@@ -337,7 +338,7 @@ export function PredictionsByHorizon() {
                   <span>Each cell: </span>
                   <span className="font-mono">Δ%</span>
                   <InfoBubble term="delta_pct" />
-                  <span>on{' '}<span className="font-mono font-medium">{activeField}</span>{' '}(top), actual close $ below — or predicted close $ in italics when the target date is still in the future.</span>
+                  <span>on{' '}<span className="font-mono font-medium">{activeField}</span>{' '}(top), actual close $ below when target date elapsed; otherwise predicted close $ in italics with dashed border.</span>
                   Hover for an OHLC compare.
                   <span className="ml-2 text-green-500">■</span> undershoot
                   <span className="ml-1 text-red-500">■</span> overshoot
@@ -356,12 +357,25 @@ export function PredictionsByHorizon() {
                   <TableHead className="w-[100px] sticky left-0 bg-card z-10">
                     Ticker
                   </TableHead>
-                  <TableHead className="w-[100px]">Actual</TableHead>
-                  {horizonsList.map((h) => (
-                    <TableHead key={h} className="text-center min-w-[90px]">
-                      T-{h}
-                    </TableHead>
-                  ))}
+                  {horizonsList.map((h) => {
+                    // Column target = anchor + h (anchor mode). Format MM/DD
+                    // for compact header. Anchor input is YYYY-MM-DD; parse
+                    // as UTC to keep the date math timezone-stable.
+                    const colTarget = (() => {
+                      const [y, m, d] = targetDate.split('-').map(Number)
+                      const dt = new Date(Date.UTC(y, (m || 1) - 1, d || 1))
+                      dt.setUTCDate(dt.getUTCDate() + h)
+                      return `${String(dt.getUTCMonth() + 1).padStart(2, '0')}/${String(dt.getUTCDate()).padStart(2, '0')}`
+                    })()
+                    return (
+                      <TableHead key={h} className="text-center min-w-[110px]">
+                        <div className="flex flex-col leading-tight">
+                          <span className="font-mono">+{h}{intervalSuffix(interval)}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground">{colTarget}</span>
+                        </div>
+                      </TableHead>
+                    )
+                  })}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -375,9 +389,6 @@ export function PredictionsByHorizon() {
                         <TableCell className="font-mono font-bold sticky left-0 bg-card">
                           {ticker}
                         </TableCell>
-                        <TableCell className="text-muted-foreground font-mono">
-                          —
-                        </TableCell>
                         {horizonsList.map((h) => (
                           <TableCell
                             key={h}
@@ -389,22 +400,22 @@ export function PredictionsByHorizon() {
                       </TableRow>
                     )
                   }
-                  const actualVal = getFieldValue(
-                    tickerRows[0]?.actual as Record<string, number> | null,
-                    activeField,
-                  )
                   return (
                     <TableRow key={ticker}>
                       <TableCell className="font-mono font-bold sticky left-0 bg-card z-10">
                         {ticker}
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {actualVal != null ? `$${actualVal.toFixed(2)}` : '—'}
-                      </TableCell>
                       {horizonsList.map((h) => {
                         const row = tickerRows.find((r) => r.days_ago === h)
                         const predVal = getFieldValue(
                           row?.prediction as Record<string, number> | null,
+                          activeField,
+                        )
+                        // Per-cell actual: in anchor mode each cell has its
+                        // own target date, so each cell decides locally
+                        // whether to render hollow (no actual) or filled.
+                        const actualVal = getFieldValue(
+                          row?.actual as Record<string, number> | null,
                           activeField,
                         )
                         if (predVal == null) {
@@ -429,7 +440,7 @@ export function PredictionsByHorizon() {
                                 <span className="text-sm italic tabular-nums opacity-90">${predVal.toFixed(2)}</span>
                                 <div className="invisible group-hover:visible absolute z-30 top-full left-1/2 -translate-x-1/2 mt-1 p-2 rounded-xl bg-card shadow-extruded text-left pointer-events-none">
                                   <div className="text-[10px] text-muted-foreground mb-1">
-                                    {row?.ticker} · T-{h} · made {row?.made_on ?? '?'} · forecast only
+                                    {row?.ticker} · +{h}{intervalSuffix(interval)} · target {row?.target_date ?? '?'} · forecast only
                                   </div>
                                   <MiniCandleCompare actual={null} predicted={predOhlc} />
                                 </div>
@@ -459,7 +470,7 @@ export function PredictionsByHorizon() {
                               </span>
                               <div className="invisible group-hover:visible absolute z-30 top-full left-1/2 -translate-x-1/2 mt-1 p-2 rounded-xl bg-card shadow-extruded text-left pointer-events-none">
                                 <div className="text-[10px] text-muted-foreground mb-1">
-                                  {row?.ticker} · T-{h} · made {row?.made_on ?? '?'}
+                                  {row?.ticker} · +{h}{intervalSuffix(interval)} · target {row?.target_date ?? '?'}
                                 </div>
                                 <MiniCandleCompare actual={actualOhlc} predicted={predOhlc} />
                               </div>

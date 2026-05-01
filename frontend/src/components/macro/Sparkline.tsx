@@ -10,6 +10,12 @@ interface SparklineProps {
    * ~260 SVG line segments. Faster paint + crisper visual at small size.
    */
   weekly?: boolean
+  /**
+   * Append the trailing Δ% next to the SVG. Default true. Suppress when
+   * the host already shows a delta beside the sparkline (avoids two pcts
+   * in the same row + overflow on narrow containers).
+   */
+  showPct?: boolean
 }
 
 // Pick last point of each ISO week. Cheap O(n) pass.
@@ -39,6 +45,7 @@ export function Sparkline({
   width = 120,
   height = 32,
   weekly = true,
+  showPct = true,
 }: SparklineProps) {
   const { path, fillPath, deltaPct, lineColor } = useMemo(() => {
     const data = weekly ? toWeekly(points) : points
@@ -94,7 +101,7 @@ export function Sparkline({
           />
         )}
       </svg>
-      {deltaPct != null && (
+      {showPct && deltaPct != null && (
         <span
           className="text-[10px] font-mono tabular-nums whitespace-nowrap"
           style={{ color: lineColor }}

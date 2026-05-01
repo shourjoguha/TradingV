@@ -29,4 +29,6 @@
 
 ## Layout
 
-`Layout.tsx` wraps everything: 224px sidebar (nav + Kronos logo), 56px topbar (breadcrumb + `BackendToggle`), scrollable content area max-width 7xl.
+`Layout.tsx` wraps everything: 224px sidebar (nav + Kronos logo + `HypothesisStatusWidget`), 56px topbar (breadcrumb + `BackendToggle`), scrollable content area max-width 7xl.
+
+`HypothesisStatusWidget.tsx` sits at the bottom of the sidebar (both desktop + mobile drawer): inset-card with `active` count + `at_risk` count when > 0. Hides itself when total = 0 so it's invisible until the first hypothesis is seeded. M-2 minimum-viable surface — no full `/hypotheses` page yet (operator decision: defer until ≥10 active rows justify a card grid).

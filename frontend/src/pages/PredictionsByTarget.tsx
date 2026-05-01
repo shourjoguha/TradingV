@@ -144,7 +144,7 @@ export function PredictionsByTarget() {
         ...new Set(predictions.predictions.map((p) => p.days_ago)),
       ].sort((a, b) => a - b)
       uniqueDaysAgo.forEach((daysAgo, idx) => {
-        const predsForDay = predictions.predictions
+        const predsForDay = [...predictions.predictions]
           .filter((p) => p.days_ago === daysAgo && p.close !== null)
           .sort((a, b) => (a.made_on < b.made_on ? -1 : 1))
         if (predsForDay.length === 0) return
@@ -156,26 +156,36 @@ export function PredictionsByTarget() {
           crosshairMarkerVisible: true,
           crosshairMarkerRadius: 3,
         })
-        // Place prediction marker at the target date
-        const lineData = predsForDay.map((p) => ({
-          time: predictions.target_date as string,
-          value: p.close!,
-        }))
-        // If we have the made_on date, show line from made_on to target_date
-        if (predsForDay.length === 1) {
+        // 2-point segment (made_on → target_date) only valid when made_on
+        // is strictly before target_date. Otherwise lightweight-charts
+        // throws on non-ascending or duplicate-time data points and the
+        // useEffect tear unmounts the whole tab. Fall back to a single
+        // marker at the target date.
+        if (
+          predsForDay.length === 1 &&
+          predsForDay[0].made_on < predictions.target_date
+        ) {
           const pred = predsForDay[0]
           lineSeries.setData([
-            {
-              time: pred.made_on as string,
-              value: pred.close!,
-            },
-            {
-              time: predictions.target_date as string,
-              value: pred.close!,
-            },
+            { time: pred.made_on as string, value: pred.close! },
+            { time: predictions.target_date as string, value: pred.close! },
           ])
         } else {
-          lineSeries.setData(lineData)
+          // Multi-prediction OR same-day single — plot one dot per pred
+          // at the target date. Dedupe by made_on to avoid duplicate
+          // time keys (lightweight-charts rejects them).
+          const seen = new Set<string>()
+          const dots = predsForDay
+            .filter((p) => {
+              if (seen.has(p.made_on)) return false
+              seen.add(p.made_on)
+              return true
+            })
+            .map((p) => ({
+              time: predictions.target_date as string,
+              value: p.close!,
+            }))
+          if (dots.length > 0) lineSeries.setData([dots[0]])
         }
       })
     }
@@ -213,7 +223,7 @@ export function PredictionsByTarget() {
                   <SelectValue placeholder="Select ticker" />
                 </SelectTrigger>
                 <SelectContent>
-                  {watchlist?.items.map((item) => (
+                  {(watchlist?.entries ?? []).map((item) => (
                     <SelectItem key={item.symbol} value={item.symbol}>
                       {item.symbol}
                     </SelectItem>
@@ -397,7 +407,7 @@ export function PredictionsByTarget() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {predictions.predictions
+                  {[...predictions.predictions]
                     .sort((a, b) => (a.made_on > b.made_on ? -1 : 1))
                     .map((pred, i) => {
                       const actualClose = predictions.actual?.close

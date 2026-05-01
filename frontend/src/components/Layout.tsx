@@ -6,6 +6,7 @@ import {
   LineChart as LineChartIcon, BarChart3, Zap,
 } from 'lucide-react'
 import { BackendToggle } from './BackendToggle'
+import { HypothesisStatusWidget } from './HypothesisStatusWidget'
 import { useHealth } from '../hooks/use-api'
 import { useBackend } from '../hooks/use-backend'
 import { availableBackends } from '../lib/backend-store'
@@ -238,6 +239,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </h1>
         </div>
         <NavList />
+        <HypothesisStatusWidget />
       </aside>
 
       {/* Mobile drawer + overlay */}
@@ -261,6 +263,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </button>
             </div>
             <NavList />
+            <HypothesisStatusWidget />
           </aside>
         </>
       )}
