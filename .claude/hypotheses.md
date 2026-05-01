@@ -135,6 +135,35 @@ to remind.
 `body_md` on existing rows. Never touches `invalidator`, `status`, or `slug`
 — operator authority is sacred for those.
 
+### Companion: `scripts/patch_invalidators.py`
+
+One-shot follow-up after seeding. Holds a `PATCHES: dict[slug, dict]` map
+of the most-quantitative invalidator picked per draft (each draft typically
+listed several English bullets — only the cleanest DSL-mappable one is
+persisted). Validates every spec via `inv_dsl.validate_spec` up-front so
+a typo doesn't half-update. Idempotent — overwrites whatever's currently on
+each row.
+
+Edit `PATCHES` and re-run when a new draft lands or an existing thesis's
+invalidator should change.
+
+### Live state (last applied 2026-05-01)
+
+```
+slug                              claim_type    ttl  invalidator op             precondition
+btc-bottom-3m                     regime         3   series_above_threshold     —
+btc-rally-24m                     single_name   24   ratio_below_sma            btc-bottom-3m
+latam-breakout-18m                regime        18   ratio_below_sma            —
+latam-breakout-36m                regime        36   ratio_below_sma            —
+saas-mission-critical-2x-18m      single_name   18   ratio_below_sma            —
+stagflation-regime-24m            regime        24   series_above_threshold     —
+```
+
+All 6 evaluated cleanly on the first force-fire (`POST /v1/hypotheses/_tick`):
+`{evaluated: 6, expired: 0, invalidated: 0, cancelled: 0}`. Precondition
+chain `btc-rally-24m → btc-bottom-3m` correctly resolved by the seed
+script's two-pass slug→UUID mapping.
+
 ## Out of scope (deferred)
 
 - Full `/hypotheses` page. Sidebar widget covers M-2; defer page until ≥10

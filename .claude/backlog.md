@@ -209,6 +209,33 @@ plus an ongoing rule in `_collect_actuals` that re-anchors the 1h refresh window
 
 ---
 
+## Move `Base.metadata.create_all` out of lifespan; add boot-time alembic-version warning
+
+**What:** Two related cleanups to the schema-bootstrap path:
+
+1. Remove `Base.metadata.create_all` from [`app/main.py`](../app/main.py) lifespan; relocate it to the test conftest fixture only. Production / laptop boots will then fail loudly if `alembic upgrade head` hasn't been run, instead of silently auto-creating tables and masking drift.
+2. Add a boot-time check that reads `alembic_version.version_num`, compares to the latest revision file under `migrations/versions/`, and logs a loud `WARN` if they differ. Doesn't mutate, doesn't raise — just surfaces drift instead of hiding it.
+
+**Status:** Open. Triggered by the M-2 deploy on 2026-05-01: lifespan's `create_all` raced ahead of `alembic upgrade`, created `hypothesis` + `hypothesis_evaluation` at version 0020, then `alembic upgrade head` failed with `relation "hypothesis" already exists`. Recovered by dropping the auto-created (empty) tables and re-running `alembic upgrade head`. The silent-drift class of bug almost never bites — but when it does (column added in migration but `create_all` built the table without it) it's invisible until prod.
+
+**Why deferred:** No active drift today. M-2 is the only module that surfaced the issue, and we cleaned it up by hand. Net cost so far: one bad afternoon. Acceptable to defer behind real product work.
+
+**Trigger to revisit:** Next time we add a migration that *alters* an existing table (column add, constraint change, index add) — that's the failure mode `create_all` cannot mitigate, so we should remove it before then. Or after one more "boot vs alembic" race. Either signal is enough.
+
+**Implementation pointers:**
+- `app/main.py` lifespan — delete the `engine.begin() / run_sync(Base.metadata.create_all)` block.
+- `tests/conftest.py` — already calls `create_all` per fixture; verify it does and add a comment that this is the *only* place `create_all` should run.
+- New file: `app/core/schema_check.py` with a function that runs `SELECT version_num FROM alembic_version` and compares to the latest revision-id prefix among `migrations/versions/00NN_*.py`. Log via the existing `logger`.
+- Update [`.claude/laptop-setup.md`](laptop-setup.md) to emphasise `alembic upgrade head` as non-optional in the boot sequence.
+- Optional: `make boot` target → `alembic upgrade head && uvicorn app.main:app --reload` so the laptop developer never forgets.
+
+**NOT doing** (rejected during 2026-05-01 discussion as overkill):
+- CI round-trip migrations (upgrade → downgrade → upgrade per PR). Catches reversibility bugs but needs a clean test DB per run; cost > value at solo-operator volume.
+
+**Files involved:** `app/main.py`, `tests/conftest.py`, new `app/core/schema_check.py`, `.claude/laptop-setup.md`.
+
+---
+
 ## How to add an entry
 
 Use the same structure: **What** / **Status** / **Why deferred** (or **Open**) / **Trigger to revisit** / **Implementation pointers**. Include the key files involved so future-you doesn't have to re-derive context.
