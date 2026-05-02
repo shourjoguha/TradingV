@@ -88,10 +88,14 @@ Class B (`newsletter`, `video` or any note in a timely folder) →
 ## Ingestion CLIs
 
 ```bash
-# PDF
+# PDF — layout-aware: detects chapter boundaries via embedded TOC →
+# heading-scan → printed-Contents fallback. Filters running headers and
+# footers, flags pages with figures / tables / landscape rotation, and
+# warns when low-density pages suggest the PDF is a scan needing OCR.
 python -m tools.vault_indexer.ingest.ingest_pdf \
   --path ~/Downloads/broken-money.pdf \
-  --title "Broken Money" --author "Lyn Alden" --published 2024-09-30
+  --title "Broken Money" --author "Lyn Alden" --published 2024-09-30 \
+  --tags "investing_classics"        # optional; comma-separated
 
 # EPUB
 python -m tools.vault_indexer.ingest.ingest_epub --path /path/to.epub

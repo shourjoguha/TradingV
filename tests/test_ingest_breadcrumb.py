@@ -52,7 +52,9 @@ def test_pdf_ingest_writes_source_breadcrumb(vault_root, monkeypatch):
     rc = ingest_pdf.main()
     assert rc == 0
 
-    chapter = vault_root / "Books" / "test-book" / "full-text.md"
+    # New layout-aware ingest prefixes chapter filenames with a sort-stable
+    # numeric prefix; single-chapter mode emits "01-full-text.md".
+    chapter = vault_root / "Books" / "test-book" / "01-full-text.md"
     assert chapter.exists(), f"expected chapter at {chapter}, got {list(vault_root.rglob('*.md'))}"
     post = frontmatter.loads(chapter.read_text(encoding="utf-8"))
 

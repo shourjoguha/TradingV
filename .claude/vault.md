@@ -61,14 +61,21 @@ author: "..."
 source_url: "..."             # videos, newsletters, articles
 source_path: "..."            # PDFs, EPUBs — absolute path on operator's disk
 source_sha256: "..."          # PDFs, EPUBs — re-locate the file if it moves
-source_pdf_pages_total: 432   # PDFs only
+source_pdf_pages_total: 432   # PDFs only — total page count of the original
+source_pages: [32, 60]        # PDFs only — chapter's start/end page (1-indexed)
 published_at: 2026-05-15
 ingested_at: 2026-05-15T18:00Z
 horizon_months: 6
 parent: "Books/.../index.md"
-tags: [liquidity, dollar_cycle]
+tags: [liquidity, dollar_cycle, chapter_has_landscape]
 ---
 ```
+
+`tags` may include automatic `chapter_has_figures` / `chapter_has_tables`
+/ `chapter_has_landscape` when the layout analyzer detects images,
+table-shaped layouts, or rotated text in a chapter's pages. These let
+the operator filter Obsidian for chapters with charts without re-reading
+the index.
 
 The `source_*` breadcrumb keeps the door open for a future
 **vision-retrieval** workflow (read a specific PDF page or video frame

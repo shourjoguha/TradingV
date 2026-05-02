@@ -299,6 +299,27 @@ Quality trade-off vs full LightRAG: weaker — no entity-relation graph, no mult
 
 ---
 
+## OCR pipeline for scanned PDFs
+
+**What:** When a PDF turns out to be a scan (pages stored as images, no embedded text), the layout-aware ingest emits a low-density-pages warning and the affected pages produce empty bodies. An OCR pass would convert those page-images to text, allowing scanned books to be ingested with the same chapter-detection + frontmatter pipeline.
+
+**Status:** Open. Not built. The current ingest flags scanned content via the warning surface; operator sees it and can decide to OCR before re-ingesting.
+
+**Why deferred:** All books in the operator's library so far are publisher PDFs with embedded text — the layout-aware splitter handles them cleanly (`THE-INTELLIGENT-INVESTOR.pdf` produced 20 clean chapters). No real scan in the corpus yet; building OCR before there's a scan to ingest is anticipatory.
+
+**Trigger to revisit:** Operator hits a book whose ingestion warning shows ≥30% of pages flagged as low-density, and they want that book in the vault. One concrete example is enough to justify the build.
+
+**Implementation pointers when triggered:**
+- `pymupdf` can render any page to a `Pixmap`; pipe to `pytesseract` (system Tesseract binary required) for OCR.
+- Layered approach: only OCR pages flagged as low-density; keep extracted text for normal pages. Cheaper + faster than OCR-every-page.
+- For scans with skewed lines (scan angles >0.5°), `opencv` deskew before Tesseract reduces error rate. Add as a pre-OCR step.
+- Output goes through the same `extract_chapter_text` path; scanned pages just have OCR-derived text instead of native-extracted text.
+- Fallback chapter detection: if OCR text is too noisy for `CHAPTER N` matching, try the printed-Contents-page parse from `pdf_layout._printed_toc_chapters` against OCR'd page 1.
+
+**Files involved when triggered:** new `tools/vault_indexer/ingest/ocr.py` (Tesseract wrapper + deskew); edit `tools/vault_indexer/ingest/pdf_layout.py` to call OCR on low-density pages; potentially new `requirements-ocr.txt` for `pytesseract` + `opencv-python` (operator-installs Tesseract system binary).
+
+---
+
 ## How to add an entry
 
 Use the same structure: **What** / **Status** / **Why deferred** (or **Open**) / **Trigger to revisit** / **Implementation pointers**. Include the key files involved so future-you doesn't have to re-derive context.
