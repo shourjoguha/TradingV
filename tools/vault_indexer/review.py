@@ -192,9 +192,13 @@ def gather_suggestions(
             sug = _auto.suggest(title=title or "", body=body_md, vocabulary=vocabulary)
             if sug:
                 auto_tags[path] = sug
-        # Cross-link suggestions per-note.
-        sims = _search.similar_to_node(con, path, k=cross_link_per_node, exclude_self=True)
-        sims = [(p, s) for p, s in sims if s >= similarity_threshold]
+        # Cross-link suggestions per-note. similar_to_node returns dicts.
+        raw_sims = _search.similar_to_node(con, path, k=cross_link_per_node, exclude_self=True)
+        sims = [
+            (r["path"], r["similarity"])
+            for r in raw_sims
+            if r.get("similarity", 0.0) >= similarity_threshold
+        ]
         if sims:
             cross_links[path] = sims
         # Orphan tags — tags on this note that aren't in vocabulary.
