@@ -406,6 +406,65 @@ async def test_ask_route_dismiss(client, tmp_path, monkeypatch):
     assert g.json()["status"] == "dismissed"
 
 
+@pytest.mark.asyncio
+async def test_ask_route_delete(client, tmp_path, monkeypatch):
+    from app.research import service as svc
+
+    monkeypatch.setenv("VAULT_PATH", str(tmp_path))
+    monkeypatch.setattr(svc, "VAULT_PATH", tmp_path)
+
+    await client.post(
+        "/v1/hypotheses",
+        headers=HEADERS,
+        json={
+            "slug": "ad",
+            "title": "ad",
+            "claim_type": "regime",
+            "axis": "x",
+            "primary_metric": "y",
+            "tracking_signal": "y",
+            "invalidator": {"op": "manual", "args": {}},
+            "ttl_months": 6,
+        },
+    )
+
+    fake = client_mod.ClaudeResult(
+        verdict_text="No change.",
+        tool_calls=[],
+        tokens_in=100, tokens_out=50, cache_read_tokens=0, est_cost_usd=0.001,
+    )
+
+    async def _fake_ask_claude(**kwargs):
+        return fake
+
+    monkeypatch.setattr(svc._client, "ask_claude", _fake_ask_claude)
+
+    async def _fake_evidence(*args, **kwargs):
+        return []
+    from app.research import bundle as bundle_mod_local
+    monkeypatch.setattr(bundle_mod_local, "_retrieve_evidence", _fake_evidence)
+
+    r = await client.post(
+        "/v1/research/ask",
+        headers=HEADERS,
+        json={"query": "stress", "hypothesis_slugs": ["ad"]},
+    )
+    qid = r.json()["query_id"]
+
+    # Delete it.
+    rd = await client.delete(f"/v1/research/queries/{qid}", headers=HEADERS)
+    assert rd.status_code == 200
+    assert rd.json()["ok"] is True
+
+    # GET now 404.
+    g = await client.get(f"/v1/research/queries/{qid}", headers=HEADERS)
+    assert g.status_code == 404
+
+    # Re-delete is also 404.
+    rd2 = await client.delete(f"/v1/research/queries/{qid}", headers=HEADERS)
+    assert rd2.status_code == 404
+
+
 # ---------------------------------------------------------------------------
 # Vault-indexer research_hook
 # ---------------------------------------------------------------------------

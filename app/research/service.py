@@ -349,3 +349,15 @@ async def dismiss(query_id: str) -> dict[str, Any]:
         row.status = _models.STATUS_DISMISSED
         await session.commit()
         return {"ok": True}
+
+
+async def delete(query_id: str) -> dict[str, Any]:
+    """Hard-delete a research_queries row. Markdown archive in the vault is
+    NOT touched — operator removes that manually if desired."""
+    async with _db.SessionLocal() as session:
+        row = await session.get(_models.ResearchQuery, query_id)
+        if row is None:
+            return {"ok": False, "reason": "not_found"}
+        await session.delete(row)
+        await session.commit()
+        return {"ok": True}

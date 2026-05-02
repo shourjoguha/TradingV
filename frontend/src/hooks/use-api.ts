@@ -959,3 +959,22 @@ export function useDismissResearchQuery() {
       toast.error(`Dismiss failed: ${err?.detail || err?.message || 'unknown error'}`),
   })
 }
+
+export function useDeleteResearchQuery() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/v1/research/queries/${id}`, {
+        method: 'DELETE',
+        backendId,
+      }),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['research-queries', backendId] })
+      qc.removeQueries({ queryKey: ['research-query', backendId, id] })
+      toast.success('Deleted')
+    },
+    onError: (err: any) =>
+      toast.error(`Delete failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}

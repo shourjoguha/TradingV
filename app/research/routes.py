@@ -116,3 +116,15 @@ async def dismiss_query(
     if not result.get("ok"):
         raise HTTPException(400, result.get("reason", "dismiss failed"))
     return result
+
+
+@router.delete("/queries/{query_id}")
+async def delete_query(
+    query_id: str,
+    _api_key: str = Depends(verify_api_key),
+) -> dict:
+    result = await _service.delete(query_id)
+    if not result.get("ok"):
+        reason = result.get("reason", "delete failed")
+        raise HTTPException(404 if reason == "not_found" else 400, reason)
+    return result

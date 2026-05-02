@@ -2,12 +2,12 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
+import { Accordion } from '../ui/accordion'
 import type { AskResponse, ResearchQueryRead } from '../../lib/types'
 import { EvidenceItemRow } from './EvidenceItemRow'
 import { ProposedActionCard } from './ProposedActionCard'
 
 interface Props {
-  // Either shape works — both have the same enriched fields.
   response: AskResponse | ResearchQueryRead
 }
 
@@ -20,17 +20,16 @@ export function AnswerCard({ response }: Props) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
         <CardTitle className="text-base">Verdict</CardTitle>
         <div className="flex items-center gap-2">
           <Badge variant={status === 'approved' ? 'default' : 'outline'}>{status}</Badge>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-            {response.tokens_in ?? 0} in · {response.tokens_out ?? 0} out · $
-            {(response.est_cost_usd ?? 0).toFixed(4)}
+          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground tabular-nums">
+            ${(response.est_cost_usd ?? 0).toFixed(4)}
           </span>
         </div>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-3">
         <div className="prose prose-sm max-w-none text-foreground/90 leading-relaxed">
           {verdict ? (
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{verdict}</ReactMarkdown>
@@ -47,31 +46,32 @@ export function AnswerCard({ response }: Props) {
           />
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
             Evidence ({evidence.length})
           </div>
           {evidence.length === 0 ? (
             <div className="rounded-2xl shadow-inset-sm bg-background p-3 text-xs text-muted-foreground">
-              No evidence retrieved. The vault-indexer may not be running — start it
-              with{' '}
-              <code className="font-mono">
-                uvicorn tools.vault_indexer.app:app --port 8001
-              </code>{' '}
+              No evidence retrieved. The vault-indexer may not be running — start it with{' '}
+              <code className="font-mono">uvicorn tools.vault_indexer.app:app --port 8001</code>{' '}
               and the next query will retrieve excerpts.
             </div>
           ) : (
-            <div className="space-y-2">
+            <Accordion type="multiple" className="space-y-1.5">
               {evidence.map((e, i) => (
-                <EvidenceItemRow key={`${e.vault_path}-${i}`} item={e} />
+                <EvidenceItemRow
+                  key={`${e.vault_path}-${i}`}
+                  item={e}
+                  value={`ev-${i}`}
+                />
               ))}
-            </div>
+            </Accordion>
           )}
         </div>
 
         {response.answer_path && (
-          <div className="text-[11px] font-mono text-muted-foreground">
-            Markdown archive: <span className="text-foreground/80">{response.answer_path}</span>
+          <div className="text-[10px] font-mono text-muted-foreground truncate">
+            archive: <span className="text-foreground/70">{response.answer_path}</span>
           </div>
         )}
       </CardContent>

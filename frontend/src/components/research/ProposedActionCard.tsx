@@ -18,44 +18,30 @@ export function ProposedActionCard({ queryId, proposed, status }: Props) {
   const isFinal = status === 'approved' || status === 'dismissed'
 
   return (
-    <div className="rounded-2xl shadow-extruded-sm bg-background p-4 space-y-3 border-2 border-violet/20">
-      <div className="flex items-center gap-2">
-        <Wand2 className="h-4 w-4 text-violet" />
+    <div className="rounded-2xl shadow-extruded-sm bg-background p-3 space-y-2 border-2 border-violet/20">
+      <div className="flex items-center gap-2 flex-wrap">
+        <Wand2 className="h-4 w-4 text-violet shrink-0" />
         <div className="text-sm font-medium">Proposed action</div>
-        {status === 'approved' && <Badge variant="default">approved</Badge>}
-        {status === 'dismissed' && <Badge variant="outline">dismissed</Badge>}
-        {status === 'pending' && <Badge variant="outline">pending</Badge>}
-        <div className="ml-auto text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-          confidence {(proposed.confidence ?? 0).toFixed(2)}
+        <Badge variant="default" className="font-mono text-[10px]">
+          {proposed.hypothesis_slug}
+        </Badge>
+        <div className="ml-auto text-[10px] font-mono uppercase tracking-wider text-muted-foreground tabular-nums">
+          conf {(proposed.confidence ?? 0).toFixed(2)}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 text-xs">
-        <span className="text-muted-foreground">Hypothesis</span>
-        <Badge variant="default">{proposed.hypothesis_slug}</Badge>
-      </div>
+      <pre className="rounded-xl shadow-inset-sm bg-background p-2 text-[10px] font-mono whitespace-pre-wrap break-all">
+        {proposed.proposed_invalidator.op}
+        {'  '}
+        {JSON.stringify(proposed.proposed_invalidator.args)}
+      </pre>
 
-      <div className="space-y-1">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-          Op
-        </div>
-        <pre className="rounded-xl shadow-inset-sm bg-background p-2 text-[11px] font-mono whitespace-pre-wrap break-all">
-          {proposed.proposed_invalidator.op}{'  '}
-          {JSON.stringify(proposed.proposed_invalidator.args)}
-        </pre>
-      </div>
-
-      <div className="space-y-1">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-          Rationale
-        </div>
-        <div className="text-xs text-foreground/90 leading-relaxed">
-          {proposed.rationale}
-        </div>
+      <div className="text-xs text-foreground/90 leading-relaxed">
+        {proposed.rationale}
       </div>
 
       {!isFinal && (
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex items-center gap-2 pt-0.5">
           <Button size="sm" onClick={() => setModalOpen(true)}>
             <Check className="h-4 w-4 mr-1.5" />
             Approve
