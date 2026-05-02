@@ -209,30 +209,22 @@ plus an ongoing rule in `_collect_actuals` that re-anchors the 1h refresh window
 
 ---
 
-## Move `Base.metadata.create_all` out of lifespan; add boot-time alembic-version warning
+## Move `Base.metadata.create_all` out of lifespan; add boot-time alembic-version warning  ✅ RESOLVED
 
 **What:** Two related cleanups to the schema-bootstrap path:
 
-1. Remove `Base.metadata.create_all` from [`app/main.py`](../app/main.py) lifespan; relocate it to the test conftest fixture only. Production / laptop boots will then fail loudly if `alembic upgrade head` hasn't been run, instead of silently auto-creating tables and masking drift.
-2. Add a boot-time check that reads `alembic_version.version_num`, compares to the latest revision file under `migrations/versions/`, and logs a loud `WARN` if they differ. Doesn't mutate, doesn't raise — just surfaces drift instead of hiding it.
+1. Remove `Base.metadata.create_all` from [`app/main.py`](../app/main.py) lifespan; tests still build their schema from models in `tests/conftest.py`. Production / laptop boots no longer silently auto-create tables.
+2. Add a boot-time `WARN` when `alembic_version.version_num` != the latest revision file under `migrations/versions/`. Doesn't mutate, doesn't raise — just surfaces drift.
 
-**Status:** Open. Triggered by the M-2 deploy on 2026-05-01: lifespan's `create_all` raced ahead of `alembic upgrade`, created `hypothesis` + `hypothesis_evaluation` at version 0020, then `alembic upgrade head` failed with `relation "hypothesis" already exists`. Recovered by dropping the auto-created (empty) tables and re-running `alembic upgrade head`. The silent-drift class of bug almost never bites — but when it does (column added in migration but `create_all` built the table without it) it's invisible until prod.
+**Resolution:** Shipped 2026-05-02 (after second occurrence of the boot-vs-alembic race in 24 hours: M-2 on 2026-05-01 + Phase 2 on 2026-05-02). New module [`app/core/schema_check.py`](../app/core/schema_check.py) provides `warn_if_drift(engine)`, called from lifespan in place of the old `create_all` block. Five new tests cover silent / warn-when-missing / warn-on-mismatch / silent-on-match / against-real-repo. Live laptop boot at version `0022` confirmed silent; simulating `version_num='0019'` produced `[schema] DB at revision 0019; latest on disk is 0022. Run alembic upgrade head ...`.
 
-**Why deferred:** No active drift today. M-2 is the only module that surfaced the issue, and we cleaned it up by hand. Net cost so far: one bad afternoon. Acceptable to defer behind real product work.
+`tests/conftest.py` is now the *only* place `Base.metadata.create_all` is called — annotated as such.
 
-**Trigger to revisit:** Next time we add a migration that *alters* an existing table (column add, constraint change, index add) — that's the failure mode `create_all` cannot mitigate, so we should remove it before then. Or after one more "boot vs alembic" race. **Update 2026-05-02:** triggered again on the Phase 2 migration `0022_hypothesis_node_links` (table auto-created by `create_all`, alembic at 0021, manual drop + upgrade required). **Second occurrence in 24 hours.** This issue should now be promoted from "open" to "next available 30-min window" — recommendation: pull it forward of Phase 3 work.
+[`.claude/laptop-setup.md`](laptop-setup.md) updated to make the `alembic upgrade head` step explicit-and-mandatory.
 
-**Implementation pointers:**
-- `app/main.py` lifespan — delete the `engine.begin() / run_sync(Base.metadata.create_all)` block.
-- `tests/conftest.py` — already calls `create_all` per fixture; verify it does and add a comment that this is the *only* place `create_all` should run.
-- New file: `app/core/schema_check.py` with a function that runs `SELECT version_num FROM alembic_version` and compares to the latest revision-id prefix among `migrations/versions/00NN_*.py`. Log via the existing `logger`.
-- Update [`.claude/laptop-setup.md`](laptop-setup.md) to emphasise `alembic upgrade head` as non-optional in the boot sequence.
-- Optional: `make boot` target → `alembic upgrade head && uvicorn app.main:app --reload` so the laptop developer never forgets.
+**Original decision rationale preserved:** the silent-drift class of bug (column added in migration but `create_all` built the table without it) almost never bites, but when it does it's invisible until prod. Removing the parity-net trades a tiny bit of first-boot DX for a much better drift posture. CI round-trip migrations were considered and rejected as overkill at solo-operator volume.
 
-**NOT doing** (rejected during 2026-05-01 discussion as overkill):
-- CI round-trip migrations (upgrade → downgrade → upgrade per PR). Catches reversibility bugs but needs a clean test DB per run; cost > value at solo-operator volume.
-
-**Files involved:** `app/main.py`, `tests/conftest.py`, new `app/core/schema_check.py`, `.claude/laptop-setup.md`.
+**Files touched:** `app/main.py`, `app/core/schema_check.py` (new), `tests/test_schema_check.py` (new), `.claude/laptop-setup.md`.
 
 ---
 

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import SETTINGS
-from app.core.db import Base, engine
+from app.core.db import engine
 
 # Ensure models are imported so Base.metadata knows about them.
 from app.alerts import models as _alert_models  # noqa: F401
@@ -36,8 +36,18 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        # Schema is migration-driven. We do NOT call Base.metadata.create_all
+        # here anymore — it raced ahead of `alembic upgrade head` twice in
+        # 24h (M-2 on 2026-05-01 + Phase 2 on 2026-05-02), blocking the
+        # actual migration with "relation already exists" errors and
+        # masking subtler drift (a column added in a migration would not
+        # be created by create_all, but tables would look fine).
+        # See ADR-013/014 + the backlog entry resolved 2026-05-02.
+        # Tests build their schema from models in tests/conftest.py — the
+        # only place create_all should run.
+        from app.core.schema_check import warn_if_drift
+
+        await warn_if_drift(engine)
 
         # Parse the markdown view registry once at boot. Errors fail the
         # boot loudly so the operator sees the broken file immediately.

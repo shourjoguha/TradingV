@@ -51,6 +51,10 @@ async def client():
     core_db.engine = engine
     core_db.SessionLocal = session_maker
 
+    # Tests-only schema bootstrap from models. Production / laptop now go
+    # through alembic; lifespan no longer auto-creates tables (see
+    # ADR-013/014 + the resolved backlog entry from 2026-05-02). This is
+    # the ONLY place create_all should run.
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

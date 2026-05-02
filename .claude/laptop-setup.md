@@ -27,6 +27,15 @@ Run the full TradingView analysis backend on the M3 MacBook. Paired with the Rai
    alembic upgrade head
    ```
 
+   `alembic upgrade head` is **mandatory** before booting `uvicorn`. The
+   lifespan no longer auto-creates tables via
+   `Base.metadata.create_all` (the parity-net was masking schema drift —
+   see ADR-013/014 and the resolved backlog item from 2026-05-02). After
+   a `git pull` that brought in a new migration, run `alembic upgrade
+   head` again before restarting; otherwise boot logs a loud
+   `[schema] DB at revision X; latest on disk is Y. Run alembic upgrade
+   head ...` warning and skips the missing schema.
+
 ## Kronos weights (one-time, ~531MB)
 
 ```bash

@@ -159,7 +159,11 @@ fixtures. Easy to peel off.
   move to its own venv with one config change.)
 - `pgvector` cleanup avoided. The boot-vs-alembic race triggered the
   same `create_all` wart we filed in [backlog.md](../backlog.md);
-  manual cleanup applied as before.
+  manual cleanup applied as before. **Backlog item resolved 2026-05-02
+  immediately after Phase 2 ship** — `Base.metadata.create_all` removed
+  from lifespan; replaced with `app/core/schema_check.py` that logs a
+  loud WARN on revision drift. Tests-only `create_all` lives in
+  `tests/conftest.py`. No more silent table auto-creation.
 - Operator owes a few minutes / week of review-queue tick discipline.
   If they don't, no harm — the queue regenerates harmlessly.
 
