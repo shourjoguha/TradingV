@@ -21,6 +21,7 @@ from fastapi import FastAPI, HTTPException, Query
 from . import cache as _cache
 from . import indexer as _indexer
 from . import renames as _renames
+from . import research_hook as _research_hook
 from . import review as _review
 from . import search as _search
 from . import taxonomy as _tax
@@ -144,16 +145,21 @@ async def traverse_endpoint(path: str, depth: int = Query(1, ge=1, le=3)):
 
 @app.post("/promote")
 async def promote_endpoint():
-    """Read ticks from `_review-queue.md`, apply them, regenerate the queue."""
+    """Read ticks from `_review-queue.md`, apply them, regenerate the queue.
+
+    Also scans `Research/*.md` for ticked Approve/Dismiss boxes and
+    fires the corresponding TradingView API call.
+    """
     text = _review.read(CONFIG.vault_path)
     ticks = _review.parse_ticks(text)
     counts = _review.promote(_con(), CONFIG.vault_path, ticks) if ticks else {}
-    # Re-scan so applied tags are reflected in the cache.
+    research_counts = _research_hook.scan_and_apply(CONFIG.vault_path)
+    # Re-scan so applied tags + Research ticks are reflected in the cache.
     _indexer.full_rescan(_con())
     tax = _tax.parse_file(CONFIG.vault_path / "_taxonomy.md")
     suggestions = _review.gather_suggestions(_con(), vocabulary=tax.tags)
     _review.write(CONFIG.vault_path, _review.render(suggestions))
-    return {"applied": counts}
+    return {"applied": counts, "research": research_counts}
 
 
 @app.post("/apply-renames")

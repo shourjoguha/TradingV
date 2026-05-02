@@ -128,9 +128,12 @@ TradingView's pattern.
 
 ## TradingView integration
 
-Schema-only landing in Phase 2: migration `0022_hypothesis_node_links`
-adds a pointer table from `hypothesis.id` to `vault_path`. Routes that
-consume it land in Phase 3 with the LLM bundle assembler.
+Phase 2 added the `hypothesis_node_links` pointer table; Phase 3 made it
+load-bearing. The vault-indexer's `/promote` flow now also scans
+`Research/*.md` for ticked Approve/Dismiss boxes and HTTP-calls
+TradingView's `/v1/research/queries/{id}/approve|dismiss` — see
+[research.md](research.md). Two new env vars (`TRADINGVIEW_API_URL`,
+`TRADINGVIEW_API_KEY`) drive that coupling.
 
 ```sql
 hypothesis_node_links(

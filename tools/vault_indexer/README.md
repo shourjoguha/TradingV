@@ -43,7 +43,7 @@ Env vars (all optional except as noted):
 | `GET /node/{path:path}` | Raw node row (frontmatter + body). |
 | `GET /search?q=&k=` | Decay-weighted KNN over chunks. |
 | `GET /traverse/{path:path}?depth=N` | Local subgraph (explicit edges + similarity). |
-| `POST /promote` | Read ticks from `_review-queue.md`, apply, regenerate. |
+| `POST /promote` | Read ticks from `_review-queue.md` AND scan `Research/*.md` for ticked Approve/Dismiss boxes; apply both; regenerate the queue. |
 | `POST /apply-renames` | Manual trigger for the RENAMES block in `_taxonomy.md`. |
 | `POST /regenerate-review` | Force a fresh review queue without ingesting anything. |
 

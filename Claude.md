@@ -46,6 +46,7 @@ Personal trading-decision-support system for **one operator**. FastAPI backend r
 | `/v1/views*`, markdown view registry under `app/views/registry/`                   | [.claude/views.md](.claude/views.md)                           |
 | Knowledge vault (Obsidian) + `tools/vault_indexer/` sidecar (port 8001)            | [.claude/vault.md](.claude/vault.md)                           |
 | `hypothesis_node_links` table — pointer from hypothesis to vault path               | [.claude/vault.md](.claude/vault.md) (TradingView side)        |
+| `/v1/research/*`, `research_queries` table, stress-test answers in `Research/`     | [.claude/research.md](.claude/research.md)                     |
 | Telegram notifier, drift alerts, daily digest                                      | [.claude/notifications.md](.claude/notifications.md)           |
 | `/v1/tickers/{sym}/labels*`, free-form ticker metadata                             | [.claude/labels.md](.claude/labels.md)                         |
 | DB schema changes / new migration                                                  | [.claude/migrations.md](.claude/migrations.md)                 |

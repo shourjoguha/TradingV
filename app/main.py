@@ -24,6 +24,7 @@ from app.trades import models as _trades_models  # noqa: F401
 from app.market_data import derived as _derived_models  # noqa: F401
 from app.queue import models as _queue_models  # noqa: F401
 from app.hypotheses import models as _hypothesis_models  # noqa: F401
+from app.research import models as _research_models  # noqa: F401
 # Macro models are already imported via app.macro.* downstream; explicit
 # import here for create_all parity with the test conftest.
 from app.macro import models as _macro_models  # noqa: F401
@@ -187,6 +188,17 @@ async def lifespan(_app: FastAPI):
 
         hyp_task = asyncio.create_task(_hyp_loop(), name="hypothesis-tick")
 
+        # Phase 3 weekly auto-stress — fires once per active hypothesis per
+        # week. Off when ANTHROPIC_API_KEY is missing (the inner loop will
+        # log + skip; cheap to keep wired).
+        from app.research import weekly as _research_weekly
+
+        research_stop = asyncio.Event()
+        research_task = asyncio.create_task(
+            _research_weekly.loop(research_stop),
+            name="research-weekly",
+        )
+
         # Submit-queue worker — single-flight FIFO drain. Boot recovery
         # first: any 'running' rows from a crashed prior process flip back
         # to 'pending' so this worker re-picks them.
@@ -223,6 +235,8 @@ async def lifespan(_app: FastAPI):
         macro_task.cancel()
         hyp_stop.set()
         hyp_task.cancel()
+        research_stop.set()
+        research_task.cancel()
 
     except Exception as e:
         logger.error("startup error: %s", e)

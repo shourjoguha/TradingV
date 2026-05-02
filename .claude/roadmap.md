@@ -4,7 +4,7 @@
 
 ## Active
 
-**Phase 3 — Hybrid LLM stack (next).** Phase 2 (vault + indexer) shipped 2026-05-02 — see [vault.md](vault.md) and [decisions/014](decisions/014-vault-indexer.md). Vault at `~/Documents/knowledge-vault/` with sidecar at `tools/vault_indexer/` (port 8001) over SQLite + sqlite-vec, embeddings via `bge-large-en-v1.5`. Migration `0022_hypothesis_node_links` lands the TradingView pointer table; routes wait for Phase 3. Phase 3 (hybrid LLM + Claude API tool-use + operator-approved actions) gated on a collaborative-brainstorm session before promotion.
+**M-3 — Wire hypotheses into Opportunities + Trades (next).** Phase 3 (stress-test endpoint) shipped 2026-05-02 — see [research.md](research.md) and [decisions/015](decisions/015-research-stress-test.md). `POST /v1/research/ask` bundles hypothesis + vault evidence + macro state, calls Claude with a tool-use schema constrained to `propose_invalidator_update`, writes the answer as markdown into `<vault>/Research/`. Operator approves via Obsidian checkbox; vault-indexer's `/promote` flow HTTP-calls TradingView's approve route. Weekly auto-stress per active hypothesis writes summaries into `_review-queue.md`. M-3 (per-hypothesis tagging on opportunities + trades, per-hypothesis P&L) is the next product-shaped step.
 
 ## Next candidates (not committed)
 
@@ -17,10 +17,16 @@ Order is approximate. Promotion to "Active" requires deliberation + plan. Most c
 | 8a | ~~Macro Workbench M-1 — Signal layer~~ | ✅ shipped 2026-04-30 ([macro.md](macro.md), [decisions/012](decisions/012-macro-workbench-storage-shape.md)) | — |
 | 8b | ~~Macro Workbench M-2 — Hypothesis object + view registry~~ | ✅ shipped 2026-05-01 ([hypotheses.md](hypotheses.md), [views.md](views.md), [decisions/013](decisions/013-hypothesis-object.md)) | — |
 | 8b.1 | ~~Phase 2 — Vault + indexer sidecar~~ | ✅ shipped 2026-05-02 ([vault.md](vault.md), [decisions/014](decisions/014-vault-indexer.md)) | — |
-| 8b.2 | **Phase 3 — Hybrid LLM stack** (sentence-transformers embeddings already shipped; add Claude API reasoning + `recommend_action` tool-use + operator-approved action flow) | After Phase 2 + collaborative brainstorm | ~3-4 days |
+| 8b.2 | ~~Phase 3 — Stress-test endpoint~~ | ✅ shipped 2026-05-02 ([research.md](research.md), [decisions/015](decisions/015-research-stress-test.md)) | — |
+| 8b.3 | Phase 3.1 — Synthesis mode (`/research/digest`) | After Phase 3 stress-test loop in regular use | ~4-6 hrs |
+| 8b.4 | Phase 3.2 — Additional action kinds (`cancel_hypothesis`, `create_opportunity`) | After 20+ stress-tests run; operator wants more from one query | TBD |
+| 8b.5 | Phase 3.3 — Telegram digest of unread research answers | If Phase 3 auto-stress files go unread for 2-3 weeks | ~1 hr |
+| 8b.6 | Phase 3.4 — Cross-hypothesis stress (one query, multiple theses) | After single-thesis stress-test feels routine | TBD |
+| 8b.7 | Phase 3.5 — Multi-LLM cross-check (Claude + GPT) | Only if Claude proposals disagree with operator gut > 30% of the time | TBD |
+| 8b.8 | Phase 3.6 — Streaming research responses + frontend research-history page | If perceived latency / asynchrony becomes painful | TBD |
 | 8c | **Macro Workbench M-3 — Wire into Opportunities + Trades** (per-hypothesis tagging on rows; per-hypothesis P&L) | After M-2 + at least 3 active hypotheses | ~1-2 days |
-| 8d | **Macro Workbench M-4 — `POST /v1/research/ask` LLM endpoint** (view-scoped DB context; Anthropic API) | After M-3; the unique-wedge layer | ~1-2 days |
-| 8e | Macro Workbench M-5 — 13F + Form-4 ingestion | After M-4 ships and is in use | TBD |
+| 8d | ~~Macro Workbench M-4 — `POST /v1/research/ask` LLM endpoint~~ | Subsumed by Phase 3 (8b.2) | — |
+| 8e | Macro Workbench M-5 — 13F + Form-4 ingestion | After Phase 3 ships and is in use | TBD |
 | 8f | Macro Workbench M-6 — Hypothesis backtest engine | After M-5 + > 6 closed trades tagged with hypotheses | TBD |
 | 9 | Concurrency-gate removal | Queue runs cleanly for 4 weeks with zero `acquire_slot` failures | ~30 min ([tech_debt.md](tech_debt.md)) |
 | 10 | schedule_config column drop (`pending_run`, `retry_minutes`) | Bundled with the next schedule_config schema change | ~15 min ([tech_debt.md](tech_debt.md)) |

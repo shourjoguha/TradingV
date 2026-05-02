@@ -31,6 +31,7 @@ from app.queue import models as _queue_models  # noqa: F401, E402
 from app.macro import models as _macro_models  # noqa: F401, E402
 from app.boards import models as _boards_models  # noqa: F401, E402
 from app.hypotheses import models as _hypothesis_models  # noqa: F401, E402
+from app.research import models as _research_models  # noqa: F401, E402
 
 
 @pytest_asyncio.fixture

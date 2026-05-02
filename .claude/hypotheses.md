@@ -170,6 +170,10 @@ script's two-pass slug→UUID mapping.
   rows make a card grid worthwhile. Operator decision 2026-05-01.
 - Auto-translation of English invalidators → DSL via LLM. Punt to LLM phase.
 - Wiring into Opportunities / Trades — M-3.
-- LLM `/research/ask` grounding — M-4 (planned in
-  [plans/M-2-then-content-then-llm.md](plans/M-2-then-content-then-llm.md)).
+- ~~LLM `/research/ask` grounding~~ — ✅ shipped Phase 3 / 2026-05-02
+  ([research.md](research.md), [decisions/015](decisions/015-research-stress-test.md)).
+  An invalidator update proposed by `/v1/research/ask` lands as a
+  ticked checkbox in `<vault>/Research/<date>-<slug>.md` → vault-indexer
+  fires `POST /v1/research/queries/{id}/approve` → DSL is patched onto
+  the hypothesis row.
 - Backtest replay of historical invalidator firings — M-6.

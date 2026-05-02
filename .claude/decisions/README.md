@@ -20,6 +20,7 @@ Architecture Decision Records — one file per significant choice, with the why 
 | 012 | [Separate `macro_series` table over reusing `ohlcv_bars`](012-macro-workbench-storage-shape.md) | 2026-04-30 | Accepted |
 | 013 | [Hypothesis object — schema, DSL, cascade timing, ship-shape](013-hypothesis-object.md) | 2026-05-01 | Accepted |
 | 014 | [Vault-indexer — substrate, storage, embedder, authoring discipline](014-vault-indexer.md) | 2026-05-02 | Accepted |
+| 015 | [Research stress-test endpoint — Phase 3](015-research-stress-test.md) | 2026-05-02 | Accepted |
 
 ## How to add a new ADR
 
