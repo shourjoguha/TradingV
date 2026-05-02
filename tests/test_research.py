@@ -411,6 +411,88 @@ async def test_ask_route_dismiss(client, tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
+async def test_ask_response_includes_evidence_and_macro(client, tmp_path, monkeypatch):
+    """Bundle evidence + macro_state should flow flat into AskResponse."""
+    from app.research import service as svc
+
+    monkeypatch.setenv("VAULT_PATH", str(tmp_path))
+    monkeypatch.setattr(svc, "VAULT_PATH", tmp_path)
+
+    await client.post(
+        "/v1/hypotheses",
+        headers=HEADERS,
+        json={
+            "slug": "ev-test",
+            "title": "ev",
+            "claim_type": "regime",
+            "axis": "x",
+            "primary_metric": "y",
+            "tracking_signal": "y",
+            "invalidator": {"op": "manual", "args": {}},
+            "ttl_months": 6,
+        },
+    )
+
+    fake = client_mod.ClaudeResult(
+        verdict_text="ok",
+        tool_calls=[],
+        tokens_in=10, tokens_out=5, cache_read_tokens=0, est_cost_usd=0.0,
+    )
+
+    async def _fake_ask_claude(**kwargs):
+        return fake
+
+    monkeypatch.setattr(svc._client, "ask_claude", _fake_ask_claude)
+
+    async def _fake_evidence(*args, **kwargs):
+        return [
+            {
+                "vault_path": "Newsletters/foo.md",
+                "title": "Foo",
+                "section": "Intro",
+                "text": "x" * 1000,
+                "similarity": 0.42,
+                "decay_weight": 0.9,
+                "score": 0.378,
+                "published_at": "2026-04-01",
+                "author": "lyn",
+            }
+        ]
+    from app.research import bundle as bundle_mod_local
+    monkeypatch.setattr(bundle_mod_local, "_retrieve_evidence", _fake_evidence)
+
+    # Stub macro snapshot.
+    async def _fake_macro(*args, **kwargs):
+        return {"DX-Y.NYB": {"latest": 109.4, "latest_ts": "2026-05-01"}}
+    monkeypatch.setattr(bundle_mod_local, "_macro_snapshot", _fake_macro)
+
+    r = await client.post(
+        "/v1/research/ask",
+        headers=HEADERS,
+        json={"query": "stress", "hypothesis_slugs": ["ev-test"]},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert len(body["evidence"]) == 1
+    item = body["evidence"][0]
+    assert item["vault_path"] == "Newsletters/foo.md"
+    assert item["score"] == pytest.approx(0.378)
+    assert len(item["text"]) == 600  # truncated
+    # macro_state may or may not include the symbol depending on the hypothesis
+    # tracking signals; just assert the shape is a list.
+    assert isinstance(body["macro_state"], list)
+
+    # GET /queries/{id} returns the same enriched shape.
+    qid = body["query_id"]
+    g = await client.get(f"/v1/research/queries/{qid}", headers=HEADERS)
+    assert g.status_code == 200
+    gj = g.json()
+    assert len(gj["evidence"]) == 1
+    assert gj["evidence"][0]["vault_path"] == "Newsletters/foo.md"
+    assert gj["proposed_action"] is None
+
+
 def test_research_hook_detects_approve_tick():
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
     for m in [m for m in list(sys.modules) if m.startswith("vault_indexer")]:

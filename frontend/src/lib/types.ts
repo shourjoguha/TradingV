@@ -439,3 +439,73 @@ export interface ViewsResponse {
   items: ViewSpec[]
   count: number
 }
+
+// ---------------------------------------------------------------------------
+// Research — M-2 Phase 3 / 3.7 (single-turn UI)
+// ---------------------------------------------------------------------------
+
+export interface EvidenceItem {
+  vault_path: string
+  title: string | null
+  section: string | null
+  text: string
+  similarity: number
+  decay_weight: number
+  score: number
+  published_at: string | null
+  author: string | null
+}
+
+export interface MacroSnapshotItem {
+  symbol: string
+  latest: number
+  latest_ts: string
+}
+
+export interface ProposedAction {
+  hypothesis_slug: string
+  rationale: string
+  proposed_invalidator: InvalidatorSpec
+  evidence_paths?: string[]
+  confidence: number
+}
+
+export interface AskRequest {
+  query: string
+  hypothesis_slugs?: string[]
+}
+
+export interface AskResponse {
+  query_id: string
+  answer_path: string | null
+  verdict: string | null
+  tokens_in: number
+  tokens_out: number
+  est_cost_usd: number
+  proposed_action: ProposedAction | null
+  status: 'pending' | 'approved' | 'dismissed' | 'error'
+  evidence: EvidenceItem[]
+  macro_state: MacroSnapshotItem[]
+}
+
+export interface ResearchQueryRead {
+  id: string
+  asked_at: string
+  query: string
+  hypothesis_ids: string[]
+  answer_path: string | null
+  verdict: string | null
+  tokens_in: number | null
+  tokens_out: number | null
+  est_cost_usd: number | null
+  status: 'pending' | 'approved' | 'dismissed' | 'error'
+  approved_at: string | null
+  proposed_action: ProposedAction | null
+  evidence: EvidenceItem[]
+  macro_state: MacroSnapshotItem[]
+}
+
+export interface ResearchQueriesList {
+  items: ResearchQueryRead[]
+  count: number
+}

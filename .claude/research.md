@@ -162,11 +162,35 @@ research_queries(
 | `app/research/weekly.py` | background auto-stress loop |
 | `tools/vault_indexer/research_hook.py` | tick scanner + TradingView caller |
 
-## Out of scope (parked in roadmap as 8b.3–8b.8)
+## Frontend (Phase 3.7 — shipped 2026-05-02)
+
+`/research` page in the React app. Single-turn UI on top of the same
+`POST /v1/research/ask` + GET/approve/dismiss endpoints — markdown
+files keep getting written for archival + weekly auto-stress.
+
+| File | Role |
+|---|---|
+| `frontend/src/pages/Research.tsx` | page shell |
+| `frontend/src/components/research/AskInput.tsx` | textarea + scope chips (active hypotheses) + submit |
+| `frontend/src/components/research/AnswerCard.tsx` | verdict (markdown) + evidence list + proposed action + cost |
+| `frontend/src/components/research/EvidenceItemRow.tsx` | one row per excerpt; clickable `obsidian://` deep link; expand-to-read |
+| `frontend/src/components/research/ProposedActionCard.tsx` | proposed-action block with Approve/Dismiss |
+| `frontend/src/components/research/ConfirmApproveModal.tsx` | two-step confirm — shows current vs proposed invalidator JSON |
+| `frontend/src/components/research/HistoryList.tsx` | paginated past queries with status filter chips |
+| `frontend/src/hooks/use-api.ts` | `useResearchAsk` / `useResearchQueries` / `useResearchQuery` / `useApproveResearchQuery` / `useDismissResearchQuery` |
+
+Backend addition for v1: `AskResponse` and `ResearchQueryRead` now
+return `evidence` (flat `EvidenceItem[]`) + `macro_state` +
+`proposed_action`. Pulled from the persisted `bundle` / `response`
+columns at read-time — UI never has to parse the bundle envelope.
+
+## Out of scope (parked in roadmap as 8b.3–8b.9)
 
 - `/research/digest` synthesis mode
 - Action kinds: `cancel_hypothesis`, `create_opportunity`
 - Telegram digest of unread answer files
 - Cross-hypothesis stress (one query, multiple theses)
 - Multi-LLM cross-check (Claude + GPT)
-- Streaming responses + frontend research-history page
+- Streaming responses (Phase 3.6 if pulled forward)
+- Multi-turn threading (Phase 3.8)
+- Free-form open chat over the corpus (operator uses Claude API directly)

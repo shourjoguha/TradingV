@@ -24,6 +24,35 @@ VAULT_PATH = Path(os.environ.get("VAULT_PATH", str(Path.home() / "Documents" / "
 RESEARCH_FOLDER = "Research"
 
 
+def _flatten_evidence(bundle: dict[str, Any]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for e in (bundle.get("evidence") or []):
+        out.append({
+            "vault_path": e.get("vault_path", ""),
+            "title": e.get("title"),
+            "section": e.get("section"),
+            "text": (e.get("text") or "")[:600],
+            "similarity": float(e.get("similarity", 0.0) or 0.0),
+            "decay_weight": float(e.get("decay_weight", 1.0) or 1.0),
+            "score": float(e.get("score", 0.0) or 0.0),
+            "published_at": e.get("published_at"),
+            "author": e.get("author"),
+        })
+    return out
+
+
+def _flatten_macro(bundle: dict[str, Any]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for sym, info in (bundle.get("macro_state") or {}).items():
+        if isinstance(info, dict) and "latest" in info:
+            out.append({
+                "symbol": sym,
+                "latest": float(info["latest"]),
+                "latest_ts": str(info.get("latest_ts", "")),
+            })
+    return out
+
+
 TOOL_PROPOSE_INVALIDATOR_UPDATE = {
     "name": "propose_invalidator_update",
     "description": (
@@ -141,6 +170,8 @@ async def ask(
             "est_cost_usd": 0.0,
             "proposed_action": None,
             "status": _models.STATUS_ERROR,
+            "evidence": _flatten_evidence(bundle),
+            "macro_state": _flatten_macro(bundle),
         }
 
     # Validate any tool call.
@@ -191,6 +222,8 @@ async def ask(
         "est_cost_usd": float(result.est_cost_usd),
         "proposed_action": proposed_action,
         "status": _models.STATUS_PENDING,
+        "evidence": _flatten_evidence(bundle),
+        "macro_state": _flatten_macro(bundle),
     }
 
 

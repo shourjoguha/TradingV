@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, List, Clock, FlaskConical,
   Menu, X, AlertTriangle, BookOpen, ChevronDown, ChevronRight,
-  LineChart as LineChartIcon, BarChart3, Zap,
+  LineChart as LineChartIcon, BarChart3, Zap, Sparkles,
 } from 'lucide-react'
 import { BackendToggle } from './BackendToggle'
 import { HypothesisStatusWidget } from './HypothesisStatusWidget'
@@ -53,6 +53,7 @@ const NAV_GROUPS: NavEntry[] = [
     children: [
       { path: '/macro', label: 'Macro' },
       { path: '/predictions', label: 'Predictions' },
+      { path: '/research', label: 'Research', icon: Sparkles },
       { path: '/motion', label: 'Motion' },
       { path: '/watchlists', label: 'Watchlists' },
     ],

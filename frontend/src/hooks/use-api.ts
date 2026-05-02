@@ -36,6 +36,10 @@ import type {
   InvalidatorSpec,
   ViewsResponse,
   QuotesResponse,
+  AskRequest,
+  AskResponse,
+  ResearchQueriesList,
+  ResearchQueryRead,
 } from '../lib/types'
 import { toast } from 'sonner'
 
@@ -861,5 +865,97 @@ export function useViews() {
     queryKey: ['views', backendId],
     queryFn: () => apiFetch<ViewsResponse>(`/v1/views`, { backendId }),
     staleTime: 5 * 60_000,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Research — Phase 3 / 3.7
+// ---------------------------------------------------------------------------
+
+export function useResearchAsk() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: AskRequest) =>
+      apiFetch<AskResponse>('/v1/research/ask', {
+        method: 'POST',
+        body: payload,
+        backendId,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['research-queries', backendId] })
+    },
+    onError: (err: any) =>
+      toast.error(`Ask failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+export function useResearchQueries(params?: {
+  limit?: number
+  offset?: number
+  status?: string
+}) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['research-queries', backendId, params],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (params?.limit) s.set('limit', String(params.limit))
+      if (params?.offset) s.set('offset', String(params.offset))
+      if (params?.status) s.set('status', params.status)
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<ResearchQueriesList>(`/v1/research/queries${qs}`, { backendId })
+    },
+    staleTime: 30_000,
+  })
+}
+
+export function useResearchQuery(id: string | null | undefined) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['research-query', backendId, id],
+    queryFn: () =>
+      apiFetch<ResearchQueryRead>(`/v1/research/queries/${id}`, { backendId }),
+    enabled: !!id,
+    staleTime: 30_000,
+  })
+}
+
+export function useApproveResearchQuery() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/v1/research/queries/${id}/approve`, {
+        method: 'POST',
+        backendId,
+      }),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['research-queries', backendId] })
+      qc.invalidateQueries({ queryKey: ['research-query', backendId, id] })
+      qc.invalidateQueries({ queryKey: ['hypotheses', backendId] })
+      toast.success('Hypothesis updated')
+    },
+    onError: (err: any) =>
+      toast.error(`Approve failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+export function useDismissResearchQuery() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/v1/research/queries/${id}/dismiss`, {
+        method: 'POST',
+        backendId,
+      }),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['research-queries', backendId] })
+      qc.invalidateQueries({ queryKey: ['research-query', backendId, id] })
+      toast.success('Dismissed')
+    },
+    onError: (err: any) =>
+      toast.error(`Dismiss failed: ${err?.detail || err?.message || 'unknown error'}`),
   })
 }

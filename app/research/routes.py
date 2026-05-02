@@ -1,7 +1,7 @@
 """HTTP surface for /v1/research."""
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, select
@@ -18,6 +18,39 @@ from app.research.schemas import (
 )
 
 router = APIRouter(prefix="/research", tags=["research"])
+
+
+def _enriched_read(row: ResearchQuery) -> ResearchQueryRead:
+    """Build a ResearchQueryRead with evidence/macro/proposed_action
+    re-derived from persisted bundle + response columns."""
+    bundle = row.bundle or {}
+    evidence = _service._flatten_evidence(bundle)
+    macro = _service._flatten_macro(bundle)
+    proposed: Optional[dict[str, Any]] = None
+    # If approved, prefer the approved_action snapshot.
+    if row.approved_action:
+        proposed = row.approved_action
+    else:
+        for tc in (row.response or {}).get("tool_calls", []) or []:
+            if tc.get("name") == "propose_invalidator_update":
+                proposed = tc.get("input")
+                break
+    return ResearchQueryRead(
+        id=row.id,
+        asked_at=row.asked_at,
+        query=row.query,
+        hypothesis_ids=row.hypothesis_ids or [],
+        answer_path=row.answer_path,
+        verdict=row.verdict,
+        tokens_in=row.tokens_in,
+        tokens_out=row.tokens_out,
+        est_cost_usd=float(row.est_cost_usd) if row.est_cost_usd is not None else None,
+        status=row.status,
+        approved_at=row.approved_at,
+        proposed_action=proposed,
+        evidence=evidence,
+        macro_state=macro,
+    )
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -46,7 +79,7 @@ async def list_queries(
         stmt = stmt.limit(limit).offset(offset)
         rows = (await session.execute(stmt)).scalars().all()
     return ResearchQueriesList(
-        items=[ResearchQueryRead.model_validate(r) for r in rows],
+        items=[_enriched_read(r) for r in rows],
         count=len(rows),
     )
 
@@ -60,7 +93,7 @@ async def get_query(
         row = await session.get(ResearchQuery, query_id)
         if row is None:
             raise HTTPException(404, "research query not found")
-    return ResearchQueryRead.model_validate(row)
+    return _enriched_read(row)
 
 
 @router.post("/queries/{query_id}/approve")

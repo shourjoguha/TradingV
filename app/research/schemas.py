@@ -12,6 +12,24 @@ class AskRequest(BaseModel):
     hypothesis_slugs: Optional[list[str]] = None
 
 
+class EvidenceItem(BaseModel):
+    vault_path: str
+    title: Optional[str] = None
+    section: Optional[str] = None
+    text: str = ""
+    similarity: float = 0.0
+    decay_weight: float = 1.0
+    score: float = 0.0
+    published_at: Optional[str] = None
+    author: Optional[str] = None
+
+
+class MacroSnapshotItem(BaseModel):
+    symbol: str
+    latest: float
+    latest_ts: str = ""
+
+
 class AskResponse(BaseModel):
     query_id: str
     answer_path: Optional[str]
@@ -21,6 +39,8 @@ class AskResponse(BaseModel):
     est_cost_usd: float
     proposed_action: Optional[dict[str, Any]] = None
     status: str
+    evidence: list[EvidenceItem] = Field(default_factory=list)
+    macro_state: list[MacroSnapshotItem] = Field(default_factory=list)
 
 
 class ResearchQueryRead(BaseModel):
@@ -36,6 +56,9 @@ class ResearchQueryRead(BaseModel):
     est_cost_usd: Optional[float]
     status: str
     approved_at: Optional[datetime.datetime]
+    proposed_action: Optional[dict[str, Any]] = None
+    evidence: list[EvidenceItem] = Field(default_factory=list)
+    macro_state: list[MacroSnapshotItem] = Field(default_factory=list)
 
 
 class ResearchQueriesList(BaseModel):

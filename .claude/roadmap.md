@@ -4,13 +4,11 @@
 
 ## Active
 
-**Phase 3.7 — Research UI v1 (single-turn) — READY TO BUILD.** Full executable plan at [`plans/phase-3.7-research-ui-single-turn.md`](plans/phase-3.7-research-ui-single-turn.md). Single-session build (~7-8 hrs) for a fresh-context operator. The plan file is self-contained — open it, follow the "Suggested execution order" section, commit at the end. New-session pickup prompt:
+**Phase 3.7 — Research UI v1 (single-turn) — SHIPPED 2026-05-02.** `/research` page wired into the React app: input + scope chips, AnswerCard with verdict (markdown) + flat evidence list + proposed-action card, confirm-modal Approve, status-filtered history. Backend `AskResponse` + `ResearchQueryRead` extended with `evidence` + `macro_state` + `proposed_action` for single-call render. Plan: [`plans/phase-3.7-research-ui-single-turn.md`](plans/phase-3.7-research-ui-single-turn.md).
 
-> Execute the plan at `.claude/plans/phase-3.7-research-ui-single-turn.md`. Don't re-plan — the design is locked. Run the "Suggested execution order" step by step. Commit at the end. Ask before improvising on blockers.
+Phase 3 (stress-test backend) shipped 2026-05-02 — see [research.md](research.md) and [decisions/015](decisions/015-research-stress-test.md).
 
-Phase 3 (stress-test backend) shipped 2026-05-02 — see [research.md](research.md) and [decisions/015](decisions/015-research-stress-test.md). The endpoint works; UI is the missing surface.
-
-**On deck (not next):** M-3 (wire hypotheses into Opportunities + Trades) — gated on Phase 3.7 + 3.8 settling, plus operator confirmation that hypothesis-aware opportunity weighting is the right shape vs simpler tagging.
+**On deck (not next):** Phase 3.8 (threading) — gated on operator hitting the "asked the same hypothesis 3+ times this week" moment. After that, M-3 (wire hypotheses into Opportunities + Trades).
 
 ## Next candidates (not committed)
 
@@ -29,7 +27,7 @@ Order is approximate. Promotion to "Active" requires deliberation + plan. Most c
 | 8b.5 | Phase 3.3 — Telegram digest of unread research answers | If Phase 3 auto-stress files go unread for 2-3 weeks | ~1 hr |
 | 8b.6 | Phase 3.4 — Cross-hypothesis stress (one query, multiple theses) | After single-thesis stress-test feels routine | TBD |
 | 8b.7 | Phase 3.5 — Multi-LLM cross-check (Claude + GPT) | Only if Claude proposals disagree with operator gut > 30% of the time | TBD |
-| 8b.8 | **Phase 3.7 — Research UI v1 (single-turn)** — `/research` page in the React app: input box, hypothesis-scope chip selector, verdict + evidence + proposed-action card, confirm-modal Approve, paginated history. AskResponse extended with structured `evidence` field. | Operator brainstorm 2026-05-02; markdown-only path is friction even with auto-stress | ~6-8 hrs (full plan: [plans/phase-3.7-research-ui-single-turn.md](plans/phase-3.7-research-ui-single-turn.md)) |
+| 8b.8 | ~~Phase 3.7 — Research UI v1 (single-turn)~~ | ✅ shipped 2026-05-02 ([research.md](research.md), plan: [plans/phase-3.7-research-ui-single-turn.md](plans/phase-3.7-research-ui-single-turn.md)) | — |
 | 8b.9 | **Phase 3.8 — Research UI v2 (threading)** — multi-turn conversation per hypothesis. `research_queries` gains `thread_id`; bundle assembler folds prior turns; "New thread" UI. | After Phase 3.7 in regular use AND operator hits "I asked the same hypothesis 3+ times this week and wished the answers knew about each other" | TBD (direction notes: [plans/phase-3.8-research-ui-threading.md](plans/phase-3.8-research-ui-threading.md)) |
 | 8b.10 | ~~Free-form open chat over the corpus~~ | OUT OF SCOPE — operator decided 2026-05-02 to use the Claude API directly when they want open-ended discussion. Claude can read this stack as context AND perform outside research; building a generic chat UI inside TradingView would duplicate that without differentiation. | — |
 | 8c | **Macro Workbench M-3 — Wire into Opportunities + Trades** (per-hypothesis tagging on rows; per-hypothesis P&L) | After M-2 + at least 3 active hypotheses | ~1-2 days |

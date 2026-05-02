@@ -23,6 +23,11 @@ const Watchlists = lazy(() =>
   import('./pages/Watchlists').then((m) => ({ default: m.Watchlists })),
 )
 
+// Lazy-load Research (Phase 3.7).
+const Research = lazy(() =>
+  import('./pages/Research').then((m) => ({ default: m.Research })),
+)
+
 export function App() {
   return (
     <Layout>
@@ -39,6 +44,14 @@ export function App() {
           }
         />
         <Route path="/predictions/:tab?" element={<Predictions />} />
+        <Route
+          path="/research"
+          element={
+            <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+              <Research />
+            </Suspense>
+          }
+        />
         <Route path="/motion/:tab?" element={<Motion />} />
         <Route
           path="/watchlists/:boardId?"
