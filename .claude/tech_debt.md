@@ -49,6 +49,21 @@ Things we know about, deferred on purpose, with the trigger to revisit. Differen
 
 ---
 
+## `sentence_transformers` import broken in test env (2026-05-02, post-Phase 3.7)
+
+**What:** `tests/test_vault_indexer.py` — 4 tests fail with `ImportError` chain through `sentence_transformers` → `transformers` requiring `huggingface-hub>=1.5.0` while `requirements.txt` pins `huggingface_hub==0.33.1`. Surfaced when `anthropic` was added to `requirements.txt` and `pip install -r requirements.txt` re-resolved the env.
+
+**Why deferred:** Core vault-indexer runtime still works (cache.db pre-built, no fresh embeddings needed for tested operator flows). Phase 3.7 ship was on critical path. Production ingestion path (`scripts/ingest_*.py`) only runs when operator manually adds new vault content, which is rare.
+
+**How to apply when ready:**
+- Pin `transformers<5.0` in `requirements.txt` (the 5.7.0 version that auto-installed bumps the hub requirement past our pin).
+- OR bump `huggingface_hub` past 1.5.0 — verify Kronos weight loader still works (it pins 0.33.1 for a reason; there's a backlog entry on Kronos hf-hub compat).
+- Re-run `pytest tests/test_vault_indexer.py` to confirm all 4 pass.
+
+**Trigger to revisit:** next vault-indexer change OR before next fresh-checkout deploy on Railway (CI parity matters).
+
+---
+
 ## How to add an entry
 
 Use this skeleton:

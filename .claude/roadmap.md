@@ -4,11 +4,9 @@
 
 ## Active
 
-**Phase 3.7 — Research UI v1 (single-turn) — SHIPPED 2026-05-02.** `/research` page wired into the React app: input + scope chips, AnswerCard with verdict (markdown) + flat evidence list + proposed-action card, confirm-modal Approve, status-filtered history. Backend `AskResponse` + `ResearchQueryRead` extended with `evidence` + `macro_state` + `proposed_action` for single-call render. Plan: [`plans/phase-3.7-research-ui-single-turn.md`](plans/phase-3.7-research-ui-single-turn.md).
+No phase in active build. Phase 3.7 (Research UI v1, single-turn) shipped 2026-05-02 — see [roadmap-shipped.md](roadmap-shipped.md).
 
-Phase 3 (stress-test backend) shipped 2026-05-02 — see [research.md](research.md) and [decisions/015](decisions/015-research-stress-test.md).
-
-**On deck (not next):** Phase 3.8 (threading) — gated on operator hitting the "asked the same hypothesis 3+ times this week" moment. After that, M-3 (wire hypotheses into Opportunities + Trades).
+**On deck (not next):** Phase 3.8 (threading) — gated on operator hitting the "asked the same hypothesis 3+ times this week" moment (see [plans/phase-3.8-research-ui-threading.md](plans/phase-3.8-research-ui-threading.md) for trigger condition + direction notes). After that, M-3 (wire hypotheses into Opportunities + Trades).
 
 ## Next candidates (not committed)
 
