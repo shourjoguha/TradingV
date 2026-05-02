@@ -128,6 +128,19 @@ Next time the indexer runs (or operator hits `POST /promote`):
 
 The queue file is the entire review API. No separate UI.
 
+## Running it
+
+```bash
+export VAULT_PATH=$HOME/Documents/knowledge-vault
+uvicorn tools.vault_indexer.app:app --port 8001
+```
+
+**Cache persistence:** `<vault>/.indexer/cache.db` survives restarts.
+Laptop reboots / uvicorn restarts do **not** trigger re-embedding —
+embedding is one-time per markdown file (re-runs only on body-hash
+change). Restart uvicorn and the corpus is searchable again on first
+request. Operator runbook: [`use_me_guide.md`](../use_me_guide.md) §1.5.
+
 ## Endpoints (port 8001)
 
 | | |

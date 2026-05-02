@@ -20,6 +20,7 @@ Personal trading-decision-support system for **one operator**. FastAPI backend r
 - App: `app.main:app`
 - Local: `uvicorn app.main:app --reload` (venv activated, env set)
 - Deploy: Railway via Dockerfile + `tailscale-entrypoint.sh`. `railway.toml` declares the Dockerfile builder; the entrypoint runs Tailscale, then chains `alembic upgrade head && uvicorn ...` from the Dockerfile CMD. `Procfile` is unused on Railway. See [.claude/railway-deployment.md](.claude/railway-deployment.md).
+- **Vault-indexer (Phase 2/3 knowledge layer)**: `uvicorn tools.vault_indexer.app:app --port 8001` with `VAULT_PATH=$HOME/Documents/knowledge-vault`. Required for `/v1/research/ask` to retrieve from the operator's curated corpus. **The cache at `<vault>/.indexer/cache.db` persists across restarts** — laptop reboots don't trigger re-embedding. Full operator runbook for starting / verifying / re-ingesting lives in [`use_me_guide.md`](use_me_guide.md) §1.5.
 
 ## `.claude/` — module-specific docs
 
