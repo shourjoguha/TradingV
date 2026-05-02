@@ -4,7 +4,13 @@
 
 ## Active
 
-**M-3 — Wire hypotheses into Opportunities + Trades (next).** Phase 3 (stress-test endpoint) shipped 2026-05-02 — see [research.md](research.md) and [decisions/015](decisions/015-research-stress-test.md). `POST /v1/research/ask` bundles hypothesis + vault evidence + macro state, calls Claude with a tool-use schema constrained to `propose_invalidator_update`, writes the answer as markdown into `<vault>/Research/`. Operator approves via Obsidian checkbox; vault-indexer's `/promote` flow HTTP-calls TradingView's approve route. Weekly auto-stress per active hypothesis writes summaries into `_review-queue.md`. M-3 (per-hypothesis tagging on opportunities + trades, per-hypothesis P&L) is the next product-shaped step.
+**Phase 3.7 — Research UI v1 (single-turn) — READY TO BUILD.** Full executable plan at [`plans/phase-3.7-research-ui-single-turn.md`](plans/phase-3.7-research-ui-single-turn.md). Single-session build (~7-8 hrs) for a fresh-context operator. The plan file is self-contained — open it, follow the "Suggested execution order" section, commit at the end. New-session pickup prompt:
+
+> Execute the plan at `.claude/plans/phase-3.7-research-ui-single-turn.md`. Don't re-plan — the design is locked. Run the "Suggested execution order" step by step. Commit at the end. Ask before improvising on blockers.
+
+Phase 3 (stress-test backend) shipped 2026-05-02 — see [research.md](research.md) and [decisions/015](decisions/015-research-stress-test.md). The endpoint works; UI is the missing surface.
+
+**On deck (not next):** M-3 (wire hypotheses into Opportunities + Trades) — gated on Phase 3.7 + 3.8 settling, plus operator confirmation that hypothesis-aware opportunity weighting is the right shape vs simpler tagging.
 
 ## Next candidates (not committed)
 

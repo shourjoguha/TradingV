@@ -1,8 +1,33 @@
 # Phase 3.7 — Research UI v1 (single-turn)
 
-> **Status:** Awaiting execution. Brainstormed 2026-05-02, scoped after operator confirmation. Pick this up in a fresh session and execute end-to-end; should land in one focused sitting.
+> **Status:** READY TO BUILD. Brainstormed + scoped 2026-05-02. Self-contained — no re-planning needed.
 > **Predecessor:** Phase 3 backend (commit `2fe5ddf`) — `POST /v1/research/ask` already works, persists rows, writes markdown into `<vault>/Research/`. This phase is the operator-facing UI on top.
 > **Successor (NOT this phase):** Phase 3.8 threading. Direction-only notes at [`phase-3.8-research-ui-threading.md`](phase-3.8-research-ui-threading.md).
+
+## Picking this up in a new session
+
+This file is self-contained. **Don't re-plan or re-brainstorm.** The
+design is locked. Pickup pattern:
+
+1. Read this file end to end.
+2. Confirm `pytest -q` is green (baseline ~343).
+3. Start the vault-indexer (background, `uvicorn tools.vault_indexer.app:app --port 8001`) — Phase 3.7 doesn't change indexer code, but the UAT smoke calls it.
+4. Execute the "Suggested execution order" section (last section in this file) step by step.
+5. Commit at end. UAT (10 steps) before commit.
+
+If you hit a blocker (missing dep like `react-markdown`, schema conflict, indexer not starting) — pause and ask the operator before improvising. Most likely blocker: `react-markdown` not yet installed; fall back to plain text + file backlog item.
+
+**State of the world at pickup time** (everything below is already shipped, do NOT touch):
+
+- Phase 1 / M-2: hypothesis object + invalidator DSL + daily lifespan tick (commit `663048a`)
+- Phase 2: vault + indexer sidecar + 6 hypothesis seeds + DSL invalidators applied (commits `89c1ab3`, `b56fde0`)
+- Phase 3 backend: `/v1/research/ask` + `propose_invalidator_update` tool-use + weekly auto-stress + indexer Research-tick promotion (commit `2fe5ddf`)
+- The Intelligent Investor: 20 chapters, 416 embedded chunks, fully searchable (commit `1cd9acf` for the review-queue bug fix that was the last issue)
+- Source-breadcrumb in PDF/EPUB ingest, layout-aware splitter, taxonomy with `investing_classics` (commits `16acd7e`, `a61bac0`)
+- Background-task gating in tests (`DISABLE_LIFESPAN_BACKGROUND_TASKS=1` in conftest, commit `7251435`)
+- `Base.metadata.create_all` removed from lifespan + boot-time schema-drift WARN (commit `d6b4cb6`)
+
+You don't need any of this loaded into context to execute Phase 3.7. The plan below references the exact file paths you'll touch.
 
 ## Context
 
@@ -303,7 +328,7 @@ If test infra exists, cover:
 
 ## UAT (what "Phase 3.7 ships" means)
 
-1. `pytest -q` green (343 baseline + 2 new = 345 expected; if any
+1. `pytest -q` green (350 baseline + 2 new = 352 expected; if any
    regressions — backend AskResponse extension is the suspect).
 2. From the Research page: type "what's at risk in my BTC bottom
    thesis?", scope to `btc-bottom-3m`, hit Ask → spinner → answer
