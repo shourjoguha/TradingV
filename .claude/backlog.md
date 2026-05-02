@@ -228,6 +228,36 @@ plus an ongoing rule in `_collect_actuals` that re-anchors the 1h refresh window
 
 ---
 
+## Vision retrieval over original sources (PDF page-image, video frame)
+
+**What:** A new `/v1/research/deep-dive?vault_path=X&page=Y` (or `&timestamp=Y`) endpoint that uses a vision-capable model to read a specific page of the original PDF/EPUB, or a specific timestamp range of the original video, to answer fact-check or chart-extraction questions text-RAG can't (chart values, equation transcription, table fidelity, figure interpretation).
+
+**Status:** Open. Breadcrumb already in place — every PDF/EPUB-ingested note carries `source_path` + `source_sha256` (and `source_pdf_pages_total` for PDFs); videos and newsletters carry `source_url`. The retrieval path is what's deferred.
+
+**Why deferred (2026-05-02 brainstorm):** "If we might want X, we should build X" is the most common reason solo-operator side projects accumulate dead infrastructure. The current stress-test loop reasons over claims that live in prose; charts in books are usually illustrative not load-bearing. Building vision retrieval before the operator hits a real "I needed to see chart X and couldn't" moment risks designing for the wrong query shape.
+
+**Trigger to revisit:** Operator can name **3 concrete instances** within a single 2-week window where they wanted a fact-check or chart value from a source and the existing markdown bundle didn't have it. That's strong-enough signal to design the retrieval shape against real queries instead of imagined ones.
+
+**Order-of-likelihood by source type:**
+1. **Videos** — Whisper transcripts lose ~100% of visual content (FRED screenshots, technical chart annotations, holdings tables). The largest gap if this matters at all.
+2. **PDFs** — body prose survives, charts/equations/tables don't. Books' charts are usually illustrative; financial reports' charts are sometimes load-bearing.
+3. **EPUBs** — mostly text anyway; lowest gap.
+4. **Newsletters (web)** — text-heavy; lowest gap.
+
+**Implementation pointers when triggered:**
+- Frontmatter breadcrumb already exists (PDF: `source_path` + `source_sha256` + `source_pdf_pages_total`; EPUB: `source_path` + `source_sha256`; video/newsletter: `source_url`). No re-ingest needed.
+- For PDFs: `pymupdf` already used for text extraction; same lib renders pages to PNG via `page.get_pixmap()`.
+- For videos: yt-dlp can fetch a frame range; `ffmpeg` extracts at-second frames.
+- Endpoint: pick the source via `vault_path` lookup → resolve via `source_path` (or re-locate via `source_sha256` if file moved) → render the page/frame → call vision-capable Claude with the rendered image + the operator's question.
+- Persistence: same `research_queries` table with a new `kind: deep_dive` discriminator. Same approval flow if any DSL change is proposed.
+- Output: same Obsidian markdown answer with the rendered page embedded (Obsidian renders images natively from data URI or `attachments/` path).
+
+**Files involved (when triggered):** `app/research/deep_dive.py` (new), `tools/vault_indexer/ingest/ingest_pdf.py` (re-locator helper if files move), `app/research/routes.py` (new endpoint).
+
+**NOT doing now:** copying PDF/EPUB files into the vault. Vault stays markdown-only; original files stay in operator's library. The breadcrumb is enough.
+
+---
+
 ## How to add an entry
 
 Use the same structure: **What** / **Status** / **Why deferred** (or **Open**) / **Trigger to revisit** / **Implementation pointers**. Include the key files involved so future-you doesn't have to re-derive context.

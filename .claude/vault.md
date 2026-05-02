@@ -58,7 +58,10 @@ record.
 kind: book | book_chapter | newsletter | video | note | topic
 title: "..."
 author: "..."
-source_url: "..."
+source_url: "..."             # videos, newsletters, articles
+source_path: "..."            # PDFs, EPUBs — absolute path on operator's disk
+source_sha256: "..."          # PDFs, EPUBs — re-locate the file if it moves
+source_pdf_pages_total: 432   # PDFs only
 published_at: 2026-05-15
 ingested_at: 2026-05-15T18:00Z
 horizon_months: 6
@@ -66,6 +69,15 @@ parent: "Books/.../index.md"
 tags: [liquidity, dollar_cycle]
 ---
 ```
+
+The `source_*` breadcrumb keeps the door open for a future
+**vision-retrieval** workflow (read a specific PDF page or video frame
+on-demand to extract chart values, equations, or table fidelity that
+text extraction can't preserve). The original PDF/EPUB stays in the
+operator's library — **not** copied into the vault. `source_sha256`
+makes the breadcrumb robust to file moves. See the deferred backlog
+entry "Vision retrieval over original sources" for the trigger
+condition.
 
 ## Operator-edit flows
 

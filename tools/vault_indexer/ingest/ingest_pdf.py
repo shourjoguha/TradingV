@@ -1,8 +1,16 @@
-"""PDF ingestion — split by `# heading` into chapter notes under `Books/`."""
+"""PDF ingestion — split by `# heading` into chapter notes under `Books/`.
+
+Each note's frontmatter carries a breadcrumb back to the original file
+(``source_path``, ``source_sha256``, ``source_pdf_pages_total``) so a
+future vision-retrieval workflow can re-open the PDF on demand. The PDF
+is **not** copied into the vault — operator's library stays the source.
+If the operator moves the file, ``source_sha256`` makes it locatable.
+"""
 from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import sys
 from pathlib import Path
 
@@ -12,12 +20,26 @@ from .common import iso_week, slug, write_note          # noqa: F401 (kept for s
 from ..config import CONFIG
 
 
-def extract_text(pdf_path: Path) -> str:
+def extract_text(pdf_path: Path) -> tuple[str, int]:
+    """Return (full_text, page_count). Pages joined by blank lines."""
     with pymupdf.open(pdf_path) as doc:
         parts = []
         for page in doc:
             parts.append(page.get_text("text"))
-    return "\n\n".join(parts)
+        page_count = doc.page_count
+    return "\n\n".join(parts), page_count
+
+
+def sha256_of_file(path: Path, *, chunk_size: int = 1 << 20) -> str:
+    """Streaming SHA-256 — robust to file moves (operator can re-locate via hash)."""
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        while True:
+            buf = f.read(chunk_size)
+            if not buf:
+                break
+            h.update(buf)
+    return h.hexdigest()
 
 
 def split_by_chapters(raw: str) -> list[tuple[str, str]]:
@@ -49,7 +71,11 @@ def main() -> int:
     ap.add_argument("--author", default=None)
     ap.add_argument("--published", default=None, help="YYYY-MM-DD")
     ap.add_argument("--book-slug", default=None, help="Folder slug under Books/")
-    ap.add_argument("--single-chapter", action="store_true", help="Skip chapter split; one note for the whole PDF.")
+    ap.add_argument(
+        "--single-chapter",
+        action="store_true",
+        help="Skip chapter split; one note for the whole PDF.",
+    )
     args = ap.parse_args()
 
     pdf_path = Path(args.path).expanduser().resolve()
@@ -61,7 +87,14 @@ def main() -> int:
     book_slug = args.book_slug or slug(title)
     rel_dir = f"Books/{book_slug}"
 
-    raw = extract_text(pdf_path)
+    raw, page_count = extract_text(pdf_path)
+    sha = sha256_of_file(pdf_path)
+    source_breadcrumb = {
+        "source_path": str(pdf_path),
+        "source_sha256": sha,
+        "source_pdf_pages_total": page_count,
+    }
+
     if args.single_chapter:
         chapters = [("Full text", raw)]
     else:
@@ -72,7 +105,8 @@ def main() -> int:
 
     vault_root = CONFIG.vault_path
 
-    # Index note linking the chapters.
+    # Index note linking the chapters. Carries the breadcrumb so the
+    # book-level note alone is enough to locate the original PDF.
     index_body = f"# {title}\n\nAuthor: {args.author or '—'}\n\n## Chapters\n"
     for i, (chap_title, _) in enumerate(chapters, start=1):
         cslug = slug(chap_title) or f"ch-{i:02d}"
@@ -88,6 +122,7 @@ def main() -> int:
             "author": args.author,
             "published_at": args.published,
             "tags": [],
+            **source_breadcrumb,
         },
     )
 
@@ -105,6 +140,7 @@ def main() -> int:
                 "published_at": args.published,
                 "parent": f"{rel_dir}/index.md",
                 "tags": [],
+                **source_breadcrumb,
             },
         )
 

@@ -1,15 +1,32 @@
-"""EPUB ingestion via ebooklib — chapter-aware."""
+"""EPUB ingestion via ebooklib — chapter-aware.
+
+Each note's frontmatter carries a breadcrumb (``source_path``,
+``source_sha256``) back to the original file. The EPUB is not copied
+into the vault.
+"""
 from __future__ import annotations
 
 import argparse
+import hashlib
 import sys
 from pathlib import Path
 
 from ebooklib import epub
-from lxml.html import fromstring as parse_html, tostring
+from lxml.html import fromstring as parse_html
 
 from .common import slug, write_note
 from ..config import CONFIG
+
+
+def _sha256_of_file(path: Path, *, chunk_size: int = 1 << 20) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        while True:
+            buf = f.read(chunk_size)
+            if not buf:
+                break
+            h.update(buf)
+    return h.hexdigest()
 
 
 def extract_chapters(epub_path: Path) -> list[tuple[str, str]]:
@@ -25,7 +42,11 @@ def extract_chapters(epub_path: Path) -> list[tuple[str, str]]:
         # Title from first h1 / h2 / heading-ish element.
         h = tree.find(".//h1") or tree.find(".//h2")
         title = (h.text_content().strip() if h is not None else item.get_name()) or "Untitled"
-        text = "\n\n".join(p.text_content().strip() for p in tree.iter() if p.tag in {"p", "blockquote"} and p.text_content().strip())
+        text = "\n\n".join(
+            p.text_content().strip()
+            for p in tree.iter()
+            if p.tag in {"p", "blockquote"} and p.text_content().strip()
+        )
         if text:
             out.append((title, text))
     return out
@@ -54,6 +75,12 @@ def main() -> int:
         print("no extractable chapters", file=sys.stderr)
         return 2
 
+    sha = _sha256_of_file(p)
+    source_breadcrumb = {
+        "source_path": str(p),
+        "source_sha256": sha,
+    }
+
     vault_root = CONFIG.vault_path
     write_note(
         vault_root=vault_root,
@@ -66,6 +93,7 @@ def main() -> int:
             "author": args.author,
             "published_at": args.published,
             "tags": [],
+            **source_breadcrumb,
         },
     )
     for i, (chap_title, body) in enumerate(chapters, start=1):
@@ -82,6 +110,7 @@ def main() -> int:
                 "published_at": args.published,
                 "parent": f"{rel_dir}/index.md",
                 "tags": [],
+                **source_breadcrumb,
             },
         )
     print(f"ingested {len(chapters)} chapter(s) under {rel_dir}/")

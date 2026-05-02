@@ -69,7 +69,10 @@ Env vars (all optional except as noted):
 kind: book | book_chapter | newsletter | video | note | topic
 title: "..."
 author: "..."
-source_url: "..."
+source_url: "..."                  # videos, newsletters, articles
+source_path: "/Users/.../foo.pdf"  # PDFs, EPUBs — operator's disk
+source_sha256: "..."               # PDFs, EPUBs — robust to file moves
+source_pdf_pages_total: 432        # PDFs only
 published_at: 2026-05-15
 ingested_at: 2026-05-15T18:00Z
 horizon_months: 6      # class B only; null/missing → 6mo default
