@@ -2,6 +2,11 @@ import os
 
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("API_KEY", "test-key")
+# Skip every asyncio.create_task spawned by app.main lifespan in tests.
+# Process exits cleanly after the last fixture teardown — no orphan
+# background loops, no warmup waits colliding with assertions, faster
+# suite.
+os.environ.setdefault("DISABLE_LIFESPAN_BACKGROUND_TASKS", "1")
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient

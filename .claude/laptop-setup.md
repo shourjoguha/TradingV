@@ -36,6 +36,15 @@ Run the full TradingView analysis backend on the M3 MacBook. Paired with the Rai
    `[schema] DB at revision X; latest on disk is Y. Run alembic upgrade
    head ...` warning and skips the missing schema.
 
+### Env vars worth knowing
+
+- `DISABLE_LIFESPAN_BACKGROUND_TASKS=1` — skips every `asyncio.create_task`
+  spawned by `app/main.py` lifespan (queue worker, accuracy evaluator,
+  drift detector, daily digest, market-data refresh, opportunity tick,
+  macro ingestion, hypothesis tick, research weekly). Set automatically
+  in `tests/conftest.py` so pytest fixtures tear down cleanly. **Don't
+  set in production.**
+
 ## Kronos weights (one-time, ~531MB)
 
 ```bash

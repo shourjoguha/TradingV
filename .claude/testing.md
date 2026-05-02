@@ -11,6 +11,16 @@ python -m pytest
 ## Fixture pattern (`tests/conftest.py`)
 The `client` fixture monkey-patches `app.core.db.engine` and `app.core.db.SessionLocal` to a fresh in-memory SQLite engine, creates all tables via `Base.metadata.create_all`, then imports `app.main:app` and returns an `AsyncClient`. Each test gets a fully isolated DB.
 
+## Background tasks
+
+`tests/conftest.py` sets `DISABLE_LIFESPAN_BACKGROUND_TASKS=1` at module top, before any app import. The `app/main.py` lifespan checks the flag and `yield`s **without spawning** any of: queue worker, accuracy evaluator, drift detector, daily digest, market-data refresh, opportunity tick, macro ingestion, hypothesis tick, research weekly.
+
+Why: pytest fixtures tear down cleanly with no orphan loops, warmup waits don't collide with assertions, suite is ~30% faster. **Production unchanged** — the env var is unset there. Don't set this flag in production.
+
+If a test specifically needs to exercise a background loop's behaviour, either:
+- Call the loop's inner function directly (e.g. `service.run_daily_tick`) and assert side effects, or
+- Spin up a focused fixture that imports the loop module + invokes one cycle without going through lifespan.
+
 ## Why this works
 Every service accesses the session via `from app.core import db as _db; _db.SessionLocal()`. This indirect reference resolves at call time — so the fixture's override is seen. **Do not refactor to `from app.core.db import SessionLocal`** at module top; it binds the original sessionmaker and breaks isolation.
 

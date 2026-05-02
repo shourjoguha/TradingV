@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -63,8 +64,19 @@ async def lifespan(_app: FastAPI):
 
             activate_kronos()
 
-        # Best-effort drain of outbox rows left pending from prior process.
         import asyncio
+
+        # Tests set DISABLE_LIFESPAN_BACKGROUND_TASKS=1 in conftest. Skipping
+        # the spawn block entirely guarantees pytest fixtures tear down
+        # cleanly — no orphan tasks, no warmup waits colliding with
+        # assertions, no test runs that need to be killed externally.
+        # Production unchanged — the env var is unset there.
+        if os.environ.get("DISABLE_LIFESPAN_BACKGROUND_TASKS"):
+            logger.info("lifespan: background tasks disabled by env flag")
+            yield
+            return
+
+        # Best-effort drain of outbox rows left pending from prior process.
 
         from app.sync import service as _sync_service
 
