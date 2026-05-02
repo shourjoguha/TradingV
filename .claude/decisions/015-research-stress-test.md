@@ -156,3 +156,28 @@ genuinely want to re-fire (rare but supported).
   disagree with operator gut > 30%.
 - **Pure pull model** (TradingView polls the vault): rejected — adds
   state + latency. Push via indexer HTTP is simpler.
+
+## Footer — UI surface decision (2026-05-02)
+
+After Phase 3 backend shipped, brainstorm covered three shapes for
+the UI:
+
+1. Single-turn thin shell (`/research` page) — chosen as Phase 3.7
+   ([plan](../plans/phase-3.7-research-ui-single-turn.md)).
+2. Multi-turn threading — direction-only at Phase 3.8
+   ([sketch](../plans/phase-3.8-research-ui-threading.md)). Gated on
+   operator hitting "asked the same hypothesis 3+ times in a week and
+   wished the answers knew about each other."
+3. Free-form open chat over the corpus — **OUT OF SCOPE**. Operator
+   uses the Claude API directly when they want open-ended discussion.
+   Claude can read this stack as context AND perform outside research;
+   building a generic chat UI inside TradingView would duplicate that
+   without differentiation. Captured at roadmap 8b.10 with the
+   explicit out-of-scope marker.
+
+Markdown answer files in `<vault>/Research/` keep getting written
+regardless of UI surface. The Phase 3.7 page is a *complementary*
+surface for in-context approve/dismiss; the file artifact is still
+the archival record + the weekly-auto-stress target. Two surfaces is
+acceptable here because they share one backend and one approval
+flow — no second source of truth.
