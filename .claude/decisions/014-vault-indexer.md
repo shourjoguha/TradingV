@@ -186,3 +186,32 @@ fixtures. Easy to peel off.
 - **Postgres + pgvector.** Considered, rejected after `CREATE EXTENSION
   vector` failed on the laptop pg image. SQLite + sqlite-vec turned out
   to be a better architectural choice anyway.
+
+## Footer — re-evaluated 2026-05-02 against LightRAG + Gemini embeddings
+
+Operator-prompted comparison ([`plans/i-want-to-compare-declarative-kazoo.md`](../plans/i-want-to-compare-declarative-kazoo.md)).
+**No change.** `bge-large-en-v1.5` stays for the text-modality path.
+
+- **LightRAG**: solves multi-hop / cross-source queries, not the
+  single-thesis stress-test the Phase 3 use case demands. Switching now
+  pays graph-maintenance cost without using it. Parked behind a
+  separate trigger (first single-source-retrieval failure where
+  entity-aware filtering would have helped) as the
+  [LightRAG-lite backlog item](../backlog.md). The backlog steal
+  is entity-extraction-into-frontmatter — ~70% of the entity-aware
+  win at ~5% of the cost.
+- **Gemini text embeddings** (`gemini-embedding-001` /
+  `text-embedding-005`): ~3 MTEB points over bge-large for 5-30× the
+  latency, full network dependency, and content-leaves-the-laptop on
+  every embed. Marginal gain isn't worth the trade-offs at solo-operator
+  volume.
+- **Gemini multimodal embeddings** (`multimodalembedding@001`): the one
+  genuinely interesting option. Doesn't replace the text path; it
+  unlocks an image-modality path that doesn't yet exist. Parked behind
+  the existing
+  [vision-retrieval backlog item](../backlog.md)'s 3-concrete-moments
+  trigger, with Gemini-vs-local-CLIP/SigLIP as the candidate-stack
+  question to resolve at trigger time.
+
+The single principle binding all three: don't change a working stack to
+serve queries that haven't been asked.

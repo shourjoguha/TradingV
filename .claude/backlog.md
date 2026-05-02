@@ -256,6 +256,47 @@ plus an ongoing rule in `_collect_actuals` that re-anchors the 1h refresh window
 
 **NOT doing now:** copying PDF/EPUB files into the vault. Vault stays markdown-only; original files stay in operator's library. The breadcrumb is enough.
 
+**Candidate embedder stack (decision deferred to trigger time)** — added 2026-05-02 after the LightRAG/Gemini comparison ([`plans/i-want-to-compare-declarative-kazoo.md`](plans/i-want-to-compare-declarative-kazoo.md)):
+
+| Option | Dim | Cost (~6000 page-images one-time) | Pros | Cons |
+|---|---|---|---|---|
+| **Gemini `multimodalembedding@001`** (Vertex) | 1408 | ~$1.20 | Broader training corpus (charts, infographics, financial graphics); shared text/image space; managed; current quality leader | Page images leave the laptop on every embed; API dependency; pay-per-call ongoing |
+| **Local CLIP / SigLIP** (`transformers`) | 512–1024 | $0 | Fully local — privacy preserved; no API outage risk; no per-call cost | Narrower training distribution; lower quality on financial charts specifically; more setup (model weights + pipeline) |
+
+Pick at trigger time based on which trade-off matters more. If the operator is willing to send page images of their books to Google for the quality gain → Gemini. If privacy is non-negotiable → local CLIP/SigLIP. The retrieval shape is identical either way: render PDF page → embed → store in a *separate* sqlite-vec virtual table (different dim, different model) → query both text and image indexes, merge results.
+
+**Decision NOT to use Gemini for text embeddings:** see [`plans/i-want-to-compare-declarative-kazoo.md`](plans/i-want-to-compare-declarative-kazoo.md). bge-large-en-v1.5 stays for the text path; Gemini multimodal is purely an option for the image-modality path that doesn't yet exist.
+
+---
+
+## Entity-extraction-into-frontmatter (LightRAG-lite)
+
+**What:** A cheap structural steal from LightRAG without buying the full graph machinery. At ingest time (alongside the existing `auto_tag.py` Claude Haiku call), extract a short list of named entities per note (`entities: [Lyn Alden, BTC-USD, MSTR, debasement]`) and store them in frontmatter. At retrieval time, use the entity list as a **filter** alongside the cosine KNN: "given query mentions BTC-USD, prefer chunks whose parent note has BTC-USD in `entities`."
+
+This adds entity-aware retrieval without:
+- Building / maintaining a knowledge graph
+- LLM-in-the-retrieval-path latency (extraction is at ingest, not query)
+- Schema migrations beyond a frontmatter field
+- The dual-retrieval ranking-merge complexity LightRAG carries
+
+Quality trade-off vs full LightRAG: weaker — no entity-relation graph, no multi-hop traversal. But meaningfully better than today on entity-boundary cases the current pure-vector retriever fumbles ("everything Lyn says about Bitcoin specifically, not crypto broadly").
+
+**Status:** Open. Deferred 2026-05-02 after the LightRAG / Gemini comparison (see [`plans/i-want-to-compare-declarative-kazoo.md`](plans/i-want-to-compare-declarative-kazoo.md)).
+
+**Why deferred:** No active failure. The Phase 3 stress-test loop is single-thesis-shaped and the current vector retrieval handles single-source queries well. Building entity-aware filtering before the operator sees a query that would benefit from it is anticipatory infrastructure — same trap as full LightRAG, smaller blast radius.
+
+**Trigger to revisit:** First time the operator writes a query and `/research/ask` returns evidence that's topically adjacent but entity-wrong (e.g. asking about MSTR-mNAV gets generic crypto chunks instead of MSTR-specific ones). One concrete failure → re-open.
+
+**Cost estimate when triggered:**
+- ~50 lines of new code in `tools/vault_indexer/entity_extract.py` mirroring `auto_tag.py`'s structure
+- ~$1/yr in Haiku calls at expected ingest volume (one call per ingest, 1-5 entities returned)
+- One additional frontmatter field (`entities`); one additional query-side filter pass in `search.py`
+- ~2 hrs total
+
+**Why NOT just go straight to full LightRAG:** see the comparison plan for the full reasoning. Short version: the graph machinery's wedge is multi-hop / cross-source queries we don't yet have. The entity-list-as-filter captures ~70% of the entity-aware win at ~5% of the cost and complexity.
+
+**Files involved when triggered:** new `tools/vault_indexer/entity_extract.py`, edits to `tools/vault_indexer/indexer.py` (call extract during ingest), `tools/vault_indexer/search.py` (entity-filter at retrieval), `tools/vault_indexer/auto_tag.py` (might share the LLM call to avoid double-calling).
+
 ---
 
 ## How to add an entry
