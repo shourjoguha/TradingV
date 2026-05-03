@@ -21,16 +21,21 @@ export function EvidenceItemRow({ item, value, vaultName = 'knowledge-vault' }: 
   return (
     <AccordionItem value={value}>
       <AccordionTrigger>
-        <div className="flex items-center gap-1.5 ml-auto tabular-nums">
-          <Badge variant="outline" className="text-[10px]">
-            score {item.score.toFixed(3)}
-          </Badge>
-          <Badge variant="outline" className="text-[10px]">
-            sim {item.similarity.toFixed(2)}
-          </Badge>
-          <Badge variant="outline" className="text-[10px]">
-            decay {item.decay_weight.toFixed(2)}
-          </Badge>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="text-xs text-foreground/90 truncate" title={label}>
+            {label}
+          </span>
+          <div className="flex items-center gap-1.5 ml-auto tabular-nums shrink-0">
+            <Badge variant="outline" className="text-[10px]">
+              score {item.score.toFixed(3)}
+            </Badge>
+            <Badge variant="outline" className="text-[10px]">
+              sim {item.similarity.toFixed(2)}
+            </Badge>
+            <Badge variant="outline" className="text-[10px]">
+              decay {item.decay_weight.toFixed(2)}
+            </Badge>
+          </div>
         </div>
       </AccordionTrigger>
       <AccordionContent>
