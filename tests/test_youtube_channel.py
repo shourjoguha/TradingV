@@ -366,6 +366,48 @@ def test_ingest_one_writes_drafts_and_marks_seen(tmp_vault, monkeypatch):
     assert result2["drafts_written"] == 0
 
 
+def test_ingest_one_resolves_channel_id_from_url_when_missing(tmp_vault, monkeypatch):
+    """If `_channel.yaml` ships with placeholder/missing channel_id but a real
+    channel_url, ingest_one should call resolve_channel_id and persist."""
+    from vault_indexer.ingest import youtube_channel as yt
+    from vault_indexer.ingest import _channel_yaml as cy
+
+    channel_dir = tmp_vault / "Videos" / "ch"
+    channel_dir.mkdir(parents=True)
+    cy.save(channel_dir, {
+        "channel_id": "TODO_UC_CHANNEL_ID",
+        "channel_url": "https://youtube.com/@example",
+        "author": "Example",
+        "ingest": {"enabled": True, "cadence": "daily", "prefer_captions": True},
+    })
+
+    monkeypatch.setattr(yt, "resolve_channel_id", lambda url: "UCresolvedABCDEFGHIJK")
+    monkeypatch.setattr(yt, "fetch_feed", lambda cid: [])
+    monkeypatch.setattr(yt, "fetch_captions", lambda url, *, work_dir: "txt")
+
+    yt.ingest_one(channel_dir=channel_dir, vault_root=tmp_vault)
+
+    persisted = cy.load(channel_dir)
+    assert persisted["channel_id"] == "UCresolvedABCDEFGHIJK"
+    # Ephemeral _rel_dir must NOT survive on disk.
+    assert "_rel_dir" not in persisted
+
+
+def test_ingest_one_returns_resolve_failed_when_no_yt_dlp_match(tmp_vault, monkeypatch):
+    from vault_indexer.ingest import youtube_channel as yt
+    from vault_indexer.ingest import _channel_yaml as cy
+
+    channel_dir = tmp_vault / "Videos" / "ch"
+    channel_dir.mkdir(parents=True)
+    cy.save(channel_dir, {
+        "channel_url": "https://youtube.com/@bad",
+        "ingest": {"enabled": True, "cadence": "daily"},
+    })
+    monkeypatch.setattr(yt, "resolve_channel_id", lambda url: None)
+    result = yt.ingest_one(channel_dir=channel_dir, vault_root=tmp_vault)
+    assert result["reason"] == "resolve_failed"
+
+
 def test_ingest_one_skips_when_not_due(tmp_vault):
     from vault_indexer.ingest import youtube_channel as yt
     from vault_indexer.ingest import _channel_yaml as cy

@@ -54,6 +54,29 @@ def _channel_feed_url(channel_id: str) -> str:
     return f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
 
 
+def resolve_channel_id(channel_url: str) -> Optional[str]:
+    """Best-effort: ask yt-dlp to print the channel_id of any video on the
+    channel. Used when operator dropped a `_channel.yaml` with only a
+    `channel_url`. Returns None on any failure (logged)."""
+    try:
+        proc = subprocess.run(
+            ["yt-dlp", "--print", "%(channel_id)s",
+             "--playlist-items", "1",
+             "--quiet", "--no-warnings", "--ignore-errors",
+             channel_url],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        logger.warning("yt-dlp resolve_channel_id failed for %s: %s", channel_url, e)
+        return None
+    out = (proc.stdout or "").strip().splitlines()
+    for line in out:
+        line = line.strip()
+        if line.startswith("UC") and len(line) >= 20:
+            return line
+    return None
+
+
 def fetch_feed(channel_id: str) -> list[FeedEntry]:
     """Return entries newest-first. Empty list on any fetch error (logged)."""
     try:
@@ -260,9 +283,23 @@ def ingest_one(
     cfg = {**cfg, "_rel_dir": rel_dir}              # ephemeral; not saved
 
     channel_id = cfg.get("channel_id")
-    if not channel_id:
-        logger.warning("channel %s has no channel_id; skipping", channel_dir)
-        return {"reason": "no_channel_id", "drafts_written": 0}
+    placeholder = isinstance(channel_id, str) and channel_id.startswith("TODO")
+    if not channel_id or placeholder:
+        url = cfg.get("channel_url")
+        if not url:
+            logger.warning("channel %s has no channel_id or channel_url; skipping", channel_dir)
+            return {"reason": "no_channel_id", "drafts_written": 0}
+        resolved = resolve_channel_id(url)
+        if not resolved:
+            logger.warning("channel %s: failed to resolve channel_id from %s", channel_dir, url)
+            return {"reason": "resolve_failed", "channel_url": url, "drafts_written": 0}
+        logger.info("channel %s: resolved channel_id %s from %s", channel_dir, resolved, url)
+        channel_id = resolved
+        # Persist back so subsequent ticks skip the resolve step.
+        on_disk = {k: v for k, v in cfg.items() if not k.startswith("_")}
+        on_disk["channel_id"] = resolved
+        _cfg.save(channel_dir, on_disk)
+        cfg = {**cfg, "channel_id": resolved}
 
     entries = fetch_feed(channel_id)
     new_entries = [e for e in entries if not _cfg.has_seen(cfg, e.video_id)]
