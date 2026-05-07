@@ -18,6 +18,11 @@ pyyaml
 Pillow
 python-multipart
 
+# Vault auto-ingest (Phase: video-channel-auto-ingest).
+yt-dlp
+feedparser
+openai-whisper
+
 # Kronos runtime (always installed; KRONOS_ENABLED toggles use, not install).
 torch>=2.0.0
 huggingface_hub==0.33.1

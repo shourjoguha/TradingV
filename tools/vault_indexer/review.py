@@ -27,6 +27,7 @@ REVIEW_FILE = "_review-queue.md"
 _CHECKBOX = re.compile(r"^\s*- \[(?P<state>[ xX])\] (?P<rest>.*)$")
 _TAG_RE = re.compile(r"tag:\s*`?(?P<tag>[a-z0-9_]+)`?")
 _LINK_RE = re.compile(r"link\s*(?:→|->)\s*(?P<dst>[^\s(]+)")
+_DRAFT_RE = re.compile(r"promote draft:\s*`?(?P<path>[^`\s]+\.md\.draft)`?")
 
 
 @dataclass
@@ -72,6 +73,21 @@ def render(suggestions: dict) -> str:
             lines.append(f"- `{tag}` — used in {count} note(s). Re-tag manually or accept as deprecated.")
         lines.append("")
 
+    pending_drafts = suggestions.get("pending_drafts") or []
+    if pending_drafts:
+        lines.append("## Pending video drafts (auto-ingested; promote to canonical)")
+        lines.append("")
+        for d in pending_drafts:
+            path = d["path"]
+            title = str(d.get("title") or path)
+            author = str(d.get("author") or "")
+            published = str(d.get("published_at") or "")
+            byline = " · ".join(p for p in (author, published) if p)
+            lines.append(f"### {path}")
+            lines.append(f"- {title}" + (f"  *({byline})*" if byline else ""))
+            lines.append(f"- [ ] promote draft: `{path}`")
+            lines.append("")
+
     rename_log = suggestions.get("rename_log") or []
     if rename_log:
         lines.append("## Renames applied")
@@ -80,7 +96,7 @@ def render(suggestions: dict) -> str:
             lines.append(f"- `{old}` → `{new}` (rewrote {count} note(s))")
         lines.append("")
 
-    if not (auto_tags or cross_links or orphans or rename_log):
+    if not (auto_tags or cross_links or orphans or rename_log or pending_drafts):
         lines.append("Nothing pending. Indexer will repopulate as new content arrives.")
         lines.append("")
 
@@ -119,6 +135,12 @@ def parse_ticks(text: str) -> list[tuple[str, dict]]:
         if m.group("state") not in ("x", "X"):
             continue
         rest = m.group("rest")
+        # Draft-promote ticks carry their own absolute-in-vault path, so they
+        # don't depend on the surrounding `### path` header.
+        draft_m = _DRAFT_RE.search(rest)
+        if draft_m:
+            out.append(("draft_promote", {"path": draft_m.group("path")}))
+            continue
         if current_path is None:
             continue
         tag_m = _TAG_RE.search(rest)
@@ -136,15 +158,19 @@ def promote(con, vault_root: Path, ticks: list[tuple[str, dict]]) -> dict:
 
     For 'tag': append tag to the note's frontmatter (idempotent).
     For 'link': insert an explicit edge into vault_edge with kind='wikilink'.
+    For 'draft_promote': rename `<x>.md.draft` → `<x>.md`, strip `draft: true`.
     """
-    counts = {"tags_added": 0, "links_added": 0, "skipped": 0}
+    counts = {"tags_added": 0, "links_added": 0, "skipped": 0, "drafts_promoted": 0}
     by_path: dict[str, list[str]] = {}
     edges: list[tuple[str, str, str, float]] = []
+    drafts: list[str] = []
     for kind, payload in ticks:
         if kind == "tag":
             by_path.setdefault(payload["path"], []).append(payload["tag"])
         elif kind == "link":
             edges.append((payload["src"], payload["dst"], "wikilink", 1.0))
+        elif kind == "draft_promote":
+            drafts.append(payload["path"])
 
     for rel_path, new_tags in by_path.items():
         abs_path = vault_root / rel_path
@@ -164,6 +190,32 @@ def promote(con, vault_root: Path, ticks: list[tuple[str, dict]]) -> dict:
                     (src, dst, kind, weight),
                 )
                 counts["links_added"] += 1
+
+    for rel_path in drafts:
+        if not rel_path.endswith(".md.draft"):
+            counts["skipped"] += 1
+            continue
+        src = vault_root / rel_path
+        if not src.exists():
+            counts["skipped"] += 1
+            continue
+        dst_rel = rel_path[: -len(".draft")]                 # ...md.draft → ...md
+        dst = vault_root / dst_rel
+        if dst.exists():
+            counts["skipped"] += 1
+            continue
+        # Strip `draft: true` from frontmatter before rename.
+        try:
+            import frontmatter as _fm
+            text = src.read_text(encoding="utf-8")
+            post = _fm.loads(text)
+            if "draft" in post.metadata:
+                del post.metadata["draft"]
+            src.write_text(_fm.dumps(post) + "\n", encoding="utf-8")
+        except Exception:                                    # noqa: BLE001
+            pass
+        src.rename(dst)
+        counts["drafts_promoted"] += 1
     return counts
 
 
@@ -211,4 +263,32 @@ def gather_suggestions(
         "auto_tags": auto_tags,
         "cross_links": cross_links,
         "orphan_tags": orphans,
+        "pending_drafts": _scan_pending_drafts(CONFIG.vault_path),
     }
+
+
+def _scan_pending_drafts(vault_root: Path) -> list[dict]:
+    """Walk the vault for `.md.draft` files left by the auto-ingest pipeline.
+    Returns enriched entries (title, author, published_at) for the review queue."""
+    if not vault_root.exists():
+        return []
+    import frontmatter as _fm
+    out: list[dict] = []
+    for p in vault_root.rglob("*.md.draft"):
+        try:
+            rel = str(p.relative_to(vault_root))
+        except ValueError:
+            continue
+        meta: dict = {}
+        try:
+            post = _fm.loads(p.read_text(encoding="utf-8"))
+            meta = post.metadata or {}
+        except Exception:                                    # noqa: BLE001
+            meta = {}
+        out.append({
+            "path": rel,
+            "title": meta.get("title"),
+            "author": meta.get("author"),
+            "published_at": meta.get("published_at"),
+        })
+    return sorted(out, key=lambda d: d["path"])

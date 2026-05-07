@@ -75,5 +75,13 @@ class Settings(BaseSettings):
     # passive replica, has nothing to push).
     SYNC_DRAIN_INTERVAL_SECONDS: int = 300
 
+    # Video channel auto-ingest (per `_channel.yaml`). Off by default so
+    # existing vaults aren't surprised on next deploy; flip to true when
+    # the operator has authored a `_channel.yaml` and wants the loop to
+    # start polling. Laptop-only — vault lives on the operator's disk.
+    VIDEO_INGEST_ENABLED: bool = False
+    VIDEO_INGEST_WARMUP_SECONDS: int = 3600                  # 1 hr post-boot
+    VIDEO_INGEST_SLEEP_SECONDS: int = 3600                   # check hourly; per-channel cadence respected via _channel.yaml.last_polled_at
+
 
 SETTINGS = Settings()

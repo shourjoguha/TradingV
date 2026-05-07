@@ -140,6 +140,7 @@ async def lifespan(_app: FastAPI):
         macro_task = None
         hyp_task = None
         research_task = None
+        video_ingest_task = None
         queue_task = None
         accuracy_stop = asyncio.Event()
         drift_stop = asyncio.Event()
@@ -149,6 +150,7 @@ async def lifespan(_app: FastAPI):
         macro_stop = asyncio.Event()
         hyp_stop = asyncio.Event()
         research_stop = asyncio.Event()
+        video_ingest_stop = asyncio.Event()
         queue_stop = asyncio.Event()
 
         # tv_context expire-sweep runs on BOTH sides (Railway has its own
@@ -284,6 +286,42 @@ async def lifespan(_app: FastAPI):
                 name="research-weekly",
             )
 
+            # Video channel auto-ingest — hourly poll of every
+            # `Videos/<channel>/_channel.yaml` whose cadence has elapsed.
+            # Off by default (VIDEO_INGEST_ENABLED=false) so existing operators
+            # opt in deliberately. Per-channel failures logged + skipped.
+            if SETTINGS.VIDEO_INGEST_ENABLED:
+                async def _video_ingest_loop() -> None:
+                    from tools.vault_indexer.ingest import youtube_channel as _yt
+                    interval = SETTINGS.VIDEO_INGEST_SLEEP_SECONDS
+                    warmup = SETTINGS.VIDEO_INGEST_WARMUP_SECONDS
+                    try:
+                        await asyncio.wait_for(video_ingest_stop.wait(), timeout=warmup)
+                        if video_ingest_stop.is_set():
+                            return
+                    except asyncio.TimeoutError:
+                        pass
+                    while True:
+                        try:
+                            results = await asyncio.to_thread(_yt.ingest_all)
+                            drafts = sum((r.get("drafts_written") or 0) for r in results)
+                            if drafts:
+                                logger.info("video-ingest: %d new draft(s) across %d channels", drafts, len(results))
+                        except asyncio.CancelledError:
+                            raise
+                        except Exception as e:                # noqa: BLE001
+                            logger.warning("video-ingest tick failed: %s", e)
+                        try:
+                            await asyncio.wait_for(video_ingest_stop.wait(), timeout=interval)
+                            if video_ingest_stop.is_set():
+                                return
+                        except asyncio.TimeoutError:
+                            continue
+
+                video_ingest_task = asyncio.create_task(
+                    _video_ingest_loop(), name="video-ingest"
+                )
+
             # Submit-queue worker — single-flight FIFO drain. Boot recovery
             # first: any 'running' rows from a crashed prior process flip back
             # to 'pending' so this worker re-picks them.
@@ -317,6 +355,7 @@ async def lifespan(_app: FastAPI):
             (macro_stop, macro_task),
             (hyp_stop, hyp_task),
             (research_stop, research_task),
+            (video_ingest_stop, video_ingest_task),
         ):
             stop_evt.set()
             if task is not None:

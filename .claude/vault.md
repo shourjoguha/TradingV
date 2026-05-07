@@ -20,6 +20,7 @@ macro-workbench → decision-tool roadmap (shipped 2026-05-02).
   _taxonomy.md                    ← 15-tag controlled vocabulary; hand-editable
   _review-queue.md                ← indexer-managed; operator ticks checkboxes
   _index.md                       ← operator-authored folder context (any level)
+  _channel.yaml                   ← per-channel auto-ingest config (Videos/<channel>/)
   .indexer/cache.db               ← SQLite + sqlite-vec; gitignored
 
 tools/vault_indexer/              ← FastAPI sidecar; port 8001
@@ -60,6 +61,16 @@ tools/vault_indexer/              ← FastAPI sidecar; port 8001
   appear in KNN evidence. Bundle assembler walks the ancestor chain of
   each evidence path and prepends every `_index.md` found as
   "Source context" before the evidence list. Verbatim — no token cap.
+- **Per-channel auto-ingest (`_channel.yaml`)** — operator drops a YAML
+  config in `Videos/<channel>/` to subscribe the auto-ingest loop
+  (`tools/vault_indexer/ingest/youtube_channel.py`). Off by default
+  (`VIDEO_INGEST_ENABLED=false`). When enabled, the laptop's lifespan
+  task polls the channel's RSS feed (`youtube.com/feeds/videos.xml?channel_id=`),
+  fetches captions via `yt-dlp --write-auto-sub` (whisper fallback), and
+  drops `<published>-<slug>.md.draft` files in the channel folder. The
+  draft surfaces in `_review-queue.md` as a "promote draft" checkbox;
+  operator ticks → indexer renames `.md.draft` → `.md` and strips the
+  `draft: true` flag.
 
 See [ADR-014](decisions/014-vault-indexer.md) for the full decision
 record.
