@@ -20,6 +20,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Optional
@@ -270,9 +271,17 @@ def ingest_one(
     channel_dir: Path,
     vault_root: Path,
     max_videos_per_run: int = 3,
+    pause_seconds_between: int = 0,
 ) -> dict[str, Any]:
     """Poll one channel. Returns {fetched, drafts_written, skipped}.
-    Best-effort — exceptions are caught + logged."""
+    Best-effort — exceptions are caught + logged.
+
+    `pause_seconds_between` adds a fixed sleep AFTER each draft is written
+    (and AFTER state is persisted) to pace whisper-heavy backfills. The
+    lifespan task uses 0 (process all in one tick); the backfill CLI uses
+    ~2700 (45 min) so a long-running backfill can be cancelled mid-run
+    without losing more than one in-flight video.
+    """
     cfg = _cfg.load(channel_dir)
     if cfg is None:
         return {"reason": "no_yaml", "drafts_written": 0}
@@ -341,10 +350,29 @@ def ingest_one(
         drafts_written += 1
         fetched_ids.append(entry.video_id)
 
-    # Persist polled state (drop the ephemeral _rel_dir).
+        # Persist incrementally so a Ctrl-C mid-backfill doesn't lose the
+        # progress made so far. Re-loads the full cfg from disk to merge any
+        # operator edits during a long-running backfill, then re-injects the
+        # ephemeral _rel_dir for downstream calls.
+        on_disk = _cfg.load(channel_dir) or {}
+        on_disk = _cfg.mark_polled(on_disk, video_ids=[entry.video_id])
+        _cfg.save(channel_dir, on_disk)
+        cfg = {**on_disk, "_rel_dir": rel_dir}
+
+        if pause_seconds_between and entry is not new_entries[-1]:
+            logger.info(
+                "video-ingest: paced sleep %ss after %s",
+                pause_seconds_between, entry.video_id,
+            )
+            time.sleep(pause_seconds_between)
+
+    # Final stamp. fetched_ids covers BOTH successful drafts (already
+    # persisted per-video, so idempotent here) AND skipped-no-transcript
+    # videos (only seen at this point) so the next tick doesn't retry them.
     cfg.pop("_rel_dir", None)
-    cfg = _cfg.mark_polled(cfg, video_ids=fetched_ids)
-    _cfg.save(channel_dir, cfg)
+    on_disk = _cfg.load(channel_dir) or cfg
+    on_disk = _cfg.mark_polled(on_disk, video_ids=fetched_ids)
+    _cfg.save(channel_dir, on_disk)
 
     return {
         "channel": channel_id,
@@ -362,13 +390,23 @@ def discover_channel_dirs(vault_root: Path) -> Iterable[Path]:
     return [p.parent for p in videos_root.rglob(CHANNEL_FILE) if p.is_file()]
 
 
-def ingest_all(*, vault_root: Optional[Path] = None) -> list[dict[str, Any]]:
+def ingest_all(
+    *,
+    vault_root: Optional[Path] = None,
+    max_videos_per_run: int = 3,
+    pause_seconds_between: int = 0,
+) -> list[dict[str, Any]]:
     """Top-level orchestrator — discover + ingest every channel that's due."""
     root = vault_root or CONFIG.vault_path
     out: list[dict[str, Any]] = []
     for channel_dir in discover_channel_dirs(root):
         try:
-            result = ingest_one(channel_dir=channel_dir, vault_root=root)
+            result = ingest_one(
+                channel_dir=channel_dir,
+                vault_root=root,
+                max_videos_per_run=max_videos_per_run,
+                pause_seconds_between=pause_seconds_between,
+            )
             out.append({"channel_dir": str(channel_dir.relative_to(root)), **result})
         except Exception as e:                       # noqa: BLE001
             logger.exception("ingest_one failed for %s", channel_dir)
@@ -386,10 +424,39 @@ def ingest_all(*, vault_root: Optional[Path] = None) -> list[dict[str, Any]]:
 
 def main() -> int:
     import argparse
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
     ap = argparse.ArgumentParser(description="Poll all _channel.yaml under Videos/")
     ap.add_argument("--vault", default=str(CONFIG.vault_path))
+    ap.add_argument(
+        "--max-videos", type=int, default=3,
+        help="Cap per-channel videos processed in one run. Backfill: bump to 50.",
+    )
+    ap.add_argument(
+        "--pause-seconds", type=int, default=0,
+        help="Sleep between successful drafts. Backfill default: 2700 (45 min).",
+    )
+    ap.add_argument(
+        "--force", action="store_true",
+        help="Ignore is_due cadence — useful for one-shot backfills.",
+    )
     args = ap.parse_args()
-    results = ingest_all(vault_root=Path(args.vault))
+    if args.force:
+        # Force is_due() True by clearing last_polled_at on every channel.
+        # Saved values restored after the run via the normal mark_polled path.
+        from . import _channel_yaml as cy
+        for d in discover_channel_dirs(Path(args.vault)):
+            cfg = cy.load(d) or {}
+            ingest = dict(cfg.get("ingest") or {})
+            ingest["last_polled_at"] = None
+            cy.save(d, {**cfg, "ingest": ingest})
+    results = ingest_all(
+        vault_root=Path(args.vault),
+        max_videos_per_run=args.max_videos,
+        pause_seconds_between=args.pause_seconds,
+    )
     for r in results:
         print(r)
     return 0
