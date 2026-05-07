@@ -222,3 +222,40 @@ def get_node(con: apsw.Connection, path: str) -> Optional[dict]:
 
 def all_node_paths(con: apsw.Connection) -> list[str]:
     return [r[0] for r in con.execute("SELECT path FROM vault_node")]
+
+
+def folder_contexts_for(con: apsw.Connection, paths: list[str]) -> list[dict]:
+    """For each evidence path, walk up the directory tree and collect every
+    `_index.md` (kind='folder_context') node that exists in the cache. Returns
+    a deduped list ordered root-first, with each entry carrying the list of
+    evidence paths it applies to."""
+    if not paths:
+        return []
+    # Build the candidate set: for each evidence path, every ancestor `_index.md`.
+    candidates: dict[str, set[str]] = {}        # ctx_path -> evidence_paths it covers
+    for ev in paths:
+        parts = ev.split("/")
+        # Drop the leaf (the evidence file itself); only ancestor folders host vignettes.
+        for i in range(len(parts) - 1, -1, -1):
+            prefix = "/".join(parts[:i])
+            ctx = f"{prefix}/_index.md" if prefix else "_index.md"
+            candidates.setdefault(ctx, set()).add(ev)
+    # Filter to existing nodes of kind=folder_context.
+    placeholders = ",".join(["?"] * len(candidates))
+    rows = list(con.execute(
+        f"SELECT path, title, body_md FROM vault_node "
+        f"WHERE kind = 'folder_context' AND path IN ({placeholders})",
+        list(candidates.keys()),
+    ))
+    found = {r[0]: (r[1], r[2]) for r in rows}
+    out: list[dict] = []
+    # Order root-first by path depth (shorter = closer to root).
+    for ctx_path in sorted(found.keys(), key=lambda p: p.count("/")):
+        title, body = found[ctx_path]
+        out.append({
+            "path": ctx_path,
+            "title": title,
+            "body": body,
+            "applies_to": sorted(candidates[ctx_path]),
+        })
+    return out

@@ -28,6 +28,11 @@ const Research = lazy(() =>
   import('./pages/Research').then((m) => ({ default: m.Research })),
 )
 
+// Lazy-load TVContextInbox (Phase 2-6 TradingView context layer).
+const TVContextInbox = lazy(() =>
+  import('./pages/TVContextInbox').then((m) => ({ default: m.TVContextInbox })),
+)
+
 export function App() {
   return (
     <Layout>
@@ -49,6 +54,14 @@ export function App() {
           element={
             <Suspense fallback={<Skeleton className="h-40 w-full" />}>
               <Research />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/tv-context/:ticker?"
+          element={
+            <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+              <TVContextInbox />
             </Suspense>
           }
         />

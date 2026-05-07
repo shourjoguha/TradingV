@@ -552,6 +552,96 @@ async def test_ask_response_includes_evidence_and_macro(client, tmp_path, monkey
     assert gj["proposed_action"] is None
 
 
+@pytest.mark.asyncio
+async def test_ask_response_includes_source_context(client, tmp_path, monkeypatch):
+    """Operator-authored `_index.md` vignettes should pass verbatim into
+    AskResponse + the persisted bundle, with no truncation."""
+    from app.research import service as svc
+
+    monkeypatch.setenv("VAULT_PATH", str(tmp_path))
+    monkeypatch.setattr(svc, "VAULT_PATH", tmp_path)
+
+    await client.post(
+        "/v1/hypotheses",
+        headers=HEADERS,
+        json={
+            "slug": "sc-test",
+            "title": "sc",
+            "claim_type": "regime",
+            "axis": "x",
+            "primary_metric": "y",
+            "tracking_signal": "y",
+            "invalidator": {"op": "manual", "args": {}},
+            "ttl_months": 6,
+        },
+    )
+
+    fake = client_mod.ClaudeResult(
+        verdict_text="ok",
+        tool_calls=[],
+        tokens_in=10, tokens_out=5, cache_read_tokens=0, est_cost_usd=0.0,
+    )
+
+    async def _fake_ask_claude(**kwargs):
+        return fake
+
+    monkeypatch.setattr(svc._client, "ask_claude", _fake_ask_claude)
+
+    from app.research import bundle as bundle_mod_local
+
+    async def _fake_evidence(*args, **kwargs):
+        return [{
+            "vault_path": "Videos/fx-evolution-daily/2026-05-06.md",
+            "title": "May 6 daily",
+            "section": "Intro",
+            "text": "DXY pivot setup",
+            "similarity": 0.4,
+            "decay_weight": 1.0,
+            "score": 0.4,
+            "published_at": "2026-05-06",
+            "author": "fx-evo",
+        }]
+
+    long_body = "Daily macro/FX setup.\n\n" + ("Detail line.\n" * 200)
+
+    async def _fake_source_context(_evidence):
+        return [{
+            "path": "Videos/fx-evolution-daily/_index.md",
+            "title": "FX Evolution Daily — channel context",
+            "body": long_body,
+            "applies_to": ["Videos/fx-evolution-daily/2026-05-06.md"],
+        }]
+
+    monkeypatch.setattr(bundle_mod_local, "_retrieve_evidence", _fake_evidence)
+    monkeypatch.setattr(bundle_mod_local, "_retrieve_source_context", _fake_source_context)
+
+    async def _fake_macro(*args, **kwargs):
+        return {}
+    monkeypatch.setattr(bundle_mod_local, "_macro_snapshot", _fake_macro)
+
+    r = await client.post(
+        "/v1/research/ask",
+        headers=HEADERS,
+        json={"query": "stress", "hypothesis_slugs": ["sc-test"]},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert len(body["source_context"]) == 1
+    sc = body["source_context"][0]
+    assert sc["path"] == "Videos/fx-evolution-daily/_index.md"
+    assert sc["title"] == "FX Evolution Daily — channel context"
+    assert sc["body"] == long_body                      # NO TRUNCATION
+    assert sc["applies_to"] == ["Videos/fx-evolution-daily/2026-05-06.md"]
+
+    # GET /queries/{id} returns the same enriched shape.
+    qid = body["query_id"]
+    g = await client.get(f"/v1/research/queries/{qid}", headers=HEADERS)
+    assert g.status_code == 200
+    gj = g.json()
+    assert len(gj["source_context"]) == 1
+    assert gj["source_context"][0]["body"] == long_body
+
+
 def test_research_hook_detects_approve_tick():
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
     for m in [m for m in list(sys.modules) if m.startswith("vault_indexer")]:

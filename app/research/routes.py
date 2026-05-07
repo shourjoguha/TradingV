@@ -26,6 +26,7 @@ def _enriched_read(row: ResearchQuery) -> ResearchQueryRead:
     bundle = row.bundle or {}
     evidence = _service._flatten_evidence(bundle)
     macro = _service._flatten_macro(bundle)
+    source_context = _service._flatten_source_context(bundle)
     proposed: Optional[dict[str, Any]] = None
     # If approved, prefer the approved_action snapshot.
     if row.approved_action:
@@ -50,6 +51,7 @@ def _enriched_read(row: ResearchQuery) -> ResearchQueryRead:
         proposed_action=proposed,
         evidence=evidence,
         macro_state=macro,
+        source_context=source_context,
     )
 
 
@@ -61,6 +63,8 @@ async def ask_endpoint(
     result = await _service.ask(
         query=payload.query,
         hypothesis_slugs=payload.hypothesis_slugs,
+        tickers=payload.tickers,
+        force_skip_context_gate=payload.force_skip_context_gate,
     )
     return AskResponse(**result)
 

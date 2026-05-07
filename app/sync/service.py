@@ -181,6 +181,17 @@ async def drain_outbox(*, max_rows: int = 100) -> dict[str, int]:
                     api_key=api_key,
                     payload=row.payload_json or {},
                 )
+            elif kind in (
+                "tv_context_webhook",
+                "tv_context_note",
+                "tv_context_idea",
+                "tv_context_event",
+            ):
+                ok, err = await peer_client.push_tv_context(
+                    peer_url=row.peer_url,
+                    api_key=api_key,
+                    payload=row.payload_json or {},
+                )
             else:
                 ok, err = False, f"unknown_kind: {kind}"
 

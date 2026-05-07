@@ -31,7 +31,12 @@ Durable queue with five row kinds. Each external write enqueues a row:
 - `kind='schedule'` — one per `PUT /v1/schedule` (full config snapshot).
 - `kind='label'` — one per ticker-label upsert / delete.
 
-A fire-and-forget `drain_outbox()` runs after each job + once on startup + on manual trigger. Drain dispatches by `kind` to the matching `peer_client.push_*` function. Same exponential-backoff retry policy applies to all kinds.
+`drain_outbox()` runs in three places:
+1. **Startup catch-up** — once at lifespan boot (drains rows from prior process). Skipped on Railway (passive replica, no outbound rows).
+2. **Periodic drain loop** — `app.main.lifespan` `_sync_drain_loop` task on laptop only. Wakes every `SYNC_DRAIN_INTERVAL_SECONDS` (default 300s = 5 min). **Replaces the previous per-job `asyncio.create_task(drain_outbox)` pattern.** Trade-off: sync latency rises from "~instant" to "≤5 min." Reason: Railway serverless billing tracks active minutes — batched drain reduces wake-ups by ~10-50× without changing eventual consistency.
+3. **Manual trigger** — `POST /v1/sync/drain` for the operator-side pull (debugging or burst flush).
+
+Drain dispatches by `kind` to the matching `peer_client.push_*` function. Same exponential-backoff retry policy applies to all kinds. Eight kinds total: `ticker | result | watchlist | schedule | label | tv_context_webhook | tv_context_note | tv_context_idea | tv_context_event`.
 
 ### Schema
 ```

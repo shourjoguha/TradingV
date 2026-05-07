@@ -194,3 +194,79 @@ def test_index_and_search_end_to_end(tmp_vault):
     assert results, "expected at least one result"
     assert results[0]["path"] == "Notes/stag.md"
     assert results[0]["similarity"] > results[-1]["similarity"]
+
+
+def test_folder_context_index_md_skips_chunks_and_resolves_via_path_walk(tmp_vault):
+    """`_index.md` files must:
+       1. Be ingestable (kind coerced to folder_context regardless of frontmatter)
+       2. NOT produce chunk rows (zero embedding cost; never appear in evidence)
+       3. Be reachable from any descendant evidence path via `folder_contexts_for`
+    Pure-path test — does not require a working embedder."""
+    from vault_indexer import cache, indexer
+    from vault_indexer.vault import scan
+
+    channel_dir = tmp_vault / "Videos" / "fx-evolution-daily"
+    channel_dir.mkdir(parents=True)
+    (channel_dir / "_index.md").write_text(
+        "---\nkind: anything-the-operator-typed\ntitle: FX Evolution channel\n---\n"
+        "Daily FX setup. Default grain daily; weekly callouts explicit.\n",
+        encoding="utf-8",
+    )
+    (channel_dir / "2026-05-06-dxy-pivot.md").write_text(
+        "---\nkind: video\ntitle: DXY pivot\n---\n"
+        "Body about DXY pivot setup and rate path.\n",
+        encoding="utf-8",
+    )
+    # Also a top-level `Videos/_index.md` to confirm two-level chain.
+    (tmp_vault / "Videos" / "_index.md").write_text(
+        "---\ntitle: Videos collection\n---\n"
+        "Convention: per-channel folders with `_index.md`.\n",
+        encoding="utf-8",
+    )
+
+    from vault_indexer.config import CONFIG
+    con = cache.init(CONFIG.db_path, CONFIG.embedding_dim)
+
+    # `_index.md` must be ingestable now.
+    nodes = list(scan(tmp_vault))
+    paths_seen = {n.rel_path for n in nodes}
+    assert "Videos/_index.md" in paths_seen
+    assert "Videos/fx-evolution-daily/_index.md" in paths_seen
+    # Auto-coerced kind regardless of any frontmatter the operator typed.
+    by_path = {n.rel_path: n for n in nodes}
+    assert by_path["Videos/fx-evolution-daily/_index.md"].kind == "folder_context"
+    assert by_path["Videos/_index.md"].kind == "folder_context"
+
+    # Index just the two _index.md files (not the video; embedder may not be loaded).
+    indexer.index_one(con, by_path["Videos/_index.md"])
+    indexer.index_one(con, by_path["Videos/fx-evolution-daily/_index.md"])
+
+    # No chunks produced for folder_context kind.
+    chunk_count = list(con.execute(
+        "SELECT COUNT(*) FROM vault_chunk WHERE path = ?",
+        ("Videos/fx-evolution-daily/_index.md",),
+    ))[0][0]
+    assert chunk_count == 0
+    chunk_count_top = list(con.execute(
+        "SELECT COUNT(*) FROM vault_chunk WHERE path = ?",
+        ("Videos/_index.md",),
+    ))[0][0]
+    assert chunk_count_top == 0
+
+    # folder_contexts_for walks ancestors and returns both vignettes
+    # ordered root-first.
+    out = cache.folder_contexts_for(
+        con, ["Videos/fx-evolution-daily/2026-05-06-dxy-pivot.md"]
+    )
+    paths = [r["path"] for r in out]
+    assert paths == [
+        "Videos/_index.md",
+        "Videos/fx-evolution-daily/_index.md",
+    ]
+    assert all(
+        r["applies_to"] == ["Videos/fx-evolution-daily/2026-05-06-dxy-pivot.md"]
+        for r in out
+    )
+    # Body is preserved verbatim — no truncation in the cache layer.
+    fx_body = next(r for r in out if "fx-evolution-daily" in r["path"])["body"]
+    assert "Default grain daily" in fx_body

@@ -169,17 +169,18 @@ async def _process_job(job_id: str, *, horizon_bars: Optional[int]) -> None:
             if (job.origin or "self") == "self":
                 snapshot = _serialize_job_snapshot(job)
 
-    # Fire-and-forget sync to peer backend.
+    # Enqueue sync rows; the periodic drain loop in app.main lifespan
+    # picks them up on its next tick (default 5 min). Switching from
+    # per-job drain to batched drain saves Railway serverless wake-ups
+    # without changing eventual consistency — outbox semantics
+    # unchanged. Worst-case sync latency: SYNC_DRAIN_INTERVAL_SECONDS.
     from app.sync import service as sync_service
 
     if (pairs or snapshot is not None) and sync_service.peer_configured():
-        import asyncio
-
         if pairs:
             await sync_service.enqueue(pairs)
         if snapshot is not None:
             await sync_service.enqueue_result(snapshot)
-        asyncio.create_task(sync_service.drain_outbox())
 
     # Completion-trigger: wake the daily scheduler in case it was deferred
     # by AtCapacityError on its last attempt. No-op when scheduler not running.

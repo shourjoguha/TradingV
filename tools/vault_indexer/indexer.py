@@ -49,13 +49,19 @@ def index_one(con, node: VaultNode, *, force: bool = False) -> bool:
             )
         return False
 
-    chunks = chunk_body(
-        node.body_md,
-        target_tokens=CONFIG.chunk_target_tokens,
-        overlap_tokens=CONFIG.chunk_overlap_tokens,
-    )
-    texts = [t for t, _ in chunks]
-    embeddings = _embed.encode_passages(texts) if texts else []
+    # Folder-context vignettes (`_index.md`) are stored as nodes for body lookup
+    # but never embedded — they don't compete in the evidence KNN pool.
+    if node.kind == "folder_context":
+        chunks: list[tuple[str, str | None]] = []
+        embeddings: list = []
+    else:
+        chunks = chunk_body(
+            node.body_md,
+            target_tokens=CONFIG.chunk_target_tokens,
+            overlap_tokens=CONFIG.chunk_overlap_tokens,
+        )
+        texts = [t for t, _ in chunks]
+        embeddings = _embed.encode_passages(texts) if texts else []
 
     with _cache.transaction(con) as cur:
         _cache.upsert_node(

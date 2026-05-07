@@ -6,6 +6,7 @@ import uuid
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -90,6 +91,12 @@ class Hypothesis(Base):
         String(32), nullable=False, server_default=STATUS_ACTIVE
     )
     body_md: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    # Phase 4 (TV-context gating): when TRUE, /v1/research/ask short-circuits
+    # to status='needs_context' if any operator-supplied ticker has zero
+    # recent tv_context items. See app.research.service._check_tv_context.
+    requires_tv_context: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default="0"
+    )
 
     __table_args__ = (
         UniqueConstraint("slug", name="uq_hypothesis_slug"),

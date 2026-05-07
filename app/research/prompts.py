@@ -131,6 +131,24 @@ def render_bundle_text(bundle: dict[str, Any]) -> str:
             parts.append(f"  linked_vault_paths: {h['linked_vault_paths']}")
         parts.append("")
 
+    # Operator-authored folder vignettes (`_index.md` files in the vault)
+    # apply along the ancestor chain of the evidence below. Render verbatim
+    # — the operator decided these get no token cap.
+    src_ctx = bundle.get("source_context") or []
+    if src_ctx:
+        parts.append("SOURCE CONTEXT (operator-authored, always-on per folder)")
+        for s in src_ctx:
+            title = s.get("title") or s.get("path")
+            parts.append(f"### {title} ({s.get('path')})")
+            applies = s.get("applies_to") or []
+            if applies:
+                parts.append(f"  applies_to: {applies}")
+            body = (s.get("body") or "").strip()
+            if body:
+                parts.append(body)
+            parts.append("")
+        parts.append("")
+
     parts.append("EVIDENCE (decay-weighted)")
     for ex in bundle.get("evidence", []):
         line = (

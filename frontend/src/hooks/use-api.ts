@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiFetch, healthCheck } from '../lib/api'
 import { useBackend } from './use-backend'
 import type {
+  BackendId,
   Schedule,
   ScheduleUpdate,
   WatchlistResponse,
@@ -40,6 +41,12 @@ import type {
   AskResponse,
   ResearchQueriesList,
   ResearchQueryRead,
+  TVContextItem,
+  TVContextIngestResult,
+  TVNoteIngest,
+  TVIdeaIngest,
+  TVEventIngest,
+  TVVisionSpend,
 } from '../lib/types'
 import { toast } from 'sonner'
 
@@ -957,6 +964,178 @@ export function useDismissResearchQuery() {
     },
     onError: (err: any) =>
       toast.error(`Dismiss failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// TV Context — ingest + retrieval hooks
+// ---------------------------------------------------------------------------
+
+export function useTVContextByTicker(
+  ticker: string | null | undefined,
+  opts?: { includeExpired?: boolean },
+) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['tv-context', backendId, ticker, opts?.includeExpired],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (opts?.includeExpired) s.set('include_expired', 'true')
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<TVContextItem[]>(`/v1/tv-context/by-ticker/${ticker}${qs}`, {
+        backendId,
+      })
+    },
+    enabled: !!ticker,
+    staleTime: 15_000,
+  })
+}
+
+export function useTVContextByTrade(tradeId: string | null | undefined) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['tv-context-trade', backendId, tradeId],
+    queryFn: () =>
+      apiFetch<TVContextItem[]>(`/v1/tv-context/by-trade/${tradeId}`, { backendId }),
+    enabled: !!tradeId,
+    staleTime: 30_000,
+  })
+}
+
+export function useTVVisionSpend(month: string) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['tv-vision-spend', backendId, month],
+    queryFn: () =>
+      apiFetch<TVVisionSpend>(`/v1/tv-context/vision-spend?month=${month}`, {
+        backendId,
+      }),
+    staleTime: 60_000,
+  })
+}
+
+function invalidateTVContext(qc: ReturnType<typeof useQueryClient>, backendId: BackendId) {
+  qc.invalidateQueries({ queryKey: ['tv-context', backendId] })
+  qc.invalidateQueries({ queryKey: ['tv-vision-spend', backendId] })
+}
+
+export function useIngestTVNote() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: TVNoteIngest) =>
+      apiFetch<TVContextIngestResult>('/v1/tv-context/note', {
+        method: 'POST',
+        body,
+        backendId,
+      }),
+    onSuccess: () => {
+      invalidateTVContext(qc, backendId)
+      toast.success('Note saved')
+    },
+    onError: (err: any) =>
+      toast.error(`Note failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+export function useIngestTVIdea() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: TVIdeaIngest) =>
+      apiFetch<TVContextIngestResult>('/v1/tv-context/idea', {
+        method: 'POST',
+        body,
+        backendId,
+      }),
+    onSuccess: () => {
+      invalidateTVContext(qc, backendId)
+      toast.success('Idea saved')
+    },
+    onError: (err: any) =>
+      toast.error(`Idea failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+export function useIngestTVEvent() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: TVEventIngest) =>
+      apiFetch<TVContextIngestResult>('/v1/tv-context/event', {
+        method: 'POST',
+        body,
+        backendId,
+      }),
+    onSuccess: () => {
+      invalidateTVContext(qc, backendId)
+      toast.success('Event saved')
+    },
+    onError: (err: any) =>
+      toast.error(`Event failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+export function useIngestTVScreenshot() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      file: File | Blob
+      ticker: string
+      note?: string
+      hypothesisId?: string
+      visionEnabled?: boolean
+    }) => {
+      const fd = new FormData()
+      fd.append('file', input.file, 'chart.png')
+      fd.append('ticker', input.ticker)
+      if (input.note) fd.append('note', input.note)
+      if (input.hypothesisId) fd.append('hypothesis_id', input.hypothesisId)
+      if (input.visionEnabled !== undefined)
+        fd.append('vision_enabled', String(input.visionEnabled))
+      const cfg = (await import('../lib/backend-store')).getBackendConfig(backendId)
+      const res = await fetch(`${cfg.baseUrl}/v1/tv-context/screenshot`, {
+        method: 'POST',
+        headers: { 'X-API-Key': cfg.apiKey },
+        body: fd,
+      })
+      if (!res.ok) {
+        let detail = res.statusText
+        try {
+          const j = await res.json()
+          detail = j.detail ?? JSON.stringify(j)
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail)
+      }
+      return (await res.json()) as TVContextIngestResult
+    },
+    onSuccess: () => {
+      invalidateTVContext(qc, backendId)
+      toast.success('Screenshot saved')
+    },
+    onError: (err: any) =>
+      toast.error(`Upload failed: ${err?.message || 'unknown error'}`),
+  })
+}
+
+export function useArchiveTVContext() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<TVContextItem>(`/v1/tv-context/${id}/archive`, {
+        method: 'POST',
+        backendId,
+      }),
+    onSuccess: () => {
+      invalidateTVContext(qc, backendId)
+      toast.success('Archived')
+    },
+    onError: (err: any) =>
+      toast.error(`Archive failed: ${err?.detail || err?.message || 'unknown error'}`),
   })
 }
 

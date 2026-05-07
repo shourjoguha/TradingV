@@ -30,6 +30,7 @@ from app.research import models as _research_models  # noqa: F401
 # import here for create_all parity with the test conftest.
 from app.macro import models as _macro_models  # noqa: F401
 from app.boards import models as _board_models  # noqa: F401
+from app.tv_context import models as _tv_context_models  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -80,175 +81,248 @@ async def lifespan(_app: FastAPI):
 
         from app.sync import service as _sync_service
 
-        if _sync_service.peer_configured():
+        # Railway is a passive replica — it never enqueues outbound rows
+        # (origin='peer' on imported jobs bypasses enqueue), so its
+        # outbox is empty. Skip the catch-up drain on Railway to avoid a
+        # gratuitous wake of the peer.
+        is_railway = SETTINGS.INSTANCE_NAME == "railway"
+
+        if not is_railway and _sync_service.peer_configured():
             asyncio.create_task(_sync_service.drain_outbox())
 
-        # Hourly purge of old completed outbox rows (config-driven retention).
+        # Periodic outbox purge — keeps completed rows from growing
+        # unbounded. Useful on both sides (Railway also accumulates rows
+        # if the operator ever points TWO laptops at one Railway).
         purge_task = asyncio.create_task(_sync_service.purge_loop(), name="outbox-purge")
+
+        # Periodic outbox drain — laptop-only. Replaces the previous
+        # per-analysis-job `asyncio.create_task(drain_outbox)` pattern so
+        # we batch sync pushes instead of waking Railway on every job
+        # completion. Railway pays per active minute; serverless cost
+        # tracks wake-up count.
+        sync_drain_task = None
+        sync_drain_stop = asyncio.Event()
+        if not is_railway and _sync_service.peer_configured():
+            async def _sync_drain_loop() -> None:
+                interval = SETTINGS.SYNC_DRAIN_INTERVAL_SECONDS
+                while True:
+                    try:
+                        await asyncio.wait_for(sync_drain_stop.wait(), timeout=interval)
+                        if sync_drain_stop.is_set():
+                            return
+                    except asyncio.TimeoutError:
+                        pass
+                    try:
+                        await _sync_service.drain_outbox()
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning("sync drain tick failed: %s", e)
+
+            sync_drain_task = asyncio.create_task(_sync_drain_loop(), name="sync-drain")
 
         # Daily forecast scheduler (idle until enabled via PUT /v1/schedule).
         from app.schedule import runner as _schedule_runner
 
         _schedule_runner.start()
 
-        # Hourly accuracy evaluator — fills prediction_accuracy as predictions
-        # elapse and actuals land in ohlcv_bars. Idempotent; safe to interrupt.
-        from app.accuracy import drift as _drift, service as _accuracy_service
-
+        # ---- Loops below: LAPTOP ONLY -----------------------------------
+        # Railway is a passive replica + read API + webhook receiver. None
+        # of these loops produce data Railway needs to compute itself —
+        # all writes flow laptop → Railway via the outbox. Running them on
+        # Railway only burns serverless wake-ups + risks duplicate
+        # Telegram alerts / yfinance hits / hypothesis ticks.
+        accuracy_task = None
+        drift_task = None
+        digest_task = None
+        market_data_task = None
+        opps_task = None
+        macro_task = None
+        hyp_task = None
+        research_task = None
+        queue_task = None
         accuracy_stop = asyncio.Event()
-        accuracy_task = asyncio.create_task(
-            _accuracy_service.evaluator_loop(stop_event=accuracy_stop),
-            name="accuracy-evaluator",
-        )
-
-        # 6-hourly drift detector — flags pairs whose recent MAPE has degraded
-        # past DRIFT_RATIO_THRESHOLD vs all-time. Posts to Telegram if configured.
         drift_stop = asyncio.Event()
-        drift_task = asyncio.create_task(
-            _drift.detector_loop(stop_event=drift_stop),
-            name="drift-detector",
-        )
-
-        # Daily Telegram digest at DIGEST_HOUR_UTC.
-        from app.notifications import digest as _digest
-
         digest_stop = asyncio.Event()
-        digest_task = asyncio.create_task(
-            _digest.digest_loop(stop_event=digest_stop),
-            name="daily-digest",
-        )
-
-        # Daily market-data refresh — IV percentile + earnings dates per
-        # watchlist ticker. Phase 6 options runway. Best-effort; failures
-        # logged + skipped.
-        from app.market_data import derived as _derived
-
         market_data_stop = asyncio.Event()
-        market_data_task = asyncio.create_task(
-            _derived.market_data_loop(stop_event=market_data_stop),
-            name="market-data-derived",
-        )
-
-        # Hourly opportunity generator — runs rule engine over recent
-        # predictions, sweeps expired open opportunities. Phase 3.1.
-        from app.opportunities import service as _opps_service
-
         opps_stop = asyncio.Event()
-
-        async def _opps_loop() -> None:
-            while True:
-                try:
-                    await _opps_service.generate_for_predictions()
-                    await _opps_service.expire_stale()
-                except asyncio.CancelledError:
-                    raise
-                except Exception as e:  # noqa: BLE001
-                    logger.warning("opportunities tick failed: %s", e)
-                try:
-                    await asyncio.wait_for(opps_stop.wait(), timeout=60 * 60)
-                    if opps_stop.is_set():
-                        return
-                except asyncio.TimeoutError:
-                    continue
-
-        opps_task = asyncio.create_task(_opps_loop(), name="opportunities-tick")
-
-        # Daily macro signal-layer ingestion — yfinance + FRED. Phase M-1
-        # of the Macro Workbench (see .claude/macro-workbench-brainstorm.md).
-        # Idempotent upserts; first tick fires immediately for catch-up,
-        # then daily.
-        from app.macro import service as _macro_service
-
         macro_stop = asyncio.Event()
-        macro_task = asyncio.create_task(
-            _macro_service.ingestion_loop(stop_event=macro_stop),
-            name="macro-ingestion",
+        hyp_stop = asyncio.Event()
+        research_stop = asyncio.Event()
+        queue_stop = asyncio.Event()
+
+        # tv_context expire-sweep runs on BOTH sides (Railway has its own
+        # imported tv_context_items rows that need expiring) but at
+        # different cadence — laptop hourly, Railway daily — to minimise
+        # serverless wake-ups.
+        from app.tv_context import service as _tvc_service
+
+        tv_context_stop = asyncio.Event()
+        tv_context_interval = (
+            SETTINGS.TV_CTX_EXPIRE_INTERVAL_SECONDS
+            if not is_railway
+            else max(SETTINGS.TV_CTX_EXPIRE_INTERVAL_SECONDS, 86400)
+        )
+        tv_context_task = asyncio.create_task(
+            _tvc_service.expire_loop(
+                stop_event=tv_context_stop, interval_seconds=tv_context_interval
+            ),
+            name="tv-context-expire",
         )
 
-        # Daily hypothesis tick — TTL expiry → invalidator eval → cascade.
-        # M-2. Runs every 24h; first tick deferred 5 minutes after boot to
-        # let macro ingestion get a head start on day 0.
-        from app.hypotheses import service as _hyp_service
+        if is_railway:
+            logger.info(
+                "lifespan: skipping laptop-only loops (INSTANCE_NAME=railway)"
+            )
+        else:
+            # Hourly accuracy evaluator — fills prediction_accuracy as predictions
+            # elapse and actuals land in ohlcv_bars. Idempotent; safe to interrupt.
+            from app.accuracy import drift as _drift, service as _accuracy_service
 
-        hyp_stop = asyncio.Event()
+            accuracy_task = asyncio.create_task(
+                _accuracy_service.evaluator_loop(stop_event=accuracy_stop),
+                name="accuracy-evaluator",
+            )
 
-        async def _hyp_loop() -> None:
-            try:
-                await asyncio.wait_for(hyp_stop.wait(), timeout=5 * 60)
-                if hyp_stop.is_set():
-                    return
-            except asyncio.TimeoutError:
-                pass
-            while True:
+            # 6-hourly drift detector — flags pairs whose recent MAPE has
+            # degraded past DRIFT_RATIO_THRESHOLD vs all-time. Posts to
+            # Telegram if configured.
+            drift_task = asyncio.create_task(
+                _drift.detector_loop(stop_event=drift_stop),
+                name="drift-detector",
+            )
+
+            # Daily Telegram digest at DIGEST_HOUR_UTC.
+            from app.notifications import digest as _digest
+
+            digest_task = asyncio.create_task(
+                _digest.digest_loop(stop_event=digest_stop),
+                name="daily-digest",
+            )
+
+            # Daily market-data refresh — IV percentile + earnings dates per
+            # watchlist ticker. Phase 6 options runway. Best-effort; failures
+            # logged + skipped.
+            from app.market_data import derived as _derived
+
+            market_data_task = asyncio.create_task(
+                _derived.market_data_loop(stop_event=market_data_stop),
+                name="market-data-derived",
+            )
+
+            # Hourly opportunity generator — runs rule engine over recent
+            # predictions, sweeps expired open opportunities. Phase 3.1.
+            from app.opportunities import service as _opps_service
+
+            async def _opps_loop() -> None:
+                while True:
+                    try:
+                        await _opps_service.generate_for_predictions()
+                        await _opps_service.expire_stale()
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning("opportunities tick failed: %s", e)
+                    try:
+                        await asyncio.wait_for(opps_stop.wait(), timeout=60 * 60)
+                        if opps_stop.is_set():
+                            return
+                    except asyncio.TimeoutError:
+                        continue
+
+            opps_task = asyncio.create_task(_opps_loop(), name="opportunities-tick")
+
+            # Daily macro signal-layer ingestion — yfinance + FRED. Phase M-1
+            # of the Macro Workbench. Idempotent upserts; first tick fires
+            # immediately for catch-up, then daily.
+            from app.macro import service as _macro_service
+
+            macro_task = asyncio.create_task(
+                _macro_service.ingestion_loop(stop_event=macro_stop),
+                name="macro-ingestion",
+            )
+
+            # Daily hypothesis tick — TTL expiry → invalidator eval → cascade.
+            # M-2. Runs every 24h; first tick deferred 5 minutes after boot to
+            # let macro ingestion get a head start on day 0.
+            from app.hypotheses import service as _hyp_service
+
+            async def _hyp_loop() -> None:
                 try:
-                    async with _db_pkg.SessionLocal() as session:
-                        stats = await _hyp_service.run_daily_tick(session)
-                        await session.commit()
-                    logger.info("hypothesis tick: %s", stats)
-                except asyncio.CancelledError:
-                    raise
-                except Exception as e:  # noqa: BLE001
-                    logger.warning("hypothesis tick failed: %s", e)
-                try:
-                    await asyncio.wait_for(hyp_stop.wait(), timeout=24 * 60 * 60)
+                    await asyncio.wait_for(hyp_stop.wait(), timeout=5 * 60)
                     if hyp_stop.is_set():
                         return
                 except asyncio.TimeoutError:
-                    continue
+                    pass
+                while True:
+                    try:
+                        async with _db_pkg.SessionLocal() as session:
+                            stats = await _hyp_service.run_daily_tick(session)
+                            await session.commit()
+                        logger.info("hypothesis tick: %s", stats)
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning("hypothesis tick failed: %s", e)
+                    try:
+                        await asyncio.wait_for(hyp_stop.wait(), timeout=24 * 60 * 60)
+                        if hyp_stop.is_set():
+                            return
+                    except asyncio.TimeoutError:
+                        continue
 
-        from app.core import db as _db_pkg
+            from app.core import db as _db_pkg
 
-        hyp_task = asyncio.create_task(_hyp_loop(), name="hypothesis-tick")
+            hyp_task = asyncio.create_task(_hyp_loop(), name="hypothesis-tick")
 
-        # Phase 3 weekly auto-stress — fires once per active hypothesis per
-        # week. Off when ANTHROPIC_API_KEY is missing (the inner loop will
-        # log + skip; cheap to keep wired).
-        from app.research import weekly as _research_weekly
+            # Phase 3 weekly auto-stress — fires once per active hypothesis per
+            # week. Off when ANTHROPIC_API_KEY is missing (inner loop logs + skips).
+            from app.research import weekly as _research_weekly
 
-        research_stop = asyncio.Event()
-        research_task = asyncio.create_task(
-            _research_weekly.loop(research_stop),
-            name="research-weekly",
-        )
+            research_task = asyncio.create_task(
+                _research_weekly.loop(research_stop),
+                name="research-weekly",
+            )
 
-        # Submit-queue worker — single-flight FIFO drain. Boot recovery
-        # first: any 'running' rows from a crashed prior process flip back
-        # to 'pending' so this worker re-picks them.
-        from app.queue import service as _qsvc, worker as _qworker
+            # Submit-queue worker — single-flight FIFO drain. Boot recovery
+            # first: any 'running' rows from a crashed prior process flip back
+            # to 'pending' so this worker re-picks them.
+            from app.queue import service as _qsvc, worker as _qworker
 
-        n_recovered = await _qsvc.reset_stuck_on_boot()
-        if n_recovered:
-            logger.info("queue: recovered %d stuck rows on boot", n_recovered)
+            n_recovered = await _qsvc.reset_stuck_on_boot()
+            if n_recovered:
+                logger.info("queue: recovered %d stuck rows on boot", n_recovered)
 
-        queue_stop = asyncio.Event()
-        queue_task = asyncio.create_task(
-            _qworker.worker_loop(stop_event=queue_stop),
-            name="queue-worker",
-        )
+            queue_task = asyncio.create_task(
+                _qworker.worker_loop(stop_event=queue_stop),
+                name="queue-worker",
+            )
 
         yield
 
-        # Clean shutdown.
+        # Clean shutdown. Some tasks are None on Railway (gated above) —
+        # guard each cancel.
         await _schedule_runner.stop()
         purge_task.cancel()
-        accuracy_stop.set()
-        accuracy_task.cancel()
-        drift_stop.set()
-        drift_task.cancel()
-        digest_stop.set()
-        digest_task.cancel()
-        market_data_stop.set()
-        market_data_task.cancel()
-        opps_stop.set()
-        opps_task.cancel()
-        queue_stop.set()
-        queue_task.cancel()
-        macro_stop.set()
-        macro_task.cancel()
-        hyp_stop.set()
-        hyp_task.cancel()
-        research_stop.set()
-        research_task.cancel()
+        if sync_drain_task is not None:
+            sync_drain_stop.set()
+            sync_drain_task.cancel()
+        for stop_evt, task in (
+            (accuracy_stop, accuracy_task),
+            (drift_stop, drift_task),
+            (digest_stop, digest_task),
+            (market_data_stop, market_data_task),
+            (opps_stop, opps_task),
+            (queue_stop, queue_task),
+            (macro_stop, macro_task),
+            (hyp_stop, hyp_task),
+            (research_stop, research_task),
+        ):
+            stop_evt.set()
+            if task is not None:
+                task.cancel()
+        tv_context_stop.set()
+        tv_context_task.cancel()
 
     except Exception as e:
         logger.error("startup error: %s", e)

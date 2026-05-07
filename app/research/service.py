@@ -53,6 +53,20 @@ def _flatten_macro(bundle: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+def _flatten_source_context(bundle: dict[str, Any]) -> list[dict[str, Any]]:
+    """Pass through operator-authored `_index.md` vignettes verbatim — no
+    truncation by design."""
+    out: list[dict[str, Any]] = []
+    for s in (bundle.get("source_context") or []):
+        out.append({
+            "path": s.get("path", ""),
+            "title": s.get("title"),
+            "body": s.get("body") or "",
+            "applies_to": list(s.get("applies_to") or []),
+        })
+    return out
+
+
 TOOL_PROPOSE_INVALIDATOR_UPDATE = {
     "name": "propose_invalidator_update",
     "description": (
@@ -124,10 +138,41 @@ def _validate_proposed(
     return payload, None
 
 
+async def _check_tv_context(
+    *, tickers: list[str], since_hours: int = 168
+) -> list[dict[str, Any]]:
+    """Per-ticker recent-context probe. Returns list of dicts shaped for
+    ``TickerContextStatus``."""
+    from app.tv_context import service as tvc_service
+
+    out: list[dict[str, Any]] = []
+    if not tickers:
+        return out
+    since = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=since_hours)
+    async with _db.SessionLocal() as session:
+        for raw in tickers:
+            t = (raw or "").strip().upper()
+            if not t:
+                continue
+            rows = await tvc_service.recent_for_ticker(
+                session=session, ticker=t, since=since
+            )
+            most_recent = max((r.captured_at for r in rows), default=None)
+            out.append({
+                "ticker": t,
+                "available_count": len(rows),
+                "most_recent_at": most_recent,
+                "needs_context": len(rows) == 0,
+            })
+    return out
+
+
 async def ask(
     *,
     query: str,
     hypothesis_slugs: Optional[list[str]] = None,
+    tickers: Optional[list[str]] = None,
+    force_skip_context_gate: bool = False,
 ) -> dict[str, Any]:
     """Run a single stress-test query end-to-end. Returns a dict shaped
     for ``AskResponse``."""
@@ -136,6 +181,36 @@ async def ask(
 
     bundle = await _bundle.build_bundle(query=query, hypothesis_slugs=hypothesis_slugs)
     bundle_text = _prompts.render_bundle_text(bundle)
+
+    # Phase 4 gating. If any bundled hypothesis flagged requires_tv_context
+    # AND operator supplied tickers AND any ticker has 0 recent items →
+    # return early. Saves an LLM call + forces operator to attach context.
+    context_check: list[dict[str, Any]] = []
+    if tickers:
+        context_check = await _check_tv_context(tickers=tickers)
+    if not force_skip_context_gate:
+        flagged = any(
+            (h.get("requires_tv_context") or False)
+            for h in (bundle.get("hypotheses") or [])
+        )
+        if flagged and any(c["needs_context"] for c in context_check):
+            # Don't persist a research_queries row — gating is ephemeral
+            # (no LLM call, no audit value). Re-submit with attached context
+            # creates a fresh row.
+            return {
+                "query_id": research_query_id,
+                "answer_path": None,
+                "verdict": None,
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "est_cost_usd": 0.0,
+                "proposed_action": None,
+                "status": "needs_context",
+                "evidence": _flatten_evidence(bundle),
+                "macro_state": _flatten_macro(bundle),
+                "source_context": _flatten_source_context(bundle),
+                "context_check": context_check,
+            }
 
     try:
         result = await _client.ask_claude(
@@ -172,6 +247,8 @@ async def ask(
             "status": _models.STATUS_ERROR,
             "evidence": _flatten_evidence(bundle),
             "macro_state": _flatten_macro(bundle),
+            "source_context": _flatten_source_context(bundle),
+            "context_check": context_check,
         }
 
     # Validate any tool call.
@@ -224,6 +301,8 @@ async def ask(
         "status": _models.STATUS_PENDING,
         "evidence": _flatten_evidence(bundle),
         "macro_state": _flatten_macro(bundle),
+        "source_context": _flatten_source_context(bundle),
+        "context_check": context_check,
     }
 
 

@@ -28,6 +28,35 @@ async def save_alert(alert_data: AlertCreate) -> None:
             await session.commit()
     except Exception as e:
         logger.error("save_alert failed: %s", e)
+        return
+
+    # Phase 1 fan-out: when the Pine alert tags itself source='tradingview',
+    # also persist a tv_context_items row (deduped within rolling window) so
+    # the research/ask + hypothesis-eval gating layer can retrieve it. Alert
+    # row is always created (notification semantic); tv_context dedupes
+    # (retrieval semantic) — the two correctly diverge.
+    payload = alert_data.payload_json or {}
+    source = (
+        payload.get("source")
+        if isinstance(payload, dict)
+        else None
+    ) or "tradingview"  # default: assume TV unless explicitly other
+    if source != "tradingview":
+        return
+    try:
+        from app.tv_context import service as tvc_service
+
+        async with _db.SessionLocal() as session:
+            await tvc_service.ingest_webhook(
+                session=session,
+                ticker=alert_data.ticker,
+                alert_type=alert_data.alert_type,
+                payload_json=payload,
+                source=source,
+            )
+            await session.commit()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("tv_context fan-out failed: %s", e)
 
 
 async def fetch_unread_and_mark_read() -> List[Alert]:

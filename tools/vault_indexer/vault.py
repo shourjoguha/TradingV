@@ -13,14 +13,19 @@ import frontmatter
 from .config import CONFIG, is_timely
 
 
-# Files starting with `_` (review queue, taxonomy) are never ingested as nodes.
+# Files starting with `_` (review queue, taxonomy) are normally skipped — except
+# `_index.md`, which is the operator-authored folder-context vignette and gets
+# indexed (without chunk embeddings) so the bundle assembler can prepend it.
 def is_indexable(path: Path, vault_root: Path) -> bool:
     if path.suffix.lower() != ".md":
         return False
     rel = path.relative_to(vault_root)
     if any(part.startswith(".") for part in rel.parts):
         return False
-    if rel.parts[-1].startswith("_"):
+    name = rel.parts[-1]
+    if name == "_index.md":
+        return True
+    if name.startswith("_"):
         return False
     return True
 
@@ -61,7 +66,12 @@ def parse_file(path: Path, vault_root: Path) -> VaultNode:
     fm = frontmatter.loads(text)
     body = fm.content
     meta = fm.metadata
-    kind = meta.get("kind") or _infer_kind(rel)
+    # `_index.md` files are always folder context regardless of frontmatter,
+    # so the operator can't accidentally pollute the evidence pool by mis-labelling.
+    if Path(rel).name == "_index.md":
+        kind = "folder_context"
+    else:
+        kind = meta.get("kind") or _infer_kind(rel)
     horizon = meta.get("horizon_months")
     if horizon is None and is_timely(rel):
         horizon = CONFIG.default_horizon_months

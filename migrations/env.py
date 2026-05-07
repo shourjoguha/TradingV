@@ -16,6 +16,9 @@ from app.labels import models as _labels_models  # noqa: F401
 from app.predictions import models as _predictions_models  # noqa: F401
 from app.schedule import models as _schedule_models  # noqa: F401
 from app.watchlist import models as _watchlist_models  # noqa: F401
+from app.hypotheses import models as _hypothesis_models  # noqa: F401
+from app.trades import models as _trades_models  # noqa: F401
+from app.tv_context import models as _tv_context_models  # noqa: F401
 
 config = context.config
 

@@ -13,6 +13,7 @@ import datetime
 import uuid
 
 from sqlalchemy import (
+    JSON,
     DateTime,
     Float,
     ForeignKey,
@@ -53,6 +54,12 @@ class Trade(Base):
     realized_pnl: Mapped[float | None] = mapped_column(Float(), nullable=True)
     fees: Mapped[float] = mapped_column(Float(), nullable=False, server_default="0")
     notes_md: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    # Phase 5 (tv_context enrichment): list of tv_context_item ids attributed
+    # to this trade at close time. Lets the operator walk a past decision —
+    # "what TV signals fed into this trade?"
+    context_refs: Mapped[list] = mapped_column(
+        JSON(), nullable=False, server_default="[]"
+    )
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

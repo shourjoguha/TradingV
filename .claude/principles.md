@@ -60,6 +60,8 @@ If any of these change, large parts of the system need re-thought.
 - **Stocks/ETFs + crypto only.** Fixed income, FX-only-pairs, futures, options-as-primary not supported. Validators + asset_class enum assume this set.
 - **Daily cadence is primary.** Intraday (5m, 1h) is supported but not optimized — schedule runs once/day; opportunity rules trigger off daily horizons.
 - **Operator runs laptop most days.** Railway is a fallback replica, not the primary inference path. `RAILWAY_FALLBACK_ENABLED` is opt-in for that reason.
+- **Background loops run on laptop only.** Lifespan in `app/main.py` gates 9 loops (accuracy_evaluator, drift_detector, digest, market_data, opps, macro, hyp_tick, research_weekly, queue_worker) by `INSTANCE_NAME != 'railway'`. Railway runs only `outbox-purge` and tv_context expire (daily). Reason: Railway is serverless — every self-wake is billable. Loops are laptop-primary computations anyway (vault on laptop, Kronos on laptop, Telegram dedupe risk).
+- **Sync drain is batched, not per-job.** `SYNC_DRAIN_INTERVAL_SECONDS=300` (5 min) on laptop. Outbox enqueues are unchanged — semantic is "eventual consistency, ≤5 min latency."
 - **Operator reads English. Times are UTC-internal, local-display.** All UI dates do `toLocaleString()` at render; backend stores UTC.
 - **Bandwidth is unlimited; page weight isn't a hard constraint.** Vite + TS strict + Plus Jakarta + DM Sans webfonts ship at ~620 KB. Acceptable.
 - **Network latency operator → Railway is ~100ms.** US/EU operator. Calls don't need batching.

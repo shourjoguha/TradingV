@@ -16,7 +16,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Body, FastAPI, HTTPException, Query
 
 from . import cache as _cache
 from . import indexer as _indexer
@@ -97,6 +97,18 @@ async def search_endpoint(
     k: int = Query(8, ge=1, le=50),
 ):
     return {"query": q, "k": k, "results": _search.search(_con(), q, k=k)}
+
+
+@app.post("/folder-context")
+async def folder_context_endpoint(payload: dict = Body(...)):
+    """Given a list of evidence vault paths, return the operator-authored
+    `_index.md` (kind='folder_context') vignettes that apply along their
+    ancestor chain. Bundle assembler calls this after `/search`."""
+    paths = payload.get("paths") or []
+    if not isinstance(paths, list):
+        raise HTTPException(400, "paths must be a list")
+    items = _cache.folder_contexts_for(_con(), [str(p) for p in paths])
+    return {"items": items}
 
 
 @app.get("/traverse/{path:path}")

@@ -19,10 +19,14 @@ macro-workbench → decision-tool roadmap (shipped 2026-05-02).
   Topics/                         ← class A; optional landing pages per tag
   _taxonomy.md                    ← 15-tag controlled vocabulary; hand-editable
   _review-queue.md                ← indexer-managed; operator ticks checkboxes
+  _index.md                       ← operator-authored folder context (any level)
   .indexer/cache.db               ← SQLite + sqlite-vec; gitignored
 
 tools/vault_indexer/              ← FastAPI sidecar; port 8001
   ingest/                         ← PDF / EPUB / newsletter / video CLIs
+                                    Video ASR: OpenAI Whisper (model size
+                                    --whisper-model {tiny,base,small,medium,
+                                    large,large-v3}, default 'small')
 ```
 
 ## Choices
@@ -47,6 +51,15 @@ tools/vault_indexer/              ← FastAPI sidecar; port 8001
 - **Auto-tag** uses Claude Haiku (`claude-haiku-4-5`) constrained to the
   vocabulary. Off when `ANTHROPIC_API_KEY` is missing — the indexer never
   writes a tag the operator didn't tick.
+- **Folder-context vignettes (`_index.md`)** — operator authors a markdown
+  file at any level (`Videos/_index.md`, `Videos/<channel>/_index.md`,
+  etc.) capturing unstated invariants for descendants (creator background,
+  default chart filter, default grain, sequence of presentation, etc.).
+  Indexer auto-coerces `kind: folder_context` regardless of frontmatter,
+  stores the body, and **does NOT chunk-embed it** — vignettes never
+  appear in KNN evidence. Bundle assembler walks the ancestor chain of
+  each evidence path and prepends every `_index.md` found as
+  "Source context" before the evidence list. Verbatim — no token cap.
 
 See [ADR-014](decisions/014-vault-indexer.md) for the full decision
 record.

@@ -60,6 +60,24 @@ GET    /v1/trades/pnl/by-rule                         per-opportunity-rule attri
 - Forces deliberate tagging (link to opportunity → enables per-rule attribution).
 - Trivial to extend later if a brokerage integration becomes worthwhile.
 
+## TV Context enrichment hook
+
+When `PATCH /v1/trades/{id}` flips `exit_price` from null → value
+(open → closed transition), `app/trades/service.update_trade` calls
+`app/tv_context/service.py:enrich_on_trade_close` in a fresh session.
+That helper walks `tv_context_items` captured in `entry_at±24h` for the
+same ticker, stamps `tombstone.trades += {trade_id, pnl, win, closed_at}`,
+and appends `tv_context_item_id` to `trades.context_refs`.
+
+Idempotent in two layers: `was_closed_before` guard skips the call when a
+PATCH only updates fees on an already-closed trade; the helper itself
+dedupes on `trade_id` inside `tombstone.trades`. Failures are logged but
+never raised — trade-close response is never blocked.
+
+Walkthrough: `GET /v1/tv-context/by-trade/{trade_id}` reads
+`trades.context_refs` and returns linked items (active or expired
+tombstones).
+
 ## Known gaps
 
 - No partial-fill or scale-out support: each row is a single entry/exit pair. If you scale into a position, log multiple trades.

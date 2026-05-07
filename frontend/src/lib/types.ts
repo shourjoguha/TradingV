@@ -462,6 +462,16 @@ export interface MacroSnapshotItem {
   latest_ts: string
 }
 
+export interface SourceContextItem {
+  /** Vault path of the operator-authored `_index.md` vignette. */
+  path: string
+  title: string | null
+  /** Markdown body, verbatim — no truncation by design. */
+  body: string
+  /** Evidence vault paths this vignette applies to (covered by ancestor walk). */
+  applies_to: string[]
+}
+
 export interface ProposedAction {
   hypothesis_slug: string
   rationale: string
@@ -473,6 +483,15 @@ export interface ProposedAction {
 export interface AskRequest {
   query: string
   hypothesis_slugs?: string[]
+  tickers?: string[]
+  force_skip_context_gate?: boolean
+}
+
+export interface TickerContextStatus {
+  ticker: string
+  available_count: number
+  most_recent_at: string | null
+  needs_context: boolean
 }
 
 export interface AskResponse {
@@ -483,9 +502,11 @@ export interface AskResponse {
   tokens_out: number
   est_cost_usd: number
   proposed_action: ProposedAction | null
-  status: 'pending' | 'approved' | 'dismissed' | 'error'
+  status: 'pending' | 'approved' | 'dismissed' | 'error' | 'needs_context'
   evidence: EvidenceItem[]
   macro_state: MacroSnapshotItem[]
+  source_context: SourceContextItem[]
+  context_check?: TickerContextStatus[]
 }
 
 export interface ResearchQueryRead {
@@ -503,9 +524,73 @@ export interface ResearchQueryRead {
   proposed_action: ProposedAction | null
   evidence: EvidenceItem[]
   macro_state: MacroSnapshotItem[]
+  source_context: SourceContextItem[]
 }
 
 export interface ResearchQueriesList {
   items: ResearchQueryRead[]
   count: number
+}
+
+// ---------------------------------------------------------------------------
+// TV Context — Phase 1-6 ingest layer for TradingView signals
+// ---------------------------------------------------------------------------
+
+export type TVContextKind = 'webhook' | 'screenshot' | 'note' | 'idea' | 'event'
+export type TVContextStatus = 'active' | 'expired' | 'archived'
+
+export interface TVContextItem {
+  id: string
+  kind: TVContextKind
+  ticker: string | null
+  source: string
+  captured_at: string
+  expires_at: string | null
+  status: TVContextStatus
+  payload: Record<string, unknown>
+  tombstone: Record<string, unknown> | null
+  vault_path: string | null
+  heavy_blob_dropped: boolean
+}
+
+export interface TVContextIngestResult {
+  item: TVContextItem | null
+  deduped: boolean
+  dedupe_count: number | null
+}
+
+export interface TVNoteIngest {
+  ticker?: string | null
+  body: string
+  tags?: string[]
+  expires_at?: string | null
+}
+
+export interface TVIdeaIngest {
+  ticker?: string | null
+  url: string
+  summary?: string | null
+  tags?: string[]
+  expires_at?: string | null
+}
+
+export interface TVEventIngest {
+  ticker?: string | null
+  label: string
+  event_date: string  // YYYY-MM-DD
+  body?: string | null
+  expires_at?: string | null
+}
+
+export interface TVVisionSpend {
+  month: string  // YYYY-MM
+  total_usd: number
+  call_count: number
+}
+
+export interface TVContextNeededInfo {
+  ticker: string
+  available_count: number
+  most_recent_at: string | null
+  needs_context: boolean
 }

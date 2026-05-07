@@ -43,6 +43,29 @@ TELEGRAM_CHAT_ID        — optional. Integer chat ID from getUpdates after DM-i
 
 `PEER_*` vars describe the OTHER backend, not yourself.
 
+## Lifespan gating (since 2026-05-05)
+
+`INSTANCE_NAME=railway` is **load-bearing** — `app/main.py:lifespan` reads it
+to skip 9 of 11 background loops on Railway. Without this env var the gate
+doesn't fire and Railway runs every loop (defeats serverless billing).
+
+What runs on Railway:
+- `outbox-purge` — sync_outbox row cleanup (rare, hourly)
+- `tv-context-expire` — daily cadence (vs hourly on laptop)
+
+What is gated OFF on Railway:
+- accuracy_evaluator, drift_detector, daily-digest, market-data-derived,
+  opportunities-tick, macro-ingestion, hypothesis-tick, research-weekly,
+  queue-worker, sync-drain (laptop-only — Railway has nothing to push).
+
+Schedule runner respects `RAILWAY_FALLBACK_ENABLED` (default `False`); when
+that flag is true and `INSTANCE_NAME=railway`, the scheduler activates a
+once-a-day fallback path. Otherwise idle.
+
+Cost note: serverless billing tracks active container minutes. Each loop's
+self-wake = billable minute. Bill-watching after this gate landed dropped
+~70-80% (~$25/mo → ~$5-8/mo expected).
+
 ## Volume — Kronos weights persistence
 
 Kronos weights are ~531MB and re-downloading on every cold start is brutal on time + bandwidth.

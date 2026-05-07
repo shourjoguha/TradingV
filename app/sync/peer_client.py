@@ -101,6 +101,20 @@ async def push_label(
     )
 
 
+async def push_tv_context(
+    *, peer_url: str, api_key: str, payload: dict[str, Any]
+) -> Tuple[bool, str | None]:
+    """POST one tv_context_item snapshot to ``{peer_url}/v1/tv-context/import``.
+
+    Receiver is idempotent on ``payload['id']`` — duplicate posts return
+    200. Skipped for kind='screenshot' (vault path is environment-specific).
+    """
+    return await _post_json(
+        peer_url=peer_url, path="/v1/tv-context/import",
+        api_key=api_key, payload=payload, timeout=_TICKER_TIMEOUT,
+    )
+
+
 async def push_result(
     *, peer_url: str, api_key: str, payload: dict[str, Any]
 ) -> Tuple[bool, str | None]:

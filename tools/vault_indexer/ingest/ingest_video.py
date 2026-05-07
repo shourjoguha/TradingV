@@ -1,9 +1,14 @@
-"""Video ingestion via yt-dlp + openai-whisper. Markdown into Videos/<author>/."""
+"""Video ingestion via yt-dlp + OpenAI Whisper. Markdown into Videos/<author>/.
+
+Whisper is long-form-native (no manual chunking needed) and fits comfortably
+alongside other apps on a 16GB M3. The 2026-05 Canary-Qwen 2.5B alternative
+was attempted and rolled back — see ``.claude/tech_debt.md`` for the trigger
+to revisit.
+"""
 from __future__ import annotations
 
 import argparse
 import datetime
-import os
 import shutil
 import subprocess
 import sys
@@ -30,9 +35,10 @@ def download_audio(url: str, out_dir: Path) -> Path:
 
 
 def transcribe(audio_path: Path, model_name: str = "small") -> tuple[str, str]:
-    """Return (title-hint, transcript). title-hint pulled from yt-dlp metadata is harder
-    to wire; we leave title to the operator's --title flag and fall back to the URL hash."""
-    import whisper
+    """Return ``(title-hint, transcript)``. title-hint left empty — operator's
+    ``--title`` flag (or ``f"{author}-{week}"`` fallback) drives the filename.
+    """
+    import whisper  # lazy: heavy import
 
     model = whisper.load_model(model_name)
     result = model.transcribe(str(audio_path))
@@ -46,11 +52,24 @@ def main() -> int:
     ap.add_argument("--horizon", type=int, default=3)
     ap.add_argument("--published", default=None)
     ap.add_argument("--title", default=None)
-    ap.add_argument("--whisper-model", default="small")
+    ap.add_argument(
+        "--whisper-model",
+        default="small",
+        choices=("tiny", "base", "small", "medium", "large", "large-v3"),
+        help="Whisper model size. Bigger = slower + more accurate. "
+             "Default 'small' handles macro podcasts adequately.",
+    )
     args = ap.parse_args()
 
     if shutil.which("yt-dlp") is None:
         print("yt-dlp not on PATH (pip install yt-dlp)", file=sys.stderr)
+        return 1
+    if shutil.which("ffmpeg") is None:
+        print(
+            "ffmpeg not on PATH — required for yt-dlp audio extraction. "
+            "`brew install ffmpeg`.",
+            file=sys.stderr,
+        )
         return 1
 
     published = args.published or datetime.date.today().isoformat()
@@ -76,6 +95,8 @@ def main() -> int:
             "source_url": args.url,
             "published_at": published,
             "horizon_months": args.horizon,
+            "asr": "whisper",
+            "whisper_model": args.whisper_model,
             "tags": [],
         },
     )

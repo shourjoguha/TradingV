@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { AskInput } from '../components/research/AskInput'
 import { AnswerCard } from '../components/research/AnswerCard'
 import { HistoryList } from '../components/research/HistoryList'
+import { ContextNeededBanner } from '../components/research/ContextNeededBanner'
 import { useResearchAsk, useResearchQueries } from '../hooks/use-api'
 import { useBackend } from '../hooks/use-backend'
 
@@ -60,6 +61,7 @@ export function Research() {
 function ResearchLaptop() {
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<string[]>([])
+  const [tickers, setTickers] = useState('')  // comma-sep
   const [filter, setFilter] = useState('all')
   const [loadedPages, setLoadedPages] = useState(1)
 
@@ -77,11 +79,20 @@ function ResearchLaptop() {
   const items = queries.data?.items ?? []
   const hasMore = items.length >= loadedPages * PAGE_SIZE
 
-  const onSubmit = () => {
+  const parseTickers = (s: string) =>
+    s
+      .split(',')
+      .map((t) => t.trim().toUpperCase())
+      .filter(Boolean)
+
+  const onSubmit = (opts?: { forceSkipContextGate?: boolean }) => {
     if (!query.trim()) return
+    const tList = parseTickers(tickers)
     ask.mutate({
       query: query.trim(),
       hypothesis_slugs: scope.length ? scope : undefined,
+      tickers: tList.length ? tList : undefined,
+      force_skip_context_gate: opts?.forceSkipContextGate,
     })
   }
 
@@ -112,13 +123,35 @@ function ResearchLaptop() {
             setQuery={setQuery}
             scope={scope}
             setScope={setScope}
-            onSubmit={onSubmit}
+            onSubmit={() => onSubmit()}
             isPending={ask.isPending}
           />
+          <div className="mt-3">
+            <label className="text-xs text-muted-foreground">
+              Tickers (comma-sep, optional — required only for hypotheses flagged{' '}
+              <code>requires_tv_context</code>)
+            </label>
+            <input
+              type="text"
+              value={tickers}
+              onChange={(e) => setTickers(e.target.value)}
+              placeholder="AAPL, MSFT"
+              className="mt-1 w-full rounded-md border bg-background px-3 py-1.5 text-sm uppercase"
+            />
+          </div>
         </CardContent>
       </Card>
 
-      {ask.data && <AnswerCard response={ask.data} />}
+      {ask.data?.status === 'needs_context' && ask.data.context_check && (
+        <ContextNeededBanner
+          contextCheck={ask.data.context_check}
+          onSkip={() => onSubmit({ forceSkipContextGate: true })}
+        />
+      )}
+
+      {ask.data && ask.data.status !== 'needs_context' && (
+        <AnswerCard response={ask.data} />
+      )}
 
       <Card>
         <CardHeader>

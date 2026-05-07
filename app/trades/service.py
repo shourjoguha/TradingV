@@ -86,6 +86,7 @@ async def update_trade(
         t = await session.get(Trade, trade_id)
         if t is None:
             return None
+        was_closed_before = t.exit_price is not None
         if exit_price is not None:
             t.exit_price = exit_price
         if exit_at is not None:
@@ -99,7 +100,46 @@ async def update_trade(
             t.realized_pnl = _compute_pnl(t.side, t.qty, t.entry_price, t.exit_price, t.fees)
         await session.commit()
         await session.refresh(t)
+
+        # TV-context enrichment hook: when this PATCH is the one that
+        # closes the trade (open → closed transition), walk recent
+        # tv_context_items in entry_at±24h and stamp tombstones with the
+        # outcome. Idempotent (re-PATCH on already-closed trades is a
+        # no-op via tombstone.trades dedupe inside the helper). Failures
+        # are logged but never block the trade-close response.
+        if t.exit_price is not None and not was_closed_before:
+            await _enrich_tv_context(t)
+
         return _serialize(t)
+
+
+async def _enrich_tv_context(t: Trade) -> None:
+    """Best-effort fan-out to ``tv_context.enrich_on_trade_close``.
+
+    Runs in a fresh session to avoid commit-ordering bugs with the
+    update_trade transaction. Mirrors the alerts → tv_context fan-out
+    pattern: never raise; log on failure.
+    """
+    try:
+        from app.tv_context import service as _tvc_service
+
+        exit_at = t.exit_at or datetime.datetime.now(datetime.timezone.utc)
+        async with _db.SessionLocal() as session:
+            await _tvc_service.enrich_on_trade_close(
+                session=session,
+                trade_id=t.id,
+                ticker=t.ticker,
+                entry_at=t.entry_at,
+                exit_at=exit_at,
+                realized_pnl=t.realized_pnl,
+            )
+            await session.commit()
+    except Exception:  # noqa: BLE001
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "trades: tv_context enrichment failed for trade %s", t.id, exc_info=True
+        )
 
 
 async def list_trades(

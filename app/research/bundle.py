@@ -67,6 +67,7 @@ async def _hypothesis_cards(
             "primary_metric": h.primary_metric,
             "tracking_signal": h.tracking_signal,
             "invalidator": h.invalidator,
+            "requires_tv_context": bool(getattr(h, "requires_tv_context", False) or False),
             "linked_vault_paths": [r.vault_path for r in link_rows],
             "recent_evaluations": [
                 {
@@ -254,6 +255,26 @@ async def _accuracy_snapshot(
 
 # ----- Public entrypoint ---------------------------------------------------
 
+async def _retrieve_source_context(evidence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Ask the indexer for any operator-authored `_index.md` vignettes along
+    the ancestor chain of each evidence path. Always-on context per folder."""
+    if not evidence:
+        return []
+    paths = sorted({e["vault_path"] for e in evidence if e.get("vault_path")})
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{VAULT_INDEXER_URL}/folder-context",
+                json={"paths": paths},
+            )
+            r.raise_for_status()
+            data = r.json()
+            return list(data.get("items") or [])
+    except Exception as e:                          # noqa: BLE001
+        logger.warning("vault-indexer folder-context failed: %s", e)
+        return []
+
+
 async def build_bundle(
     *,
     query: str,
@@ -265,10 +286,12 @@ async def build_bundle(
         evidence = await _retrieve_evidence(query, cards, k=k)
         macro = await _macro_snapshot(session, cards)
         accuracy = await _accuracy_snapshot(session, cards)
+    source_context = await _retrieve_source_context(evidence)
 
     bundle = {
         "query": query,
         "hypotheses": cards,
+        "source_context": source_context,
         "evidence": evidence,
         "macro_state": macro,
         "accuracy_snapshot": accuracy,

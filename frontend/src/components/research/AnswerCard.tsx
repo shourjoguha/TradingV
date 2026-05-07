@@ -6,6 +6,7 @@ import { Accordion } from '../ui/accordion'
 import type { AskResponse, ResearchQueryRead } from '../../lib/types'
 import { EvidenceItemRow } from './EvidenceItemRow'
 import { ProposedActionCard } from './ProposedActionCard'
+import { SourceContextSection } from './SourceContextSection'
 
 interface Props {
   response: AskResponse | ResearchQueryRead
@@ -15,6 +16,7 @@ export function AnswerCard({ response }: Props) {
   const queryId = 'query_id' in response ? response.query_id : response.id
   const verdict = response.verdict ?? ''
   const evidence = response.evidence ?? []
+  const sourceContext = response.source_context ?? []
   const proposed = response.proposed_action
   const status = response.status
 
@@ -38,13 +40,15 @@ export function AnswerCard({ response }: Props) {
           )}
         </div>
 
-        {proposed && (
+        {proposed && status !== 'needs_context' && (
           <ProposedActionCard
             queryId={queryId}
             proposed={proposed}
             status={status}
           />
         )}
+
+        <SourceContextSection items={sourceContext} />
 
         <div className="space-y-1.5">
           <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
