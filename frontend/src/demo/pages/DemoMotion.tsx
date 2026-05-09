@@ -7,30 +7,53 @@ import {
 } from '../../components/ui/table'
 import { Badge } from '../../components/ui/badge'
 import { Skeleton } from '../../components/ui/skeleton'
-import { HowItWorksEmbed } from '../components/HowItWorksEmbed'
+import { HeroStat } from '../components/HeroStat'
+import { TrendingUp, TrendingDown } from 'lucide-react'
 
 type Tab = 'opportunities' | 'trades' | 'attribution'
 
-const VIDEO_ID =
-  (import.meta.env.VITE_DEMO_VIDEO_MOTION as string | undefined) || null
-
 export function DemoMotion() {
   const [tab, setTab] = useState<Tab>('opportunities')
+  const { data: trades } = useQuery({
+    queryKey: ['demo', 'trades'],
+    queryFn: demoApi.trades,
+  })
+
+  const totalPnl = trades?.items.reduce((s, t) => s + t.pnl_pct, 0) ?? 0
+  const wins = trades?.items.filter((t) => t.pnl_pct > 0).length ?? 0
+  const winRate = trades?.items.length ? (wins / trades.items.length) * 100 : 0
 
   return (
     <div className="space-y-6">
-      <header>
-        <h2 className="text-2xl font-semibold tracking-tight">Motion</h2>
-        <p className="text-sm text-muted-foreground">
-          Rule-based opportunities, the trades they fed, and per-rule P&L attribution.
-        </p>
-      </header>
-
-      <HowItWorksEmbed
-        youtubeId={VIDEO_ID}
-        title="Motion — opportunities → trades → P&L"
-        durationSeconds={45}
+      <HeroStat
+        headline="Forecast → signal → trade → attribution. The closed loop."
+        subhead="Predictions feed rules. Rules emit opportunities. Manual trades reference an opportunity_id, so per-rule P&L rolls up automatically. A rule with high hit-rate but tiny edge ranks below a rare, high-magnitude one."
+        primaryStat={
+          trades ? (
+            <div className="flex flex-col items-end gap-1">
+              <div>
+                <span className={totalPnl >= 0 ? 'text-emerald-600' : 'text-red-500'}>
+                  {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(1)}%
+                </span>
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ΣP&L
+                </span>
+              </div>
+              <div className="text-base font-semibold text-muted-foreground">
+                {winRate.toFixed(0)}% win-rate · {trades.items.length} trades
+              </div>
+            </div>
+          ) : (
+            <span className="text-sm font-normal text-muted-foreground">loading…</span>
+          )
+        }
+        badges={[
+          { label: 'Honest journal', tone: 'authority' },
+          { label: 'Loser included', tone: 'authority' },
+        ]}
       />
+
+      <BestWorstStrip />
 
       <div className="flex gap-2">
         {(['opportunities', 'trades', 'attribution'] as const).map((t) => (
@@ -54,6 +77,64 @@ export function DemoMotion() {
       {tab === 'opportunities' && <Opportunities />}
       {tab === 'trades' && <Trades />}
       {tab === 'attribution' && <Attribution />}
+    </div>
+  )
+}
+
+function BestWorstStrip() {
+  const { data } = useQuery({
+    queryKey: ['demo', 'trades'],
+    queryFn: demoApi.trades,
+  })
+  const { best, worst } = useMemo(() => {
+    if (!data || data.items.length === 0) return { best: null, worst: null }
+    const sorted = [...data.items].sort((a, b) => b.pnl_pct - a.pnl_pct)
+    return { best: sorted[0], worst: sorted[sorted.length - 1] }
+  }, [data])
+  if (!best || !worst) return null
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            Best trade in this snapshot
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Closed for {best.pnl_pct >= 0 ? '+' : ''}{best.pnl_pct.toFixed(2)}% via the
+            <span className="font-mono"> {best.rule_attribution} </span>rule.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm">
+          <span className="font-mono">{best.ticker}</span>{' '}
+          <span className="capitalize">{best.side}</span> ·{' '}
+          <span className="tabular-nums">{best.entry_price.toFixed(2)} → {best.exit_price.toFixed(2)}</span>{' '}
+          <span className="text-muted-foreground">
+            ({new Date(best.opened_at).toLocaleDateString()} → {new Date(best.closed_at).toLocaleDateString()})
+          </span>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <TrendingDown className="h-4 w-4 text-red-500" />
+            Biggest loser, surfaced
+          </CardTitle>
+          <CardDescription className="text-xs">
+            {worst.pnl_pct.toFixed(2)}% on{' '}
+            <span className="font-mono">{worst.rule_attribution}</span>. The honest demo
+            shows the misses next to the hits.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm">
+          <span className="font-mono">{worst.ticker}</span>{' '}
+          <span className="capitalize">{worst.side}</span> ·{' '}
+          <span className="tabular-nums">{worst.entry_price.toFixed(2)} → {worst.exit_price.toFixed(2)}</span>{' '}
+          <span className="text-muted-foreground">
+            ({new Date(worst.opened_at).toLocaleDateString()} → {new Date(worst.closed_at).toLocaleDateString()})
+          </span>
+        </CardContent>
+      </Card>
     </div>
   )
 }

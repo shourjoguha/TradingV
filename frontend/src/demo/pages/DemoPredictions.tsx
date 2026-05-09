@@ -7,31 +7,48 @@ import {
 } from '../../components/ui/table'
 import { Badge } from '../../components/ui/badge'
 import { Skeleton } from '../../components/ui/skeleton'
-import { HowItWorksEmbed } from '../components/HowItWorksEmbed'
 import { Check, X, Clock } from 'lucide-react'
+import { HeroStat } from '../components/HeroStat'
 
 type Tab = 'horizon' | 'target' | 'accuracy'
 
-const VIDEO_ID =
-  (import.meta.env.VITE_DEMO_VIDEO_PREDICTIONS as string | undefined) || null
-
 export function DemoPredictions() {
   const [tab, setTab] = useState<Tab>('horizon')
+  const { data: accuracy } = useQuery({
+    queryKey: ['demo', 'accuracy'],
+    queryFn: demoApi.accuracy,
+  })
+
+  const oneDay = accuracy?.rows.find((r) => r.horizon === '1d' && !r.pending)
+  const fiveDay = accuracy?.rows.find((r) => r.horizon === '5d' && !r.pending)
+  const totalElapsed = accuracy?.rows.reduce((s, r) => s + (r.samples ?? 0), 0) ?? 0
 
   return (
     <div className="space-y-6">
-      <header>
-        <h2 className="text-2xl font-semibold tracking-tight">Predictions</h2>
-        <p className="text-sm text-muted-foreground">
-          Forecasts made on 2026-05-04 across 12 tickers and 5 horizons.
-          Actuals filled in for elapsed horizons; 10d remains pending.
-        </p>
-      </header>
-
-      <HowItWorksEmbed
-        youtubeId={VIDEO_ID}
-        title="Predictions — how Kronos drives forecasts"
-        durationSeconds={45}
+      <HeroStat
+        headline="Every prediction. Every miss. Receipts."
+        subhead={`12 tickers, 5 horizons, ${totalElapsed} elapsed predictions in this snapshot. Each row carries entry price, predicted close, actual close, signed error, and whether the direction was right.`}
+        primaryStat={
+          oneDay && fiveDay ? (
+            <div className="flex flex-col items-end gap-1">
+              <div>
+                <span className="text-violet">{(oneDay.mape! * 100).toFixed(1)}%</span>
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  MAPE @ 1d
+                </span>
+              </div>
+              <div className="text-base font-semibold text-muted-foreground">
+                {(fiveDay.mape! * 100).toFixed(1)}% MAPE @ 5d
+              </div>
+            </div>
+          ) : (
+            <span className="text-sm font-normal text-muted-foreground">loading…</span>
+          )
+        }
+        badges={[
+          { label: 'Walk-forward only', tone: 'authority' },
+          { label: 'Sign-correct + magnitude tracked', tone: 'authority' },
+        ]}
       />
 
       <div className="flex gap-2">
