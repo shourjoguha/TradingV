@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "cutoff_date": "2026-05-09",
+  "generated_at": "2026-05-09T00:00:00Z",
+  "scrub_version": "placeholder-v0",
+  "note": "Placeholder snapshot. Replace via scripts/bake_demo_snapshot.py."
+}

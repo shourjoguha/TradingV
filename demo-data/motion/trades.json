@@ -1,0 +1,16 @@
+{
+  "items": [
+    {
+      "id": "demo-trade-1",
+      "ticker": "DEMO",
+      "side": "long",
+      "entry_price": 100.0,
+      "exit_price": 103.5,
+      "pnl_pct": 3.5,
+      "rule_attribution": "trend-breakout",
+      "opened_at": "2026-05-01T14:30:00Z",
+      "closed_at": "2026-05-06T20:00:00Z"
+    }
+  ],
+  "_demo_placeholder": true
+}

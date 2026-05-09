@@ -1,0 +1,12 @@
+{
+  "targets": [
+    {
+      "ticker": "DEMO",
+      "horizons": [
+        {"horizon": "1d", "predicted": 102.4, "delta_pct": 2.4},
+        {"horizon": "5d", "predicted": 105.7, "delta_pct": 5.7}
+      ]
+    }
+  ],
+  "_demo_placeholder": true
+}

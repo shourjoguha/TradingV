@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": "demo-opp-1",
+      "ticker": "DEMO",
+      "kind": "BUY",
+      "rule": "trend-breakout",
+      "score": 0.62,
+      "horizon": "5d",
+      "status": "open",
+      "created_at": "2026-05-09T07:00:00Z"
+    },
+    {
+      "id": "demo-opp-2",
+      "ticker": "DEMO",
+      "kind": "SELL",
+      "rule": "mean-reversion",
+      "score": 0.48,
+      "horizon": "1d",
+      "status": "expired",
+      "created_at": "2026-05-07T07:00:00Z"
+    }
+  ],
+  "_demo_placeholder": true
+}

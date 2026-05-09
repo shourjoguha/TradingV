@@ -1,0 +1,17 @@
+{
+  "horizons": [
+    {
+      "horizon": "1d",
+      "rows": [
+        {"ticker": "DEMO", "predicted": 102.4, "current": 100.0, "delta_pct": 2.4, "as_of": "2026-05-09"}
+      ]
+    },
+    {
+      "horizon": "5d",
+      "rows": [
+        {"ticker": "DEMO", "predicted": 105.7, "current": 100.0, "delta_pct": 5.7, "as_of": "2026-05-09"}
+      ]
+    }
+  ],
+  "_demo_placeholder": true
+}

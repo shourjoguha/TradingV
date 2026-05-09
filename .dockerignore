@@ -1,0 +1,16 @@
+# Demo image only needs app/ + demo-data/ + requirements.txt
+**/__pycache__
+**/*.pyc
+.git
+.gitignore
+.dockerignore
+frontend/
+.claude/
+Claude.md
+README.md
+use_me_guide.md
+*.md
+venv/
+.env*
+docs/
+backups/
