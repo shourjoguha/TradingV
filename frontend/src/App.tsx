@@ -10,6 +10,9 @@ import { AnalysisJobDetail } from './pages/AnalysisJobDetail'
 import { Predictions } from './pages/Predictions'
 import { Motion } from './pages/Motion'
 import { Skeleton } from './components/ui/skeleton'
+import { DemoApp } from './demo/DemoApp'
+
+const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
 
 // Lazy-load Docs so the markdown bundle (react-markdown + remark) only ships
 // when the operator actually opens the page.
@@ -34,6 +37,7 @@ const TVContextInbox = lazy(() =>
 )
 
 export function App() {
+  if (IS_DEMO) return <DemoApp />
   return (
     <Layout>
       <Routes>
