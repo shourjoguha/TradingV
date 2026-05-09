@@ -7,6 +7,10 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { AlertTriangle, FileSearch, Zap, TrendingUp, Plus, Minus } from 'lucide-react'
 import { AskWidget } from '../components/AskWidget'
 import { HeroStat } from '../components/HeroStat'
+import { WatchWalkthrough } from '../components/WatchWalkthrough'
+
+const TODAY_VIDEO_ID =
+  (import.meta.env.VITE_DEMO_VIDEO_TODAY as string | undefined) || null
 
 export function DemoHome() {
   const { data, isLoading } = useQuery({
@@ -50,6 +54,13 @@ export function DemoHome() {
           { label: '12 tickers · 5 horizons · frozen 2026-05-09', tone: 'neutral' },
         ]}
         cta={{ label: 'See where this model breaks →', href: '/about' }}
+        walkthrough={
+          <WatchWalkthrough
+            youtubeId={TODAY_VIDEO_ID}
+            title="Today — 60 second walkthrough"
+            durationSeconds={60}
+          />
+        }
       />
 
       <div>

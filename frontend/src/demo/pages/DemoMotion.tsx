@@ -8,7 +8,11 @@ import {
 import { Badge } from '../../components/ui/badge'
 import { Skeleton } from '../../components/ui/skeleton'
 import { HeroStat } from '../components/HeroStat'
+import { WatchWalkthrough } from '../components/WatchWalkthrough'
 import { TrendingUp, TrendingDown } from 'lucide-react'
+
+const MOTION_VIDEO_ID =
+  (import.meta.env.VITE_DEMO_VIDEO_MOTION as string | undefined) || null
 
 type Tab = 'opportunities' | 'trades' | 'attribution'
 
@@ -51,6 +55,13 @@ export function DemoMotion() {
           { label: 'Honest journal', tone: 'authority' },
           { label: 'Loser included', tone: 'authority' },
         ]}
+        walkthrough={
+          <WatchWalkthrough
+            youtubeId={MOTION_VIDEO_ID}
+            title="Motion — opportunities → trades → P&L"
+            durationSeconds={45}
+          />
+        }
       />
 
       <BestWorstStrip />

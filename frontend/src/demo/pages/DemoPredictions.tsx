@@ -9,6 +9,10 @@ import { Badge } from '../../components/ui/badge'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Check, X, Clock } from 'lucide-react'
 import { HeroStat } from '../components/HeroStat'
+import { WatchWalkthrough } from '../components/WatchWalkthrough'
+
+const PREDICTIONS_VIDEO_ID =
+  (import.meta.env.VITE_DEMO_VIDEO_PREDICTIONS as string | undefined) || null
 
 type Tab = 'horizon' | 'target' | 'accuracy'
 
@@ -49,6 +53,13 @@ export function DemoPredictions() {
           { label: 'Walk-forward only', tone: 'authority' },
           { label: 'Sign-correct + magnitude tracked', tone: 'authority' },
         ]}
+        walkthrough={
+          <WatchWalkthrough
+            youtubeId={PREDICTIONS_VIDEO_ID}
+            title="Predictions — accuracy + sign correctness"
+            durationSeconds={45}
+          />
+        }
       />
 
       <div className="flex gap-2">

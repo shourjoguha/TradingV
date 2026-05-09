@@ -11,12 +11,25 @@ interface HeroStatProps {
   badges?: { label: string; tone?: 'authority' | 'neutral' }[]
   /** Single primary CTA. */
   cta?: { label: string; href?: string; onClick?: () => void }
+  /** Optional walkthrough button slot — sits in the same row as the
+   * headline, top right. Pass <WatchWalkthrough .../>. */
+  walkthrough?: ReactNode
 }
 
-export function HeroStat({ headline, subhead, primaryStat, badges, cta }: HeroStatProps) {
+export function HeroStat({
+  headline,
+  subhead,
+  primaryStat,
+  badges,
+  cta,
+  walkthrough,
+}: HeroStatProps) {
   return (
     <section className="rounded-2xl bg-background p-6 shadow-extruded md:p-8">
-      <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
+      {walkthrough && (
+        <div className="mb-4 flex justify-end md:hidden">{walkthrough}</div>
+      )}
+      <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-start">
         <div className="space-y-3">
           <h2 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
             {headline}
@@ -40,6 +53,7 @@ export function HeroStat({ headline, subhead, primaryStat, badges, cta }: HeroSt
           )}
         </div>
         <div className="flex flex-col items-start gap-3 md:items-end">
+          {walkthrough && <div className="hidden md:block">{walkthrough}</div>}
           <div className="font-display text-3xl font-bold tabular-nums md:text-4xl">
             {primaryStat}
           </div>

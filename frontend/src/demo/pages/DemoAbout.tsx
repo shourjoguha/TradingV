@@ -5,6 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { ArrowRight, AlertOctagon, Wrench, Briefcase } from 'lucide-react'
 import { HeroStat } from '../components/HeroStat'
 import { MethodologyBadges } from '../components/MethodologyBadges'
+import { WatchWalkthrough } from '../components/WatchWalkthrough'
+
+const OVERVIEW_VIDEO_ID =
+  (import.meta.env.VITE_DEMO_VIDEO_OVERVIEW as string | undefined) || null
 
 const CONTACT =
   (import.meta.env.VITE_DEMO_CONTACT_URL as string | undefined) ??
@@ -71,6 +75,13 @@ export function DemoAbout() {
           { label: `Cutoff ${manifest?.cutoff_date ?? '2026-05-09'}`, tone: 'neutral' },
         ]}
         cta={{ label: 'Start at Today →', href: '/' }}
+        walkthrough={
+          <WatchWalkthrough
+            youtubeId={OVERVIEW_VIDEO_ID}
+            title="90-second overview"
+            durationSeconds={90}
+          />
+        }
       />
 
       <section className="space-y-3">
