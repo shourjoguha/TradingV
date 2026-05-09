@@ -44,7 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(demo_router, prefix="/v1/demo")
+app.include_router(demo_router, prefix="/v1")
 
 
 @app.get("/health")
