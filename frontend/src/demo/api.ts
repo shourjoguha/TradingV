@@ -4,7 +4,7 @@
  */
 const BASE_URL =
   (import.meta.env.VITE_DEMO_API_URL as string | undefined) ??
-  'https://tradingv-production.up.railway.app'
+  'https://tradingv-production-108c.up.railway.app'
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`)

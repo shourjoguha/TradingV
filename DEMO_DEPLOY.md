@@ -50,7 +50,7 @@ If repurposing the existing `tradingv-83b` project:
 5. Environment variables (Production):
    ```
    VITE_DEMO_MODE=true
-   VITE_DEMO_API_URL=https://<your-railway-demo>.up.railway.app
+   VITE_DEMO_API_URL=https://tradingv-production-108c.up.railway.app
    VITE_DEMO_GITHUB_URL=https://github.com/shourjoguha/TradingV/tree/demo
    VITE_DEMO_CONTACT_URL=mailto:guha.shourjo@gmail.com
    VITE_DEMO_VIDEO_OVERVIEW=     # add YouTube IDs once recorded
