@@ -12,7 +12,11 @@ import { Motion } from './pages/Motion'
 import { Skeleton } from './components/ui/skeleton'
 import { DemoApp } from './demo/DemoApp'
 
-const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
+// This branch is dedicated to the public demo. Always render DemoApp;
+// the legacy live-app routes below are kept only so a developer can
+// flip this flag to false locally and verify the original UI still
+// builds. Production deploy from this branch is always demo.
+const IS_DEMO = true
 
 // Lazy-load Docs so the markdown bundle (react-markdown + remark) only ships
 // when the operator actually opens the page.

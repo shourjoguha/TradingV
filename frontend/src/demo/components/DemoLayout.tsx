@@ -16,25 +16,25 @@ interface DemoLayoutProps {
 
 export function DemoLayout({ children }: DemoLayoutProps) {
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen w-full bg-background text-foreground">
       <DemoBanner />
-      <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6">
-        <aside className="hidden w-48 shrink-0 md:block">
-          <div className="sticky top-16 space-y-1">
-            <h1 className="mb-3 px-3 text-lg font-semibold tracking-tight text-violet">
-              TradingView
+      <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6 md:px-8">
+        <aside className="hidden w-52 shrink-0 md:block">
+          <div className="sticky top-20 space-y-3">
+            <h1 className="px-3 font-display text-xl font-extrabold tracking-tight">
+              Kronos
             </h1>
-            <nav className="flex flex-col gap-1">
+            <nav className="space-y-1">
               {NAV.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   end={'end' in item ? item.end : false}
                   className={({ isActive }) =>
-                    `flex items-center gap-2 rounded-md px-3 py-2 text-sm transition ${
+                    `flex items-center gap-2 rounded-2xl px-3 py-2 text-sm transition-all ${
                       isActive
-                        ? 'bg-violet/15 text-violet'
-                        : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100'
+                        ? 'shadow-inset-sm text-violet bg-background'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`
                   }
                 >
@@ -54,10 +54,10 @@ export function DemoLayout({ children }: DemoLayoutProps) {
                 to={item.to}
                 end={'end' in item ? item.end : false}
                 className={({ isActive }) =>
-                  `whitespace-nowrap rounded-md px-3 py-1.5 text-xs transition ${
+                  `whitespace-nowrap rounded-2xl px-3 py-1.5 text-xs transition-all ${
                     isActive
-                      ? 'bg-violet/15 text-violet'
-                      : 'bg-zinc-900 text-zinc-400'
+                      ? 'shadow-inset-sm text-violet'
+                      : 'shadow-extruded-sm text-muted-foreground'
                   }`
                 }
               >
@@ -68,7 +68,7 @@ export function DemoLayout({ children }: DemoLayoutProps) {
           {children}
         </main>
       </div>
-      <footer className="border-t border-zinc-800 py-6 text-center text-xs text-zinc-500">
+      <footer className="py-8 text-center text-xs text-muted-foreground">
         Public demo · all data frozen · no live feeds, no model inference
       </footer>
     </div>
