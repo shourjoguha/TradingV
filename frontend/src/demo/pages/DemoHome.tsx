@@ -3,7 +3,7 @@ import { demoApi } from '../api'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
 import { Skeleton } from '../../components/ui/skeleton'
-import { AlertTriangle, FileSearch, Zap, TrendingUp } from 'lucide-react'
+import { AlertTriangle, FileSearch, Zap, TrendingUp, Plus, Minus } from 'lucide-react'
 import { AskWidget } from '../components/AskWidget'
 import { HowItWorksEmbed } from '../components/HowItWorksEmbed'
 
@@ -20,7 +20,7 @@ export function DemoHome() {
     <div className="space-y-6">
       <header>
         <h2 className="text-2xl font-semibold tracking-tight">Today</h2>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-foreground">
           Morning glance: drift, pending research, fresh signals, regime context.
         </p>
       </header>
@@ -35,7 +35,7 @@ export function DemoHome() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <AlertTriangle className="h-4 w-4 text-amber-400" />
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
               Drift alerts
             </CardTitle>
             <CardDescription>
@@ -51,14 +51,14 @@ export function DemoHome() {
                   <li key={d.id} className="flex items-center justify-between text-sm">
                     <span>
                       <span className="font-mono">{d.ticker}</span>{' '}
-                      <span className="text-zinc-500">@ {d.horizon}</span>
+                      <span className="text-muted-foreground">@ {d.horizon}</span>
                     </span>
                     <Badge variant="outline">×{d.ratio.toFixed(2)} vs all-time</Badge>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-zinc-500">No drift alerts in the snapshot.</p>
+              <p className="text-sm text-muted-foreground">No drift alerts in the snapshot.</p>
             )}
           </CardContent>
         </Card>
@@ -77,15 +77,13 @@ export function DemoHome() {
             {isLoading ? (
               <Skeleton className="h-16 w-full" />
             ) : data && data.research_pending.length > 0 ? (
-              <ul className="space-y-2">
+              <ul className="space-y-2 text-sm">
                 {data.research_pending.map((r) => (
-                  <li key={r.id} className="text-sm text-zinc-300">
-                    {r.question}
-                  </li>
+                  <li key={r.id}>{r.question}</li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-zinc-500">Nothing queued.</p>
+              <p className="text-sm text-muted-foreground">Nothing queued.</p>
             )}
           </CardContent>
         </Card>
@@ -93,7 +91,7 @@ export function DemoHome() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <Zap className="h-4 w-4 text-emerald-400" />
+              <Zap className="h-4 w-4 text-emerald-500" />
               Fresh signals
             </CardTitle>
             <CardDescription>
@@ -109,7 +107,7 @@ export function DemoHome() {
                   <li key={s.id} className="flex items-center justify-between text-sm">
                     <span>
                       <span className="font-mono">{s.ticker}</span>{' '}
-                      <span className="text-zinc-500">·</span>{' '}
+                      <span className="text-muted-foreground">·</span>{' '}
                       <span>{s.rule}</span>
                     </span>
                     <Badge variant={s.kind === 'BUY' ? 'default' : 'secondary'}>
@@ -119,7 +117,7 @@ export function DemoHome() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-zinc-500">No fresh signals in the snapshot.</p>
+              <p className="text-sm text-muted-foreground">No fresh signals in the snapshot.</p>
             )}
           </CardContent>
         </Card>
@@ -132,30 +130,52 @@ export function DemoHome() {
             </CardTitle>
             <CardDescription>Macro context as of cutoff</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             {isLoading ? (
               <Skeleton className="h-16 w-full" />
             ) : data?.regime ? (
-              <dl className="grid grid-cols-3 gap-2 text-sm">
-                <div>
-                  <dt className="text-xs text-zinc-500">Label</dt>
-                  <dd className="font-medium">{data.regime.label}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-zinc-500">VIX</dt>
-                  <dd className="font-medium">
-                    {data.regime.vix?.toFixed(1) ?? '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-zinc-500">SPY 1w</dt>
-                  <dd className="font-medium">
-                    {data.regime.spy_pct_1w !== null && data.regime.spy_pct_1w !== undefined
-                      ? `${data.regime.spy_pct_1w > 0 ? '+' : ''}${data.regime.spy_pct_1w.toFixed(1)}%`
-                      : '—'}
-                  </dd>
-                </div>
-              </dl>
+              <>
+                <dl className="grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Label</dt>
+                    <dd className="font-medium capitalize">{data.regime.label.replace('-', ' ')}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">VIX</dt>
+                    <dd className="font-medium tabular-nums">
+                      {data.regime.vix?.toFixed(1) ?? '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">SPY 1w</dt>
+                    <dd className="font-medium tabular-nums">
+                      {data.regime.spy_pct_1w !== null && data.regime.spy_pct_1w !== undefined
+                        ? `${data.regime.spy_pct_1w > 0 ? '+' : ''}${data.regime.spy_pct_1w.toFixed(1)}%`
+                        : '—'}
+                    </dd>
+                  </div>
+                </dl>
+                {data.watchlist_delta && data.watchlist_delta.length > 0 && (
+                  <div className="border-t border-foreground/5 pt-3">
+                    <p className="mb-2 text-xs text-muted-foreground">Watchlist deltas</p>
+                    <ul className="space-y-1 text-xs">
+                      {(data.watchlist_delta as Array<{ ticker: string; added: boolean; reason: string }>).map((w) => (
+                        <li key={w.ticker} className="flex items-start gap-2">
+                          {w.added ? (
+                            <Plus className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" />
+                          ) : (
+                            <Minus className="mt-0.5 h-3 w-3 shrink-0 text-red-500" />
+                          )}
+                          <span>
+                            <span className="font-mono">{w.ticker}</span>{' '}
+                            <span className="text-muted-foreground">{w.reason}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
             ) : null}
           </CardContent>
         </Card>

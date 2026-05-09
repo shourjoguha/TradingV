@@ -1,16 +1,59 @@
 {
   "items": [
     {
-      "id": "demo-trade-1",
-      "ticker": "DEMO",
-      "side": "long",
-      "entry_price": 100.0,
-      "exit_price": 103.5,
-      "pnl_pct": 3.5,
+      "id": "trade-1",
+      "ticker": "AMZN",
+      "side": "short",
+      "entry_price": 184.61,
+      "exit_price": 169.66,
+      "pnl_pct": 8.1,
       "rule_attribution": "trend-breakout",
-      "opened_at": "2026-05-01T14:30:00Z",
-      "closed_at": "2026-05-06T20:00:00Z"
+      "opened_at": "2026-04-17T00:00:00+00:00",
+      "closed_at": "2026-04-26T00:00:00+00:00"
+    },
+    {
+      "id": "trade-2",
+      "ticker": "META",
+      "side": "long",
+      "entry_price": 478.92,
+      "exit_price": 525.78,
+      "pnl_pct": 9.78,
+      "rule_attribution": "mean-reversion",
+      "opened_at": "2026-04-22T00:00:00+00:00",
+      "closed_at": "2026-04-27T00:00:00+00:00"
+    },
+    {
+      "id": "trade-3",
+      "ticker": "TSLA",
+      "side": "long",
+      "entry_price": 178.34,
+      "exit_price": 185.05,
+      "pnl_pct": 3.76,
+      "rule_attribution": "gap-fill",
+      "opened_at": "2026-05-06T00:00:00+00:00",
+      "closed_at": "2026-05-11T00:00:00+00:00"
+    },
+    {
+      "id": "trade-4",
+      "ticker": "AMD",
+      "side": "short",
+      "entry_price": 158.47,
+      "exit_price": 169.53,
+      "pnl_pct": -6.98,
+      "rule_attribution": "momentum-thrust",
+      "opened_at": "2026-05-01T00:00:00+00:00",
+      "closed_at": "2026-05-04T00:00:00+00:00"
+    },
+    {
+      "id": "trade-historic-1",
+      "ticker": "TSLA",
+      "side": "long",
+      "entry_price": 195.4,
+      "exit_price": 178.2,
+      "pnl_pct": -8.8,
+      "rule_attribution": "trend-breakout",
+      "opened_at": "2026-04-15T13:30:00+00:00",
+      "closed_at": "2026-04-22T20:00:00+00:00"
     }
-  ],
-  "_demo_placeholder": true
+  ]
 }

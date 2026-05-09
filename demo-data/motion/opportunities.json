@@ -1,25 +1,124 @@
 {
   "items": [
     {
-      "id": "demo-opp-1",
-      "ticker": "DEMO",
+      "id": "opp-1",
+      "ticker": "AAPL",
       "kind": "BUY",
       "rule": "trend-breakout",
-      "score": 0.62,
-      "horizon": "5d",
+      "score": 0.51,
+      "horizon": "1d",
       "status": "open",
-      "created_at": "2026-05-09T07:00:00Z"
+      "created_at": "2026-04-23T00:00:00+00:00"
     },
     {
-      "id": "demo-opp-2",
-      "ticker": "DEMO",
-      "kind": "SELL",
+      "id": "opp-2",
+      "ticker": "MSFT",
+      "kind": "BUY",
       "rule": "mean-reversion",
+      "score": 0.52,
+      "horizon": "2d",
+      "status": "open",
+      "created_at": "2026-04-22T00:00:00+00:00"
+    },
+    {
+      "id": "opp-3",
+      "ticker": "NVDA",
+      "kind": "BUY",
+      "rule": "gap-fill",
+      "score": 0.64,
+      "horizon": "3d",
+      "status": "open",
+      "created_at": "2026-05-02T00:00:00+00:00"
+    },
+    {
+      "id": "opp-4",
+      "ticker": "GOOGL",
+      "kind": "BUY",
+      "rule": "momentum-thrust",
+      "score": 0.79,
+      "horizon": "5d",
+      "status": "open",
+      "created_at": "2026-04-16T00:00:00+00:00"
+    },
+    {
+      "id": "opp-5",
+      "ticker": "AMZN",
+      "kind": "SELL",
+      "rule": "trend-breakout",
+      "score": 0.59,
+      "horizon": "10d",
+      "status": "acted",
+      "created_at": "2026-04-17T00:00:00+00:00"
+    },
+    {
+      "id": "opp-6",
+      "ticker": "META",
+      "kind": "BUY",
+      "rule": "mean-reversion",
+      "score": 0.65,
+      "horizon": "1d",
+      "status": "acted",
+      "created_at": "2026-04-22T00:00:00+00:00"
+    },
+    {
+      "id": "opp-7",
+      "ticker": "TSLA",
+      "kind": "BUY",
+      "rule": "gap-fill",
+      "score": 0.56,
+      "horizon": "2d",
+      "status": "acted",
+      "created_at": "2026-05-06T00:00:00+00:00"
+    },
+    {
+      "id": "opp-8",
+      "ticker": "AMD",
+      "kind": "SELL",
+      "rule": "momentum-thrust",
+      "score": 0.71,
+      "horizon": "3d",
+      "status": "acted",
+      "created_at": "2026-05-01T00:00:00+00:00"
+    },
+    {
+      "id": "opp-9",
+      "ticker": "JPM",
+      "kind": "BUY",
+      "rule": "trend-breakout",
+      "score": 0.45,
+      "horizon": "5d",
+      "status": "expired",
+      "created_at": "2026-04-16T00:00:00+00:00"
+    },
+    {
+      "id": "opp-10",
+      "ticker": "GS",
+      "kind": "BUY",
+      "rule": "mean-reversion",
+      "score": 0.55,
+      "horizon": "10d",
+      "status": "expired",
+      "created_at": "2026-05-07T00:00:00+00:00"
+    },
+    {
+      "id": "opp-11",
+      "ticker": "SPY",
+      "kind": "BUY",
+      "rule": "gap-fill",
       "score": 0.48,
       "horizon": "1d",
       "status": "expired",
-      "created_at": "2026-05-07T07:00:00Z"
+      "created_at": "2026-05-01T00:00:00+00:00"
+    },
+    {
+      "id": "opp-12",
+      "ticker": "QQQ",
+      "kind": "SELL",
+      "rule": "momentum-thrust",
+      "score": 0.67,
+      "horizon": "2d",
+      "status": "expired",
+      "created_at": "2026-04-21T00:00:00+00:00"
     }
-  ],
-  "_demo_placeholder": true
+  ]
 }

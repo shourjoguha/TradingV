@@ -1,54 +1,242 @@
 {
   "presets": [
-    {"id": "what-is-this", "label": "What is this app?"},
-    {"id": "how-accurate", "label": "How accurate are the predictions?"},
-    {"id": "what-signals", "label": "How do opportunities get generated?"},
-    {"id": "trade-attribution", "label": "How is P&L attributed to rules?"},
-    {"id": "model-used", "label": "What model produces forecasts?"},
-    {"id": "data-sources", "label": "What data sources feed this?"}
+    {
+      "id": "what-is-this",
+      "label": "What is this app?"
+    },
+    {
+      "id": "how-accurate",
+      "label": "How accurate are the predictions?"
+    },
+    {
+      "id": "what-signals",
+      "label": "How do opportunities get generated?"
+    },
+    {
+      "id": "trade-attribution",
+      "label": "How is P&L attributed to rules?"
+    },
+    {
+      "id": "model-used",
+      "label": "What model produces forecasts?"
+    },
+    {
+      "id": "data-sources",
+      "label": "What data sources feed this?"
+    },
+    {
+      "id": "tech-stack",
+      "label": "What's the tech stack?"
+    },
+    {
+      "id": "why-frozen",
+      "label": "Why is this demo frozen?"
+    },
+    {
+      "id": "drift-alerts",
+      "label": "What is a drift alert?"
+    },
+    {
+      "id": "live-vs-demo",
+      "label": "What does the live app do that this demo doesn't?"
+    },
+    {
+      "id": "code-access",
+      "label": "Can I see the source code?"
+    },
+    {
+      "id": "build-with-me",
+      "label": "Can you build something like this for me?"
+    }
   ],
   "answers": [
     {
       "id": "what-is-this",
       "title": "What is this app?",
       "tab": "today",
-      "keywords": ["what", "this", "app", "tradingview", "platform", "purpose", "do", "does"],
-      "body": "Personal trading-decision-support system. FastAPI backend runs daily Kronos candlestick forecasts on a watchlist, emits rule-based BUY/SELL opportunities, tracks per-rule P&L from manually logged trades. This is a frozen public demo — the live system runs on the operator's laptop with bidirectional sync to a Railway replica."
+      "keywords": [
+        "what",
+        "this",
+        "app",
+        "tradingview",
+        "platform",
+        "purpose",
+        "do",
+        "does"
+      ],
+      "body": "Personal trading-decision-support system. FastAPI backend runs daily Kronos candlestick forecasts on a watchlist, emits rule-based BUY/SELL opportunities, tracks per-rule P&L from manually logged trades. This is a frozen public demo of that system as of 2026-05-09. The live system runs on the operator's laptop with bidirectional sync to a Railway replica."
     },
     {
       "id": "how-accurate",
       "title": "How accurate are the predictions?",
       "tab": "predictions",
-      "keywords": ["accurate", "accuracy", "mape", "hit", "rate", "performance", "prediction", "predictions", "error"],
-      "body": "Accuracy is tracked per (horizon, target) on every prediction once actuals land. Headline metrics: 1d MAPE around 1.8%, 5d MAPE around 4.6%, 1d hit-rate around 61%. Drift detector flags pairs whose recent MAPE has degraded past threshold and posts to Telegram. See the Predictions → Accuracy tab for the full grid."
+      "keywords": [
+        "accurate",
+        "accuracy",
+        "mape",
+        "hit",
+        "rate",
+        "performance",
+        "prediction",
+        "predictions",
+        "error"
+      ],
+      "body": "Accuracy is tracked per (horizon, target) on every prediction once actuals land. The Predictions \u2192 Accuracy tab shows MAPE and hit-rate per horizon. Drift detector flags pairs whose recent MAPE has degraded past threshold and posts to Telegram in the live system. Headline: 1d MAPE ~1.5-2%, 5d MAPE ~4-5%, 1d hit-rate ~60% in the snapshot."
     },
     {
       "id": "what-signals",
       "title": "How do opportunities get generated?",
       "tab": "motion",
-      "keywords": ["opportunity", "opportunities", "signal", "signals", "rule", "rules", "buy", "sell", "generated"],
-      "body": "An hourly worker runs a fixed rule set over recent predictions: trend-breakout, mean-reversion, gap-fill, momentum-thrust. Each fires only when the prediction's confidence and the rule's gating thresholds are met. Each opportunity is weighted by the rule's historical hit-rate so high-volume / low-edge rules surface lower."
+      "keywords": [
+        "opportunity",
+        "opportunities",
+        "signal",
+        "signals",
+        "rule",
+        "rules",
+        "buy",
+        "sell",
+        "generated"
+      ],
+      "body": "An hourly worker runs a fixed rule set over recent predictions: trend-breakout, mean-reversion, gap-fill, momentum-thrust. Each fires only when the prediction's confidence and the rule's gating thresholds are met. Each opportunity is weighted by the rule's historical hit-rate so high-volume / low-edge rules surface lower. Status flow: open \u2192 acted (when manually traded) or expired (after horizon)."
     },
     {
       "id": "trade-attribution",
       "title": "How is P&L attributed to rules?",
       "tab": "motion",
-      "keywords": ["pnl", "p&l", "profit", "loss", "trade", "trades", "attribution", "attributed", "rule"],
-      "body": "Manually logged trades carry an opportunity_id back to the rule that produced them. Per-rule P&L rolls up from every closed trade, so a rule with high hit-rate but low average win still ranks below a rare but high-magnitude rule. This closes the loop between forecast → signal → actual outcome."
+      "keywords": [
+        "pnl",
+        "p&l",
+        "profit",
+        "loss",
+        "trade",
+        "trades",
+        "attribution",
+        "attributed",
+        "rule"
+      ],
+      "body": "Manually logged trades carry an opportunity_id back to the rule that produced them. Per-rule P&L rolls up from every closed trade, so a rule with high hit-rate but low average win still ranks below a rare but high-magnitude rule. This closes the loop between forecast \u2192 signal \u2192 actual outcome."
     },
     {
       "id": "model-used",
       "title": "What model produces forecasts?",
       "tab": "predictions",
-      "keywords": ["model", "kronos", "forecast", "candlestick", "ml", "ai", "inference"],
-      "body": "Kronos — an open candlestick prediction model. Inference runs on the operator's laptop (GPU-eligible) and the forecasts are synced to the always-on Railway replica. The demo ships no model weights and runs no inference; the visible forecasts are frozen historical outputs."
+      "keywords": [
+        "model",
+        "kronos",
+        "forecast",
+        "candlestick",
+        "ml",
+        "ai",
+        "inference"
+      ],
+      "body": "Kronos \u2014 an open candlestick prediction model. Inference runs on the operator's laptop (GPU-eligible) and forecasts are synced to the always-on Railway replica. The demo ships no model weights and runs no inference; the visible forecasts are frozen historical outputs from the laptop."
     },
     {
       "id": "data-sources",
       "title": "What data sources feed this?",
       "tab": "today",
-      "keywords": ["data", "sources", "yfinance", "fred", "feeds", "ingestion", "ingest", "where"],
-      "body": "Market data from yfinance for prices and IV percentile; FRED for macro signal layer (rates, spreads, employment). TradingView webhook receiver for chart-context screenshots. A separate vault-indexer sidecar embeds an operator-curated knowledge corpus for the Research tab. None of these are called by the public demo — all data here is frozen as of the cutoff date."
+      "keywords": [
+        "data",
+        "sources",
+        "yfinance",
+        "fred",
+        "feeds",
+        "ingestion",
+        "ingest",
+        "where",
+        "datasources"
+      ],
+      "body": "Market data from yfinance for prices and IV percentile; FRED for macro signal layer (rates, spreads, employment). TradingView webhook receiver for chart-context screenshots. A separate vault-indexer sidecar embeds an operator-curated knowledge corpus for the Research tab. None of these are called by the public demo \u2014 all data here is frozen as of the cutoff."
+    },
+    {
+      "id": "tech-stack",
+      "title": "What's the tech stack?",
+      "tab": "about",
+      "keywords": [
+        "tech",
+        "stack",
+        "fastapi",
+        "python",
+        "react",
+        "vite",
+        "postgres",
+        "railway",
+        "docker"
+      ],
+      "body": "Python 3.12 + FastAPI + SQLAlchemy + Alembic + Postgres on the backend. React 18 + Vite + TanStack Query + Tailwind on the frontend. Tailscale for laptop \u2194 Railway sync. Cloudflare Pages for static frontend hosting. This demo strips the backend to FastAPI + a few JSON files; no DB, no model, no Tailscale."
+    },
+    {
+      "id": "why-frozen",
+      "title": "Why is this demo frozen?",
+      "tab": "about",
+      "keywords": [
+        "why",
+        "frozen",
+        "snapshot",
+        "static",
+        "demo",
+        "live"
+      ],
+      "body": "Frozen-snapshot demos are cheap (no DB on Railway), safe (no secrets, no write paths, no model), and predictable (recruiters always see the same polished story). The bake script in scripts/ refreshes the JSON from the live laptop DB; the operator chooses when to re-bake."
+    },
+    {
+      "id": "drift-alerts",
+      "title": "What is a drift alert?",
+      "tab": "today",
+      "keywords": [
+        "drift",
+        "alert",
+        "alerts",
+        "degraded",
+        "threshold",
+        "mape"
+      ],
+      "body": "A drift alert fires when a (ticker, horizon) pair's recent MAPE exceeds DRIFT_RATIO_THRESHOLD \u00d7 the all-time MAPE for that pair. It's a coarse 'this pair is currently broken' signal, posted to Telegram in the live system and visible on the Today page here. Operator acks dismisses the row."
+    },
+    {
+      "id": "live-vs-demo",
+      "title": "What does the live app do that this demo doesn't?",
+      "tab": "about",
+      "keywords": [
+        "live",
+        "vs",
+        "demo",
+        "difference",
+        "missing",
+        "real"
+      ],
+      "body": "Live app: runs Kronos inference, ingests yfinance + FRED + TradingView webhooks, evaluates accuracy hourly, runs drift + research + ingestion loops, syncs laptop \u2194 Railway via Tailscale, sends Telegram digests, accepts manual trade entries, runs a vault-indexer sidecar for the Research tab. Demo app: serves 7 JSON files. That's it."
+    },
+    {
+      "id": "code-access",
+      "title": "Can I see the source code?",
+      "tab": "about",
+      "keywords": [
+        "code",
+        "source",
+        "github",
+        "repo",
+        "repository",
+        "see"
+      ],
+      "body": "Yes \u2014 the demo branch is public at github.com/shourjoguha/TradingV/tree/demo. The main branch (live system) is gated; reach out via the Request access link in the banner."
+    },
+    {
+      "id": "build-with-me",
+      "title": "Can you build something like this for me?",
+      "tab": "about",
+      "keywords": [
+        "hire",
+        "build",
+        "for",
+        "me",
+        "you",
+        "client",
+        "consult",
+        "consulting"
+      ],
+      "body": "Open to it. The patterns here \u2014 frozen demo on cheap infra, dual-backend laptop+cloud sync, rule engine + per-rule P&L attribution, vault-indexed knowledge layer \u2014 generalize past trading. Use the Request access link in the banner."
     }
   ]
 }

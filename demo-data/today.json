@@ -1,38 +1,124 @@
 {
   "drift_alerts": [
     {
-      "id": "demo-drift-1",
-      "ticker": "DEMO",
-      "horizon": "1d",
-      "ratio": 1.42,
+      "id": "drift-1",
+      "ticker": "GS",
+      "horizon": "5d",
+      "ratio": 2.79,
       "ack": false,
-      "created_at": "2026-05-08T14:00:00Z",
-      "note": "Placeholder. Replace via bake script."
+      "created_at": "2026-05-08T10:00:00+00:00",
+      "note": "5d MAPE elevated vs all-time baseline."
+    },
+    {
+      "id": "drift-2",
+      "ticker": "AMZN",
+      "horizon": "5d",
+      "ratio": 2.01,
+      "ack": false,
+      "created_at": "2026-05-08T04:00:00+00:00",
+      "note": "5d MAPE elevated vs all-time baseline."
+    },
+    {
+      "id": "drift-3",
+      "ticker": "QQQ",
+      "horizon": "2d",
+      "ratio": 1.83,
+      "ack": false,
+      "created_at": "2026-05-07T22:00:00+00:00",
+      "note": "2d MAPE elevated vs all-time baseline."
     }
   ],
   "research_pending": [
     {
-      "id": "demo-rq-1",
-      "question": "Sample research question — frozen for demo.",
+      "id": "rq-1",
+      "question": "Does the trend-breakout rule still beat random in regimes where VIX > 18?",
       "status": "pending",
-      "created_at": "2026-05-08T10:00:00Z"
+      "created_at": "2026-05-08T00:00:00+00:00"
+    },
+    {
+      "id": "rq-2",
+      "question": "Do mean-reversion signals on QQQ degrade after weeks with a Fed minutes release?",
+      "status": "pending",
+      "created_at": "2026-05-07T00:00:00+00:00"
+    },
+    {
+      "id": "rq-3",
+      "question": "Is per-rule hit-rate stable when the mega-cap names (NVDA, META) are excluded?",
+      "status": "pending",
+      "created_at": "2026-05-06T00:00:00+00:00"
     }
   ],
   "fresh_signals": [
     {
-      "id": "demo-opp-1",
-      "ticker": "DEMO",
+      "id": "opp-fresh-1",
+      "ticker": "NVDA",
       "kind": "BUY",
-      "rule": "sample-rule",
-      "score": 0.62,
+      "rule": "trend-breakout",
+      "score": 0.81,
+      "horizon": "1d",
+      "created_at": "2026-05-09T07:00:00+00:00"
+    },
+    {
+      "id": "opp-fresh-2",
+      "ticker": "AMD",
+      "kind": "SELL",
+      "rule": "mean-reversion",
+      "score": 0.83,
+      "horizon": "2d",
+      "created_at": "2026-05-09T08:00:00+00:00"
+    },
+    {
+      "id": "opp-fresh-3",
+      "ticker": "META",
+      "kind": "BUY",
+      "rule": "gap-fill",
+      "score": 0.58,
+      "horizon": "3d",
+      "created_at": "2026-05-09T09:00:00+00:00"
+    },
+    {
+      "id": "opp-fresh-4",
+      "ticker": "JPM",
+      "kind": "BUY",
+      "rule": "momentum-thrust",
+      "score": 0.7,
       "horizon": "5d",
-      "created_at": "2026-05-09T07:00:00Z"
+      "created_at": "2026-05-09T10:00:00+00:00"
+    },
+    {
+      "id": "opp-fresh-5",
+      "ticker": "SPY",
+      "kind": "SELL",
+      "rule": "trend-breakout",
+      "score": 0.57,
+      "horizon": "10d",
+      "created_at": "2026-05-09T11:00:00+00:00"
+    },
+    {
+      "id": "opp-fresh-6",
+      "ticker": "TSLA",
+      "kind": "BUY",
+      "rule": "mean-reversion",
+      "score": 0.78,
+      "horizon": "1d",
+      "created_at": "2026-05-09T12:00:00+00:00"
     }
   ],
   "regime": {
-    "label": "neutral",
-    "vix": 16.2,
-    "spy_pct_1w": 0.4
+    "label": "neutral-bullish",
+    "vix": 14.8,
+    "spy_pct_1w": 1.2
   },
-  "watchlist_delta": []
+  "watchlist_delta": [
+    {
+      "ticker": "NVDA",
+      "added": true,
+      "reason": "ER beat + AI guidance raise"
+    },
+    {
+      "ticker": "ZM",
+      "added": false,
+      "reason": "Removed: low edge over 90 days"
+    }
+  ]
 }

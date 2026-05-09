@@ -75,10 +75,17 @@ export interface TodayPayload {
 
 export interface HorizonRow {
   ticker: string
+  entry_price?: number
+  entry_date?: string
   predicted: number
-  current: number
   delta_pct: number
+  target_date?: string
+  actual: number | null
+  error_pct: number | null
+  sign_correct: boolean | null
   as_of: string
+  /** legacy alias kept for older consumers; equals actual when elapsed, entry_price otherwise */
+  current?: number
 }
 
 export interface HorizonGroup {
@@ -90,11 +97,33 @@ export interface PredictionsByHorizon {
   horizons: HorizonGroup[]
 }
 
+export interface TargetHorizonRow {
+  horizon: string
+  predicted: number
+  delta_pct: number
+  target_date: string
+  actual: number | null
+  error_pct: number | null
+  sign_correct: boolean | null
+}
+
+export interface TargetGroup {
+  ticker: string
+  entry_price: number
+  entry_date: string
+  horizons: TargetHorizonRow[]
+}
+
+export interface PredictionsByTarget {
+  targets: TargetGroup[]
+}
+
 export interface AccuracyRow {
   horizon: string
   samples: number
-  mape: number
-  hit_rate: number
+  mape: number | null
+  hit_rate: number | null
+  pending: boolean
 }
 
 export interface AccuracyGrid {
@@ -152,6 +181,7 @@ export const demoApi = {
   manifest: () => get<Manifest>('/v1/manifest'),
   today: () => get<TodayPayload>('/v1/today'),
   byHorizon: () => get<PredictionsByHorizon>('/v1/predictions/by-horizon'),
+  byTarget: () => get<PredictionsByTarget>('/v1/predictions/by-target'),
   accuracy: () => get<AccuracyGrid>('/v1/accuracy/grid'),
   opportunities: () => get<OpportunityList>('/v1/opportunities'),
   trades: () => get<TradeList>('/v1/trades'),

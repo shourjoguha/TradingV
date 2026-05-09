@@ -1,12 +1,628 @@
 {
   "targets": [
     {
-      "ticker": "DEMO",
+      "ticker": "AAPL",
+      "entry_price": 188.42,
+      "entry_date": "2026-05-04",
       "horizons": [
-        {"horizon": "1d", "predicted": 102.4, "delta_pct": 2.4},
-        {"horizon": "5d", "predicted": 105.7, "delta_pct": 5.7}
+        {
+          "horizon": "1d",
+          "predicted": 188.41,
+          "delta_pct": -0.01,
+          "target_date": "2026-05-05",
+          "actual": 190.21,
+          "error_pct": -0.95,
+          "sign_correct": false
+        },
+        {
+          "horizon": "2d",
+          "predicted": 188.42,
+          "delta_pct": 0.0,
+          "target_date": "2026-05-06",
+          "actual": 183.37,
+          "error_pct": 2.75,
+          "sign_correct": false
+        },
+        {
+          "horizon": "3d",
+          "predicted": 189.05,
+          "delta_pct": 0.33,
+          "target_date": "2026-05-07",
+          "actual": 187.49,
+          "error_pct": 0.83,
+          "sign_correct": false
+        },
+        {
+          "horizon": "5d",
+          "predicted": 188.41,
+          "delta_pct": -0.01,
+          "target_date": "2026-05-09",
+          "actual": 189.4,
+          "error_pct": -0.52,
+          "sign_correct": false
+        },
+        {
+          "horizon": "10d",
+          "predicted": 189.65,
+          "delta_pct": 0.65,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
+      ]
+    },
+    {
+      "ticker": "MSFT",
+      "entry_price": 425.18,
+      "entry_date": "2026-05-04",
+      "horizons": [
+        {
+          "horizon": "1d",
+          "predicted": 427.36,
+          "delta_pct": 0.51,
+          "target_date": "2026-05-05",
+          "actual": 420.09,
+          "error_pct": 1.73,
+          "sign_correct": false
+        },
+        {
+          "horizon": "2d",
+          "predicted": 421.99,
+          "delta_pct": -0.75,
+          "target_date": "2026-05-06",
+          "actual": 427.2,
+          "error_pct": -1.22,
+          "sign_correct": false
+        },
+        {
+          "horizon": "3d",
+          "predicted": 429.27,
+          "delta_pct": 0.96,
+          "target_date": "2026-05-07",
+          "actual": 425.2,
+          "error_pct": 0.96,
+          "sign_correct": true
+        },
+        {
+          "horizon": "5d",
+          "predicted": 423.93,
+          "delta_pct": -0.29,
+          "target_date": "2026-05-09",
+          "actual": 432.36,
+          "error_pct": -1.95,
+          "sign_correct": false
+        },
+        {
+          "horizon": "10d",
+          "predicted": 414.4,
+          "delta_pct": -2.53,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
+      ]
+    },
+    {
+      "ticker": "NVDA",
+      "entry_price": 920.45,
+      "entry_date": "2026-05-04",
+      "horizons": [
+        {
+          "horizon": "1d",
+          "predicted": 924.09,
+          "delta_pct": 0.4,
+          "target_date": "2026-05-05",
+          "actual": 917.12,
+          "error_pct": 0.76,
+          "sign_correct": false
+        },
+        {
+          "horizon": "2d",
+          "predicted": 922.68,
+          "delta_pct": 0.24,
+          "target_date": "2026-05-06",
+          "actual": 925.33,
+          "error_pct": -0.29,
+          "sign_correct": true
+        },
+        {
+          "horizon": "3d",
+          "predicted": 926.1,
+          "delta_pct": 0.61,
+          "target_date": "2026-05-07",
+          "actual": 893.77,
+          "error_pct": 3.62,
+          "sign_correct": false
+        },
+        {
+          "horizon": "5d",
+          "predicted": 925.77,
+          "delta_pct": 0.58,
+          "target_date": "2026-05-09",
+          "actual": 873.58,
+          "error_pct": 5.97,
+          "sign_correct": false
+        },
+        {
+          "horizon": "10d",
+          "predicted": 886.1,
+          "delta_pct": -3.73,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
+      ]
+    },
+    {
+      "ticker": "GOOGL",
+      "entry_price": 168.23,
+      "entry_date": "2026-05-04",
+      "horizons": [
+        {
+          "horizon": "1d",
+          "predicted": 167.59,
+          "delta_pct": -0.38,
+          "target_date": "2026-05-05",
+          "actual": 170.62,
+          "error_pct": -1.78,
+          "sign_correct": false
+        },
+        {
+          "horizon": "2d",
+          "predicted": 166.4,
+          "delta_pct": -1.09,
+          "target_date": "2026-05-06",
+          "actual": 172.54,
+          "error_pct": -3.56,
+          "sign_correct": false
+        },
+        {
+          "horizon": "3d",
+          "predicted": 166.39,
+          "delta_pct": -1.09,
+          "target_date": "2026-05-07",
+          "actual": 167.72,
+          "error_pct": -0.79,
+          "sign_correct": true
+        },
+        {
+          "horizon": "5d",
+          "predicted": 167.57,
+          "delta_pct": -0.39,
+          "target_date": "2026-05-09",
+          "actual": 169.19,
+          "error_pct": -0.96,
+          "sign_correct": false
+        },
+        {
+          "horizon": "10d",
+          "predicted": 171.1,
+          "delta_pct": 1.71,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
+      ]
+    },
+    {
+      "ticker": "AMZN",
+      "entry_price": 184.61,
+      "entry_date": "2026-05-04",
+      "horizons": [
+        {
+          "horizon": "1d",
+          "predicted": 185.14,
+          "delta_pct": 0.29,
+          "target_date": "2026-05-05",
+          "actual": 185.99,
+          "error_pct": -0.46,
+          "sign_correct": true
+        },
+        {
+          "horizon": "2d",
+          "predicted": 183.7,
+          "delta_pct": -0.49,
+          "target_date": "2026-05-06",
+          "actual": 181.45,
+          "error_pct": 1.24,
+          "sign_correct": true
+        },
+        {
+          "horizon": "3d",
+          "predicted": 183.71,
+          "delta_pct": -0.49,
+          "target_date": "2026-05-07",
+          "actual": 187.04,
+          "error_pct": -1.78,
+          "sign_correct": false
+        },
+        {
+          "horizon": "5d",
+          "predicted": 183.83,
+          "delta_pct": -0.42,
+          "target_date": "2026-05-09",
+          "actual": 200.01,
+          "error_pct": -8.09,
+          "sign_correct": false
+        },
+        {
+          "horizon": "10d",
+          "predicted": 181.72,
+          "delta_pct": -1.57,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
+      ]
+    },
+    {
+      "ticker": "META",
+      "entry_price": 478.92,
+      "entry_date": "2026-05-04",
+      "horizons": [
+        {
+          "horizon": "1d",
+          "predicted": 475.03,
+          "delta_pct": -0.81,
+          "target_date": "2026-05-05",
+          "actual": 484.66,
+          "error_pct": -1.99,
+          "sign_correct": false
+        },
+        {
+          "horizon": "2d",
+          "predicted": 482.82,
+          "delta_pct": 0.82,
+          "target_date": "2026-05-06",
+          "actual": 502.0,
+          "error_pct": -3.82,
+          "sign_correct": true
+        },
+        {
+          "horizon": "3d",
+          "predicted": 478.08,
+          "delta_pct": -0.18,
+          "target_date": "2026-05-07",
+          "actual": 450.22,
+          "error_pct": 6.19,
+          "sign_correct": true
+        },
+        {
+          "horizon": "5d",
+          "predicted": 474.34,
+          "delta_pct": -0.96,
+          "target_date": "2026-05-09",
+          "actual": 503.03,
+          "error_pct": -5.7,
+          "sign_correct": false
+        },
+        {
+          "horizon": "10d",
+          "predicted": 462.2,
+          "delta_pct": -3.49,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
+      ]
+    },
+    {
+      "ticker": "TSLA",
+      "entry_price": 178.34,
+      "entry_date": "2026-05-04",
+      "horizons": [
+        {
+          "horizon": "1d",
+          "predicted": 178.1,
+          "delta_pct": -0.14,
+          "target_date": "2026-05-05",
+          "actual": 180.01,
+          "error_pct": -1.06,
+          "sign_correct": false
+        },
+        {
+          "horizon": "2d",
+          "predicted": 178.87,
+          "delta_pct": 0.3,
+          "target_date": "2026-05-06",
+          "actual": 185.97,
+          "error_pct": -3.82,
+          "sign_correct": true
+        },
+        {
+          "horizon": "3d",
+          "predicted": 179.03,
+          "delta_pct": 0.38,
+          "target_date": "2026-05-07",
+          "actual": 175.81,
+          "error_pct": 1.83,
+          "sign_correct": false
+        },
+        {
+          "horizon": "5d",
+          "predicted": 177.35,
+          "delta_pct": -0.56,
+          "target_date": "2026-05-09",
+          "actual": 173.88,
+          "error_pct": 1.99,
+          "sign_correct": true
+        },
+        {
+          "horizon": "10d",
+          "predicted": 180.23,
+          "delta_pct": 1.06,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
+      ]
+    },
+    {
+      "ticker": "AMD",
+      "entry_price": 158.47,
+      "entry_date": "2026-05-04",
+      "horizons": [
+        {
+          "horizon": "1d",
+          "predicted": 158.01,
+          "delta_pct": -0.29,
+          "target_date": "2026-05-05",
+          "actual": 156.57,
+          "error_pct": 0.92,
+          "sign_correct": true
+        },
+        {
+          "horizon": "2d",
+          "predicted": 158.12,
+          "delta_pct": -0.22,
+          "target_date": "2026-05-06",
+          "actual": 151.64,
+          "error_pct": 4.27,
+          "sign_correct": true
+        },
+        {
+          "horizon": "3d",
+          "predicted": 156.96,
+          "delta_pct": -0.95,
+          "target_date": "2026-05-07",
+          "actual": 155.86,
+          "error_pct": 0.71,
+          "sign_correct": true
+        },
+        {
+          "horizon": "5d",
+          "predicted": 159.13,
+          "delta_pct": 0.42,
+          "target_date": "2026-05-09",
+          "actual": 165.38,
+          "error_pct": -3.77,
+          "sign_correct": true
+        },
+        {
+          "horizon": "10d",
+          "predicted": 158.3,
+          "delta_pct": -0.11,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
+      ]
+    },
+    {
+      "ticker": "JPM",
+      "entry_price": 198.51,
+      "entry_date": "2026-05-04",
+      "horizons": [
+        {
+          "horizon": "1d",
+          "predicted": 199.31,
+          "delta_pct": 0.41,
+          "target_date": "2026-05-05",
+          "actual": 200.82,
+          "error_pct": -0.75,
+          "sign_correct": true
+        },
+        {
+          "horizon": "2d",
+          "predicted": 198.7,
+          "delta_pct": 0.1,
+          "target_date": "2026-05-06",
+          "actual": 194.61,
+          "error_pct": 2.1,
+          "sign_correct": false
+        },
+        {
+          "horizon": "3d",
+          "predicted": 199.58,
+          "delta_pct": 0.54,
+          "target_date": "2026-05-07",
+          "actual": 200.09,
+          "error_pct": -0.25,
+          "sign_correct": true
+        },
+        {
+          "horizon": "5d",
+          "predicted": 200.4,
+          "delta_pct": 0.95,
+          "target_date": "2026-05-09",
+          "actual": 198.05,
+          "error_pct": 1.19,
+          "sign_correct": false
+        },
+        {
+          "horizon": "10d",
+          "predicted": 202.84,
+          "delta_pct": 2.18,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
+      ]
+    },
+    {
+      "ticker": "GS",
+      "entry_price": 463.27,
+      "entry_date": "2026-05-04",
+      "horizons": [
+        {
+          "horizon": "1d",
+          "predicted": 461.9,
+          "delta_pct": -0.3,
+          "target_date": "2026-05-05",
+          "actual": 457.36,
+          "error_pct": 0.99,
+          "sign_correct": true
+        },
+        {
+          "horizon": "2d",
+          "predicted": 457.6,
+          "delta_pct": -1.22,
+          "target_date": "2026-05-06",
+          "actual": 460.55,
+          "error_pct": -0.64,
+          "sign_correct": true
+        },
+        {
+          "horizon": "3d",
+          "predicted": 470.94,
+          "delta_pct": 1.66,
+          "target_date": "2026-05-07",
+          "actual": 478.43,
+          "error_pct": -1.56,
+          "sign_correct": true
+        },
+        {
+          "horizon": "5d",
+          "predicted": 467.51,
+          "delta_pct": 0.92,
+          "target_date": "2026-05-09",
+          "actual": 403.44,
+          "error_pct": 15.88,
+          "sign_correct": false
+        },
+        {
+          "horizon": "10d",
+          "predicted": 468.98,
+          "delta_pct": 1.23,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
+      ]
+    },
+    {
+      "ticker": "SPY",
+      "entry_price": 519.84,
+      "entry_date": "2026-05-04",
+      "horizons": [
+        {
+          "horizon": "1d",
+          "predicted": 518.54,
+          "delta_pct": -0.25,
+          "target_date": "2026-05-05",
+          "actual": 520.16,
+          "error_pct": -0.31,
+          "sign_correct": false
+        },
+        {
+          "horizon": "2d",
+          "predicted": 526.88,
+          "delta_pct": 1.35,
+          "target_date": "2026-05-06",
+          "actual": 507.52,
+          "error_pct": 3.81,
+          "sign_correct": false
+        },
+        {
+          "horizon": "3d",
+          "predicted": 518.91,
+          "delta_pct": -0.18,
+          "target_date": "2026-05-07",
+          "actual": 541.38,
+          "error_pct": -4.15,
+          "sign_correct": false
+        },
+        {
+          "horizon": "5d",
+          "predicted": 518.91,
+          "delta_pct": -0.18,
+          "target_date": "2026-05-09",
+          "actual": 514.43,
+          "error_pct": 0.87,
+          "sign_correct": true
+        },
+        {
+          "horizon": "10d",
+          "predicted": 524.0,
+          "delta_pct": 0.8,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
+      ]
+    },
+    {
+      "ticker": "QQQ",
+      "entry_price": 442.13,
+      "entry_date": "2026-05-04",
+      "horizons": [
+        {
+          "horizon": "1d",
+          "predicted": 438.91,
+          "delta_pct": -0.73,
+          "target_date": "2026-05-05",
+          "actual": 450.56,
+          "error_pct": -2.59,
+          "sign_correct": false
+        },
+        {
+          "horizon": "2d",
+          "predicted": 442.61,
+          "delta_pct": 0.11,
+          "target_date": "2026-05-06",
+          "actual": 472.51,
+          "error_pct": -6.33,
+          "sign_correct": true
+        },
+        {
+          "horizon": "3d",
+          "predicted": 444.18,
+          "delta_pct": 0.46,
+          "target_date": "2026-05-07",
+          "actual": 464.74,
+          "error_pct": -4.42,
+          "sign_correct": true
+        },
+        {
+          "horizon": "5d",
+          "predicted": 435.2,
+          "delta_pct": -1.57,
+          "target_date": "2026-05-09",
+          "actual": 440.77,
+          "error_pct": -1.26,
+          "sign_correct": true
+        },
+        {
+          "horizon": "10d",
+          "predicted": 447.31,
+          "delta_pct": 1.17,
+          "target_date": "2026-05-14",
+          "actual": null,
+          "error_pct": null,
+          "sign_correct": null
+        }
       ]
     }
-  ],
-  "_demo_placeholder": true
+  ]
 }

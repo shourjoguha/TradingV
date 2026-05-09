@@ -21,11 +21,11 @@ export function DemoAbout() {
         <h2 className="text-3xl font-semibold tracking-tight">
           Personal trading-decision-support, end to end.
         </h2>
-        <p className="max-w-2xl text-zinc-400">
-          FastAPI backend running daily Kronos forecasts on a watchlist. Rule
-          engine emits BUY/SELL opportunities weighted by historical hit-rate.
-          Manual trades close the loop with per-rule P&L attribution. This is
-          a frozen public demo of that system as of {manifest?.cutoff_date ?? '2026-05-09'}.
+        <p className="max-w-2xl text-muted-foreground">
+          FastAPI backend running daily Kronos forecasts on a 12-ticker
+          watchlist. Rule engine emits BUY/SELL opportunities weighted by
+          historical hit-rate. Manual trades close the loop with per-rule P&L
+          attribution. This is a frozen public demo of that system as of {manifest?.cutoff_date ?? '2026-05-09'}.
         </p>
       </div>
 
@@ -41,9 +41,10 @@ export function DemoAbout() {
             <Database className="h-4 w-4 text-violet" />
             <CardTitle className="text-sm">What's real here</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-zinc-400">
-            Frozen JSON snapshot of real predictions, opportunities, and trades —
-            scrubbed of PII and proprietary feeds.
+          <CardContent className="text-sm text-muted-foreground">
+            Synthetic-but-realistic snapshot: 12 tickers, predictions made
+            2026-05-04 across 5 horizons. Actuals filled in for elapsed
+            horizons; 10d still pending. Schema mirrors the live system 1:1.
           </CardContent>
         </Card>
         <Card>
@@ -51,9 +52,11 @@ export function DemoAbout() {
             <Lock className="h-4 w-4 text-violet" />
             <CardTitle className="text-sm">What's locked down</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-zinc-400">
+          <CardContent className="text-sm text-muted-foreground">
             No DB. No model weights. No write paths. No outbound API calls.
-            CORS allow-list, healthcheck, rate limits in front.
+            CORS allow-list, healthcheck, rate limits in front. Mutating
+            endpoints (e.g. opportunity dismiss) return success without
+            persisting state.
           </CardContent>
         </Card>
         <Card>
@@ -61,9 +64,10 @@ export function DemoAbout() {
             <Cpu className="h-4 w-4 text-violet" />
             <CardTitle className="text-sm">What runs upstream</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-zinc-400">
+          <CardContent className="text-sm text-muted-foreground">
             Live system runs on the operator's laptop with a Tailscale-synced
-            Railway replica, vault-indexer sidecar, and Telegram alerts.
+            Railway replica, vault-indexer sidecar, hourly accuracy +
+            opportunity workers, drift detector, and Telegram alerts.
           </CardContent>
         </Card>
       </div>
@@ -75,7 +79,7 @@ export function DemoAbout() {
           </Link>
         </Button>
         <Button asChild variant="outline">
-          <Link to="/predictions">See accuracy</Link>
+          <Link to="/predictions">See the accuracy grid</Link>
         </Button>
         <Button asChild variant="outline">
           <Link to="/motion">See P&L attribution</Link>

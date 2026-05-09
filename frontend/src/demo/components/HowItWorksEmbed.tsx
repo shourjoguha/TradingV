@@ -22,11 +22,11 @@ export function HowItWorksEmbed({
 
   if (!youtubeId) {
     return (
-      <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 text-center">
-        <div className="flex flex-col items-center gap-2 px-6 py-8">
-          <Video className="h-8 w-8 text-zinc-600" />
-          <p className="text-sm font-medium text-zinc-300">{title}</p>
-          <p className="text-xs text-zinc-500">Walkthrough video coming soon</p>
+      <div className="flex aspect-video w-full items-center justify-center rounded-2xl bg-background shadow-inset-sm">
+        <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
+          <Video className="h-8 w-8 text-muted-foreground" />
+          <p className="text-sm font-medium">{title}</p>
+          <p className="text-xs text-muted-foreground">Walkthrough video coming soon</p>
         </div>
       </div>
     )
@@ -37,16 +37,16 @@ export function HowItWorksEmbed({
       <button
         type="button"
         onClick={() => setActive(true)}
-        className="group relative aspect-video w-full overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900"
+        className="group relative aspect-video w-full overflow-hidden rounded-2xl shadow-extruded-sm transition-all hover:shadow-extruded-hover"
       >
         <img
           src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`}
           alt={title}
-          className="h-full w-full object-cover opacity-80 transition group-hover:opacity-100"
+          className="h-full w-full object-cover opacity-90 transition group-hover:opacity-100"
           loading="lazy"
         />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-violet/90 shadow-lg transition group-hover:scale-110">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-violet shadow-extruded transition group-hover:scale-110">
             <Play className="h-6 w-6 fill-white text-white" />
           </div>
         </div>
@@ -69,7 +69,7 @@ export function HowItWorksEmbed({
       title={title}
       allow="autoplay; encrypted-media; picture-in-picture"
       allowFullScreen
-      className="aspect-video w-full rounded-lg border border-zinc-800"
+      className="aspect-video w-full rounded-2xl shadow-extruded-sm"
     />
   )
 }

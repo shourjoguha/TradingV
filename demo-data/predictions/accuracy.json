@@ -1,7 +1,39 @@
 {
   "rows": [
-    {"horizon": "1d", "samples": 240, "mape": 0.018, "hit_rate": 0.61},
-    {"horizon": "5d", "samples": 180, "mape": 0.046, "hit_rate": 0.57}
-  ],
-  "_demo_placeholder": true
+    {
+      "horizon": "1d",
+      "samples": 12,
+      "mape": 0.0119,
+      "hit_rate": 0.333,
+      "pending": false
+    },
+    {
+      "horizon": "2d",
+      "samples": 12,
+      "mape": 0.0282,
+      "hit_rate": 0.583,
+      "pending": false
+    },
+    {
+      "horizon": "3d",
+      "samples": 12,
+      "mape": 0.0226,
+      "hit_rate": 0.583,
+      "pending": false
+    },
+    {
+      "horizon": "5d",
+      "samples": 12,
+      "mape": 0.0401,
+      "hit_rate": 0.333,
+      "pending": false
+    },
+    {
+      "horizon": "10d",
+      "samples": 0,
+      "mape": null,
+      "hit_rate": null,
+      "pending": true
+    }
+  ]
 }
