@@ -7,7 +7,7 @@
       "entry_price": 184.61,
       "exit_price": 169.66,
       "pnl_pct": 8.1,
-      "rule_attribution": "trend-breakout",
+      "rule_attribution": "BUY +2% over 5d (HR≥60%)",
       "opened_at": "2026-04-17T00:00:00+00:00",
       "closed_at": "2026-04-26T00:00:00+00:00"
     },
@@ -18,7 +18,7 @@
       "entry_price": 478.92,
       "exit_price": 525.78,
       "pnl_pct": 9.78,
-      "rule_attribution": "mean-reversion",
+      "rule_attribution": "SELL -2% over 5d (HR≥60%)",
       "opened_at": "2026-04-22T00:00:00+00:00",
       "closed_at": "2026-04-27T00:00:00+00:00"
     },
@@ -29,7 +29,7 @@
       "entry_price": 178.34,
       "exit_price": 185.05,
       "pnl_pct": 3.76,
-      "rule_attribution": "gap-fill",
+      "rule_attribution": "BUY +5% over 10d (HR≥55%)",
       "opened_at": "2026-05-06T00:00:00+00:00",
       "closed_at": "2026-05-11T00:00:00+00:00"
     },
@@ -40,7 +40,7 @@
       "entry_price": 158.47,
       "exit_price": 169.53,
       "pnl_pct": -6.98,
-      "rule_attribution": "momentum-thrust",
+      "rule_attribution": "BUY +5% over 10d (HR≥55%)",
       "opened_at": "2026-05-01T00:00:00+00:00",
       "closed_at": "2026-05-04T00:00:00+00:00"
     },
@@ -51,7 +51,7 @@
       "entry_price": 195.4,
       "exit_price": 178.2,
       "pnl_pct": -8.8,
-      "rule_attribution": "trend-breakout",
+      "rule_attribution": "BUY +2% over 5d (HR≥60%)",
       "opened_at": "2026-04-15T13:30:00+00:00",
       "closed_at": "2026-04-22T20:00:00+00:00"
     }

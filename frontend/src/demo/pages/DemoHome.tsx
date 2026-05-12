@@ -158,7 +158,7 @@ export function DemoHome() {
                 What it's curious about
               </CardTitle>
               <CardDescription className="text-xs">
-                Stress-test questions queued against the operator-curated knowledge vault.
+                Stress-test questions the operator has queued against the curated knowledge vault. The automatic weekly stress-test loop is gated off by default to keep API spend bounded; the operator opts in.
               </CardDescription>
             </div>
             <span className="text-xs text-muted-foreground">
@@ -252,8 +252,9 @@ export function DemoHome() {
               Want to see the closed loop?
             </p>
             <p className="text-sm text-muted-foreground">
-              Predictions feed rules. Rules feed opportunities. Opportunities feed trades.
-              Trades feed back into per-rule P&L. The whole pipeline is on Motion.
+              Predictions feed rules. Rules feed opportunities. Opportunities feed trades
+              (manually logged with the rule attribution). Trades feed back into per-rule P&L.
+              The whole pipeline is on Motion.
             </p>
           </div>
           <Link

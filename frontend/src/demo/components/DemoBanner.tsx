@@ -43,7 +43,7 @@ export function DemoBanner() {
             href={CONTACT_URL}
             className="inline-flex items-center gap-1 text-muted-foreground transition-colors hover:text-violet"
           >
-            Request access
+            Contact operator
           </a>
         </div>
       </div>

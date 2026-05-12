@@ -33,20 +33,20 @@ const STACK = [
 
 const FAILURE_MODES = [
   {
-    name: 'Regime changes',
-    body: 'When VIX expands quickly past historical bands, hit-rate degrades by ~12 points. The drift detector flags this within hours; the operator throttles the rule engine.',
+    name: 'Drift on a per-pair basis',
+    body: 'The drift detector compares recent MAPE to all-time MAPE per (ticker, horizon) pair. When recent error exceeds 1.5× the long-run baseline, the pair gets flagged. Acked alerts age out after 90 days; unacked alerts stay forever, forcing operator review.',
   },
   {
-    name: 'Earnings surprises',
-    body: 'Predictions made within 48h of an earnings release have ~2× the MAPE of the steady-state set. The system tags these and de-weights their attribution.',
+    name: 'Earnings releases inject step-changes',
+    body: 'Earnings days are step-functions the model was not conditioned on. The system maintains an earnings calendar over the roster plus smart-money tier-1/2 names and surfaces upcoming releases. Manual exposure throttling at the operator level; automatic prediction de-weighting by earnings proximity is on the near-term improvement list, not built yet.',
   },
   {
-    name: 'Mega-cap concentration',
-    body: 'Hit-rate is materially better on mega-caps (NVDA, MSFT, META) than on mid-caps. Excluding them drops aggregate hit-rate ~6 points — surfaced openly, not hidden.',
+    name: 'Cohort skew by market cap',
+    body: 'Per-ticker hit-rate varies materially by market cap. Mega-caps tend to forecast better day-to-day than mid-caps. The accuracy grid surfaces every (ticker, horizon) cell so the cohort skew is visible; a one-click "exclude mega-caps" cohort filter is on the near-term improvement list, not built yet.',
   },
   {
     name: 'Long-horizon decay',
-    body: '10d MAPE is 3-4× the 1d MAPE. The honest take: the further out you forecast, the more this system costs you. The grid shows it.',
+    body: 'Forecast error compounds with horizon — the 10d MAPE is multiples of the 1d MAPE on every ticker in the snapshot. The honest take: the further out you forecast, the more this system costs you. The accuracy grid shows the decay row by row.',
   },
 ] as const
 
@@ -165,7 +165,7 @@ export function DemoAbout() {
             href={CONTACT}
             className="rounded-2xl bg-violet px-5 py-2 text-sm font-medium text-white shadow-extruded-sm transition-all hover:shadow-extruded"
           >
-            Request access / start a conversation
+            Contact operator / start a conversation
           </a>
           <a
             href={GITHUB}

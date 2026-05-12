@@ -16,6 +16,15 @@ interface WatchWalkthroughProps {
  * fullscreen toggle expands it to fill the viewport. Click backdrop or
  * press Escape to close.
  */
+/**
+ * Until walkthrough videos are recorded, the button is hidden by default.
+ * Flip `VITE_SHOW_WALKTHROUGH_PLACEHOLDERS=true` at build time to surface
+ * the button with a "video coming soon" placeholder modal. Setting a real
+ * youtubeId always wins — the env flag only affects the placeholder path.
+ */
+const SHOW_PLACEHOLDERS =
+  import.meta.env.VITE_SHOW_WALKTHROUGH_PLACEHOLDERS === 'true'
+
 export function WatchWalkthrough({
   youtubeId,
   title,
@@ -23,6 +32,9 @@ export function WatchWalkthrough({
 }: WatchWalkthroughProps) {
   const [open, setOpen] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
+
+  // Hide entirely when no video is wired and placeholder mode is off.
+  if (!youtubeId && !SHOW_PLACEHOLDERS) return null
 
   // Close on Escape; lock body scroll while open.
   useEffect(() => {

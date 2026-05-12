@@ -30,13 +30,13 @@ const CANNED_FALLBACK: CannedAnswer[] = [
     id: 'how-accurate',
     title: 'How accurate are the predictions?',
     tab: 'predictions',
-    body: 'Accuracy is tracked per (horizon, target) on every prediction once actuals land. The Predictions → Accuracy tab shows MAPE and hit-rate per horizon. Drift detector flags pairs whose recent MAPE has degraded past threshold and posts to Telegram in the live system. Headline: 1d MAPE ~1.2-2%, 5d MAPE ~4-5%, 1d hit-rate ~60% in the snapshot.',
+    body: 'Accuracy is tracked per (horizon, target) on every prediction once actuals land. The Predictions → Accuracy tab shows MAPE and hit-rate per horizon. Drift detector flags pairs whose recent MAPE has degraded past threshold and posts to Telegram in the live system when the bot token is configured. Headline numbers in the 2026-05-09 snapshot: 1d MAPE ~1.5-2%, 5d MAPE ~4-5%, 1d hit-rate ~60%. These move every time the bake script refreshes the snapshot; check the accuracy tab for the live grid.',
   },
   {
     id: 'what-signals',
     title: 'How do opportunities get generated?',
     tab: 'motion',
-    body: 'An hourly worker runs a fixed rule set over recent predictions: trend-breakout, mean-reversion, gap-fill, momentum-thrust. Each fires only when the prediction\'s confidence and the rule\'s gating thresholds are met. Each opportunity is weighted by the rule\'s historical hit-rate so high-volume / low-edge rules surface lower. Status flow: open → acted (when manually traded) or expired (after horizon).',
+    body: 'An hourly worker runs a fixed rule set over recent predictions. Current rules are threshold-based on the predicted 5d and 10d moves: a 5d ≥2% predicted gain with ≥60% historical hit-rate fires BUY; a 5d ≤−2% predicted drop fires SELL; a 10d ≥5% predicted gain with ≥55% hit-rate fires a longer-horizon BUY. Each opportunity is weighted by that rule\'s cumulative historical hit-rate so a high-volume / low-edge rule surfaces lower than a rare / high-magnitude one. Status flow: open → acted (when manually traded) or expired (after horizon). Rule set is intentionally small and hardcoded — decision support, not a discovery engine.',
   },
   {
     id: 'trade-attribution',
@@ -54,7 +54,7 @@ const CANNED_FALLBACK: CannedAnswer[] = [
     id: 'data-sources',
     title: 'What data sources feed this?',
     tab: 'today',
-    body: 'Market data from yfinance for prices and IV percentile; FRED for macro signal layer (rates, spreads, employment). TradingView webhook receiver for chart-context screenshots. A separate vault-indexer sidecar embeds an operator-curated knowledge corpus for the Research tab. None of these are called by the public demo — all data here is frozen as of the cutoff.',
+    body: 'Market data from yfinance for prices and IV percentile; FRED for macro signal layer (rates, spreads, employment). TradingView webhooks for text-based alert payloads, plus a separate operator-paste / drag-and-drop path for chart screenshots that get vision-summarised by Claude. A separate vault-indexer sidecar embeds an operator-curated knowledge corpus for the Research tab. None of these are called by the public demo — all data here is frozen as of the cutoff.',
   },
   {
     id: 'tech-stack',
@@ -72,7 +72,7 @@ const CANNED_FALLBACK: CannedAnswer[] = [
     id: 'drift-alerts',
     title: 'What is a drift alert?',
     tab: 'today',
-    body: "A drift alert fires when a (ticker, horizon) pair's recent MAPE exceeds DRIFT_RATIO_THRESHOLD × the all-time MAPE for that pair. It's a coarse 'this pair is currently broken' signal, posted to Telegram in the live system and visible on the Today page here. Operator acks dismisses the row.",
+    body: "A drift alert fires when a (ticker, horizon) pair's recent MAPE exceeds DRIFT_RATIO_THRESHOLD × the all-time MAPE for that pair. It's a coarse 'this pair is currently broken' signal, posted to Telegram in the live system when the bot token is configured and visible on the Today page here. Operator acks dismisses the row.",
   },
   {
     id: 'live-vs-demo',
@@ -84,13 +84,13 @@ const CANNED_FALLBACK: CannedAnswer[] = [
     id: 'code-access',
     title: 'Can I see the source code?',
     tab: 'about',
-    body: 'Yes — the demo branch is public at github.com/shourjoguha/TradingV/tree/demo. The main branch (live system) is gated; reach out via the Request access link in the banner.',
+    body: 'Yes — the demo branch is public at github.com/shourjoguha/TradingV/tree/demo. The main branch (live system) is gated; reach out via the Contact operator link in the banner.',
   },
   {
     id: 'build-with-me',
     title: 'Can you build something like this for me?',
     tab: 'about',
-    body: 'Open to it. The patterns here — frozen demo on cheap infra, dual-backend laptop+cloud sync, rule engine + per-rule P&L attribution, vault-indexed knowledge layer — generalize past trading. One operator, two engagements at a time. Use the Request access link in the banner.',
+    body: 'Open to it. The patterns here — frozen demo on cheap infra, dual-backend laptop+cloud sync, rule engine + per-rule P&L attribution, vault-indexed knowledge layer — generalize past trading. One operator, two engagements at a time. Use the Contact operator link in the banner.',
   },
 ]
 

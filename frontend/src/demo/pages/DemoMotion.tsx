@@ -31,7 +31,7 @@ export function DemoMotion() {
     <div className="space-y-6">
       <HeroStat
         headline="Forecast → signal → trade → attribution. The closed loop."
-        subhead="Predictions feed rules. Rules emit opportunities. Manual trades reference an opportunity_id, so per-rule P&L rolls up automatically. A rule with high hit-rate but tiny edge ranks below a rare, high-magnitude one."
+        subhead="Predictions feed rules. Rules emit opportunities. The operator manually logs each closed trade with the originating opportunity_id, so per-rule P&L rolls up automatically. A rule with high hit-rate but tiny edge ranks below a rare, high-magnitude one."
         primaryStat={
           trades ? (
             <div className="flex flex-col items-end gap-1">
