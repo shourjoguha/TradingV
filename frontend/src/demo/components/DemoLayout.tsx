@@ -68,8 +68,14 @@ export function DemoLayout({ children }: DemoLayoutProps) {
           {children}
         </main>
       </div>
-      <footer className="py-8 text-center text-xs text-muted-foreground">
-        Public demo · all data frozen · no live feeds, no model inference
+      <footer className="mx-auto max-w-3xl space-y-2 px-4 py-8 text-center text-xs text-muted-foreground">
+        <p>Public demo · frozen data · no live feeds or model inference.</p>
+        <p>
+          <span className="font-medium text-foreground/80">Not financial advice.</span>{' '}
+          This site exists to demonstrate the shape of an integrated decision-support
+          system — the patterns shown here (closed-loop attribution, drift detection,
+          honest accuracy tracking, vault-indexed research) generalize well beyond trading.
+        </p>
       </footer>
     </div>
   )

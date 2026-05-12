@@ -19,7 +19,7 @@ export function DemoBanner() {
   const cutoff = manifest?.cutoff_date ?? '2026-05-09'
 
   return (
-    <div className="sticky top-0 z-40 w-full bg-background/85 backdrop-blur-sm shadow-[0_4px_12px_rgba(163,177,198,0.2)]">
+    <div className="sticky top-0 z-40 w-full bg-orange-100/85 backdrop-blur-sm shadow-[0_4px_12px_rgba(163,177,198,0.2)]">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 text-xs md:px-8">
         <div className="flex items-center gap-3 text-muted-foreground">
           <span className="rounded-full bg-violet/15 px-2 py-0.5 font-medium text-violet">
