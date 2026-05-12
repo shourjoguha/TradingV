@@ -88,7 +88,7 @@ const CANNED_FALLBACK: CannedAnswer[] = [
   },
   {
     id: 'build-with-me',
-    title: 'Can you build something like this for me?',
+    title: 'Is something like this available as a build engagement?',
     tab: 'about',
     body: 'Open to it. The patterns here — frozen demo on cheap infra, dual-backend laptop+cloud sync, rule engine + per-rule P&L attribution, vault-indexed knowledge layer — generalize past trading. One operator, two engagements at a time. Use the Contact operator link in the banner.',
   },
@@ -143,8 +143,8 @@ export function AskWidget() {
           Ask the demo
         </CardTitle>
         <CardDescription className="text-xs">
-          Twelve questions answered in full below. Click a card to expand. Or type your own —
-          the matcher returns the closest fit, never an empty state.
+          Twelve questions answered in full below. Click a card to expand. Or submit a custom
+          query — the matcher returns the closest fit, never an empty state.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

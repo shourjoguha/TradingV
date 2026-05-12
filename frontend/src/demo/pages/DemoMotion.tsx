@@ -315,8 +315,8 @@ function Attribution() {
         <CardTitle className="text-sm">Per-rule P&L attribution</CardTitle>
         <CardDescription className="text-xs">
           Each closed trade rolls back to the rule that produced its opportunity.
-          Cumulative %P&L per rule lets you compare rules across very different
-          trade counts.
+          Cumulative %P&L per rule normalises across very different trade counts so
+          a rare high-magnitude rule isn't drowned out by a frequent low-edge one.
         </CardDescription>
       </CardHeader>
       <CardContent>

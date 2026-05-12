@@ -14,12 +14,12 @@ const ITEMS = [
   {
     icon: GitBranch,
     title: 'Drift detector running',
-    body: 'When recent MAPE on any (ticker, horizon) pair exceeds threshold × all-time MAPE, the system flags itself before you do.',
+    body: 'When recent MAPE on any (ticker, horizon) pair exceeds threshold × all-time MAPE, the system flags itself before the operator notices.',
   },
   {
     icon: BookOpen,
     title: 'Open source',
-    body: 'Demo branch is public on GitHub. Fork it, audit it, run it on your own data. The honest demo is the only kind worth shipping.',
+    body: 'Demo branch is public on GitHub. Fork the repo, audit the source, run the patterns on any data. The honest demo is the only kind worth shipping.',
   },
 ] as const
 

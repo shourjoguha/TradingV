@@ -30,7 +30,7 @@ export function DemoHome() {
     <div className="space-y-6">
       <HeroStat
         headline="A trading model that admits when it's wrong."
-        subhead="You see every prediction across 12 tickers, 5 horizons — and exactly how each one missed. No cherry-picked screenshots, no PR-massaged numbers."
+        subhead="Every prediction is on display across 12 tickers and 5 horizons — alongside exactly how each one missed. No cherry-picked screenshots, no PR-massaged numbers."
         primaryStat={
           oneDay && fiveDay ? (
             <div className="flex flex-col items-end gap-1">
@@ -66,8 +66,9 @@ export function DemoHome() {
       <div>
         <h3 className="font-display text-lg font-semibold">Today, frozen</h3>
         <p className="text-sm text-muted-foreground">
-          What the operator's morning glance looks like. Four signals at once: where it's
-          misfiring, what it would have you do, what it's curious about, and the macro mood.
+          What the operator's morning glance looks like. Four signals at once: where the model
+          is misfiring, what the rules might pursue, what the system is curious about, and the
+          macro mood.
         </p>
       </div>
 
@@ -80,7 +81,7 @@ export function DemoHome() {
                 Where the model is misfiring
               </CardTitle>
               <CardDescription className="text-xs">
-                Drift = recent MAPE ratio vs all-time. The system flags itself before you do.
+                Drift = recent MAPE ratio vs all-time. The system flags itself before the operator does.
               </CardDescription>
             </div>
             <span className="text-xs text-muted-foreground">
@@ -116,7 +117,7 @@ export function DemoHome() {
             <div>
               <CardTitle className="flex items-center gap-2 text-sm font-medium">
                 <Zap className="h-4 w-4 text-emerald-500" />
-                What it would have you do today
+                What it might pursue
               </CardTitle>
               <CardDescription className="text-xs">
                 Rule-based signals weighted by historical hit-rate. Decision support, not auto-execution.

@@ -46,7 +46,7 @@
     },
     {
       "id": "build-with-me",
-      "label": "Can you build something like this for me?"
+      "label": "Is something like this available as a build engagement?"
     }
   ],
   "answers": [
@@ -224,7 +224,7 @@
     },
     {
       "id": "build-with-me",
-      "title": "Can you build something like this for me?",
+      "title": "Is something like this available as a build engagement?",
       "tab": "about",
       "keywords": [
         "hire",

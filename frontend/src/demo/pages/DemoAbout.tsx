@@ -46,7 +46,7 @@ const FAILURE_MODES = [
   },
   {
     name: 'Long-horizon decay',
-    body: 'Forecast error compounds with horizon — the 10d MAPE is multiples of the 1d MAPE on every ticker in the snapshot. The honest take: the further out you forecast, the more this system costs you. The accuracy grid shows the decay row by row.',
+    body: 'Forecast error compounds with horizon — the 10d MAPE is multiples of the 1d MAPE on every ticker in the snapshot. The honest take: the further out the model forecasts, the more error it carries. The accuracy grid shows the decay row by row.',
   },
 ] as const
 
@@ -87,8 +87,8 @@ export function DemoAbout() {
       <section className="space-y-3">
         <h3 className="font-display text-xl font-bold">Why this exists</h3>
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Trading models are easy to demo when you choose what to show. The operator built
-          this because the only honest demo is one that shows the misses next to the hits.
+          Trading models are easy to demo when the author chooses what to show. The operator
+          built this because the only honest demo is one that shows the misses next to the hits.
           Predictions are stamped with an entry date. Actuals get filled in as the horizon
           elapses. Errors get tracked. The drift detector flags pairs that have started
           misbehaving. Per-rule P&L attribution lets the closed loop close. None of that is
@@ -122,7 +122,7 @@ export function DemoAbout() {
         <h3 className="font-display text-xl font-bold">How it's validated</h3>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Every prediction is scored against the actual close on its target date. The grid
-          you see in Predictions → Accuracy is a direct readout of those evaluations.
+          rendered in Predictions → Accuracy is a direct readout of those evaluations.
         </p>
         <MethodologyBadges />
       </section>
