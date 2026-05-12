@@ -112,9 +112,9 @@ bounded.
 
 ## Future
 
-- Phase 4 of the original IA-reorg plan (Gekko auto-pipeline) is still
-  deferred. Several of its sources are now redundant with EDGAR direct
-  ingest — see `.claude/plans/ok-now-we-have-distributed-anchor.md`.
+- Phase 4 of the original IA-reorg plan (smart-money auto-pipeline) is
+  still deferred. Several of its sources are now redundant with EDGAR
+  direct ingest — see `.claude/plans/ok-now-we-have-distributed-anchor.md`.
 - Steering events from `app/research/weekly.py` could write to
   `process_status.last_error` for diagnostic surfacing — currently they
   log to `<vault>/Research/_steering-log.md`.

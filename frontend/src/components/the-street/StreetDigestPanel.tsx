@@ -127,7 +127,7 @@ function DigestBody({
           <Section
             label={`Trailblazers (${ch.trailblazers!.length})`}
             icon={<Building2 className="h-3.5 w-3.5 text-violet" />}
-            help="High-performing fund managers tracked by Gekko (51 funds). Same 13F cadence as Billionaires. Higher fund count = denser cross-fund crowding on this name."
+            help="High-performing fund managers tracked by the smart-money aggregator (51 funds). Same 13F cadence as Billionaires. Higher fund count = denser cross-fund crowding on this name."
           >
             <FundList rows={ch.trailblazers!} />
           </Section>
@@ -167,9 +167,9 @@ function DigestBody({
 const OPTIONS_HELP = (
   <>
     <p className="mb-2">
-      Unusual call (or call-spread) flow flagged BULLISH by Gekko, conviction ≥
-      50, ~10-day rolling window. Bullish flow is positioning, not a literal
-      share buy.
+      Unusual call (or call-spread) flow flagged BULLISH by the smart-money
+      aggregator, conviction ≥ 50, ~10-day rolling window. Bullish flow is
+      positioning, not a literal share buy.
     </p>
     <ul className="space-y-1 list-disc pl-4">
       <li>
@@ -182,8 +182,8 @@ const OPTIONS_HELP = (
         contract block. Bigger = larger account behind it.
       </li>
       <li>
-        <span className="font-medium">Conviction</span> — Gekko's blend of size,
-        premium-vs-open-interest, and aggressor side. 50 = noisy, 70+ = strong.
+        <span className="font-medium">Conviction</span> — the aggregator's blend
+        of size, premium-vs-open-interest, and aggressor side. 50 = noisy, 70+ = strong.
       </li>
       <li>
         <span className="font-medium">vs OI</span> — sweep volume divided by
@@ -386,7 +386,7 @@ const MONTH_NAMES = [
 ]
 
 /**
- * Parse Gekko's compact contract code, e.g. `C$610.005/29` →
+ * Parse the aggregator's compact contract code, e.g. `C$610.005/29` →
  * { kind:'C', strike:'610.00', expiryLabel:'May 29' }.
  *
  * Format observed: `[CP]$<strike-with-2-decimals><month>/<day>`. The
