@@ -38,11 +38,11 @@ const FAILURE_MODES = [
   },
   {
     name: 'Earnings releases inject step-changes',
-    body: 'Earnings days are step-functions the model was not conditioned on. The system maintains an earnings calendar over the roster plus smart-money tier-1/2 names and surfaces upcoming releases. Manual exposure throttling at the operator level; automatic prediction de-weighting by earnings proximity is on the near-term improvement list, not built yet.',
+    body: 'Earnings days are step-functions the model was not conditioned on. The system maintains an earnings calendar over the roster plus smart-money tier-1/2 names and surfaces upcoming releases so the operator can throttle exposure manually around announcements.',
   },
   {
     name: 'Cohort skew by market cap',
-    body: 'Per-ticker hit-rate varies materially by market cap. Mega-caps tend to forecast better day-to-day than mid-caps. The accuracy grid surfaces every (ticker, horizon) cell so the cohort skew is visible; a one-click "exclude mega-caps" cohort filter is on the near-term improvement list, not built yet.',
+    body: 'Per-ticker hit-rate varies materially by market cap. Mega-caps tend to forecast better day-to-day than mid-caps. The accuracy grid surfaces every (ticker, horizon) cell so the cohort skew is visible — the operator watches the per-ticker rows to know which names the model trusts itself on.',
   },
   {
     name: 'Long-horizon decay',
