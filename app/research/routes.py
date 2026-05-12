@@ -52,6 +52,9 @@ def _enriched_read(row: ResearchQuery) -> ResearchQueryRead:
         evidence=evidence,
         macro_state=macro,
         source_context=source_context,
+        score=row.score,
+        is_deferred=row.is_deferred,
+        auto_aged_at=row.auto_aged_at,
     )
 
 
@@ -95,12 +98,42 @@ async def list_queries(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     status: Optional[str] = Query(None),
+    order: str = Query("asked_at", pattern="^(asked_at|score)$"),
+    include_deferred: bool = Query(True),
     _api_key: str = Depends(verify_api_key),
 ) -> ResearchQueriesList:
+    """List research queries.
+
+    `order=asked_at` (default) preserves the legacy chronological listing —
+    backwards-compat for /research detail page and admin tooling.
+
+    `order=score` ranks by composite priority score (top of list = most
+    attention-worthy). NULL scores sort last so the Today landing's top-5
+    panel surfaces ranked rows first and any unscored legacy queries
+    after.
+
+    `include_deferred=false` filters out queries currently in the backlog
+    (outside the top-5 visible cohort). Used by the Today landing.
+    """
     async with _db.SessionLocal() as session:
-        stmt = select(ResearchQuery).order_by(desc(ResearchQuery.asked_at))
+        stmt = select(ResearchQuery)
         if status:
             stmt = stmt.where(ResearchQuery.status == status)
+        if not include_deferred:
+            stmt = stmt.where(ResearchQuery.is_deferred.is_(False))
+        if order == "score":
+            # NULLs LAST regardless of DB — coalesce to a sentinel that
+            # sorts after any real score (any negative number works since
+            # our scores can dip below zero with strong penalties, but
+            # legacy unscored rows should still trail). Use sqlalchemy
+            # nulls_last when available; fall back to coalesce.
+            stmt = stmt.order_by(
+                desc(ResearchQuery.score.is_not(None)),
+                desc(ResearchQuery.score),
+                desc(ResearchQuery.asked_at),
+            )
+        else:
+            stmt = stmt.order_by(desc(ResearchQuery.asked_at))
         stmt = stmt.limit(limit).offset(offset)
         rows = (await session.execute(stmt)).scalars().all()
     return ResearchQueriesList(

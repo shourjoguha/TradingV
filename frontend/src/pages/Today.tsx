@@ -1,59 +1,36 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Play, ChevronDown, ChevronRight } from 'lucide-react'
+import { Play } from 'lucide-react'
 import { useFireNow, useSchedule } from '../hooks/use-api'
 import { Button } from '../components/ui/button'
-import { DriftBanner } from '../components/today/DriftBanner'
-import { ResearchApprovalStrip } from '../components/today/ResearchApprovalStrip'
-import { FreshSignalsStrip } from '../components/today/FreshSignalsStrip'
+import { DriftCard } from '../components/today/DriftCard'
+import { FreshSignalsCard } from '../components/today/FreshSignalsCard'
+import { ResearchCuriousCard } from '../components/today/ResearchCuriousCard'
+import { MarketMoodCard } from '../components/today/MarketMoodCard'
 import { TVContextStrip } from '../components/today/TVContextStrip'
 import { WatchlistDelta } from '../components/today/WatchlistDelta'
-import { RegimeStrip } from '../components/dashboard/RegimeStrip'
-
-const COLLAPSE_KEY = 'today.section.collapsed'
-
-interface CollapseState {
-  regime?: boolean
-}
-
-function readCollapse(): CollapseState {
-  if (typeof window === 'undefined') return {}
-  try {
-    const raw = window.localStorage.getItem(COLLAPSE_KEY)
-    return raw ? (JSON.parse(raw) as CollapseState) : {}
-  } catch {
-    return {}
-  }
-}
-
-function writeCollapse(state: CollapseState): void {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(COLLAPSE_KEY, JSON.stringify(state))
-}
+import { PendingReviewPanel } from '../components/today/PendingReviewPanel'
 
 /**
- * Today — single-screen morning catch-up.
+ * Today — single-screen morning catch-up, demo-inspired 2×2 narrative grid.
  *
- * Replaces the legacy generic Dashboard at the root route. Surfaces the
- * morning-priority bundle: drift alerts → pending research approvals →
- * fresh opportunities since the last visit. Lower-priority context
- * (regime context, schedule, queue, recent jobs) lives at /admin/overview
- * via the legacy Dashboard, which stays around as a quarterly admin page.
+ * Layout:
+ *  1. Page header + Run Now button
+ *  2. 2×2 grid of narrative cards (drift, fresh signals, research curiosity,
+ *     market mood). Each card has a role description that survives empty
+ *     state. NO inline action buttons — clicks navigate to dedicated pages.
+ *  3. Secondary rows: TV Context strip + Watchlist delta.
+ *  4. PendingReviewPanel at the bottom — top-5 by composite score, inline
+ *     expand for approve/dismiss. Backlog link to /research?status=pending.
  *
- * Phase 1 wires Drift / Research / Fresh Signals only. Phase 2 will add
- * TV Context strip + Watchlist Delta.
+ * Operator pain solved (2026-05-13 brainstorm):
+ *  - 10+ pending approvals stacked above the fold → cognitive overload
+ *    → blanket dismissal. New layout: cap visible to 5, ranked by score
+ *    not chronology, inline expand only when operator engages, auto-age
+ *    after 30d via the retention loop (see app/research/ranking.py).
  */
 export function Today() {
   const { data: schedule } = useSchedule()
   const { mutate: fireNow, isPending: isFiring } = useFireNow()
-  const [collapse, setCollapse] = useState<CollapseState>(() => readCollapse())
-
-  useEffect(() => {
-    writeCollapse(collapse)
-  }, [collapse])
-
-  const toggleRegime = () =>
-    setCollapse((c) => ({ ...c, regime: !c.regime }))
 
   return (
     <div className="space-y-6">
@@ -63,7 +40,8 @@ export function Today() {
             Today
           </h2>
           <p className="text-muted-foreground text-sm">
-            Morning catch-up: drift, pending research, fresh signals.
+            Morning glance: where the model is misfiring, what it might pursue,
+            what it's curious about, and the market mood.
           </p>
         </div>
         <Button
@@ -76,36 +54,21 @@ export function Today() {
         </Button>
       </div>
 
-      <DriftBanner />
-
-      <ResearchApprovalStrip />
-
-      <FreshSignalsStrip />
+      <div className="grid gap-3 md:grid-cols-2">
+        <DriftCard />
+        <FreshSignalsCard />
+        <ResearchCuriousCard />
+        <MarketMoodCard />
+      </div>
 
       <TVContextStrip />
 
       <WatchlistDelta />
 
-      {/* Collapsed-by-default regime context — operator can expand if needed. */}
-      <div className="space-y-2">
-        <button
-          type="button"
-          onClick={toggleRegime}
-          aria-expanded={!collapse.regime}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-2xl text-sm font-medium text-muted-foreground hover:text-foreground hover:shadow-extruded-sm transition-all"
-        >
-          {collapse.regime ? (
-            <ChevronRight className="h-3.5 w-3.5 opacity-60" />
-          ) : (
-            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-          )}
-          Regime context
-        </button>
-        {!collapse.regime && <RegimeStrip />}
-      </div>
+      <PendingReviewPanel />
 
       <div className="text-xs text-muted-foreground italic pt-4">
-        Looking for the old dashboard?{' '}
+        Looking for the legacy dashboard?{' '}
         <Link to="/admin/overview" className="text-violet hover:underline">
           Open it here
         </Link>

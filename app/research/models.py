@@ -6,13 +6,16 @@ import uuid
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     DateTime,
+    Float,
     Index,
     Integer,
     Numeric,
     String,
     Text,
+    false,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -56,10 +59,33 @@ class ResearchQuery(Base):
     )
     approved_action: Mapped[dict | None] = mapped_column(JSON(), nullable=True)
 
+    # Composite priority score (Today landing top-5 ranking). NULL = not yet
+    # computed (legacy rows before migration 0027, or queries created before
+    # ranking module ran).
+    score: Mapped[float | None] = mapped_column(Float(), nullable=True)
+
+    # True when the query is in the backlog (outside current top-5). The
+    # landing UI hides deferred queries; /research?status=pending still shows
+    # them.
+    is_deferred: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, server_default=false(), default=False
+    )
+
+    # Set when the retention sweep auto-dismissed a stale pending query.
+    auto_aged_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     __table_args__ = (
         CheckConstraint(
             "status IN ('pending', 'approved', 'dismissed', 'error')",
             name="ck_research_queries_status",
         ),
         Index("ix_research_queries_asked_at", "asked_at"),
+        Index(
+            "ix_research_queries_status_deferred_score",
+            "status",
+            "is_deferred",
+            "score",
+        ),
     )

@@ -93,6 +93,13 @@ class ResearchQueryRead(BaseModel):
     evidence: list[EvidenceItem] = Field(default_factory=list)
     macro_state: list[MacroSnapshotItem] = Field(default_factory=list)
     source_context: list[SourceContextItem] = Field(default_factory=list)
+    # Composite ranking score (see app.research.ranking). NULL on legacy rows
+    # created before migration 0027.
+    score: Optional[float] = None
+    # True when the query is in the backlog (outside current top-5).
+    is_deferred: bool = False
+    # Set when retention sweep auto-aged a stale pending query.
+    auto_aged_at: Optional[datetime.datetime] = None
 
 
 class ResearchQueriesList(BaseModel):

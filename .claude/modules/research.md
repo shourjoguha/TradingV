@@ -107,6 +107,35 @@ TradingView's approve route re-validates the DSL (defense in depth), then
 patches the hypothesis row's `invalidator`. Next nightly hypothesis tick
 re-evaluates with the new threshold.
 
+## Ranking + auto-age (Today landing top-5)
+
+The Today landing surfaces only the **top-5 pending queries by composite score**, not chronologically. Lives in `app/research/ranking.py`. Formula (constants at module top — single touchpoint for iteration):
+
+```
+score = 1.0 * has_action
+      + 0.8 * at_risk_hyp           (TTL ≤ 30 days)
+      + 0.6 * recent_at_risk_eval   (within 14 days)
+      + 0.4 * log1p(cost_usd)
+      - 0.5 * dismiss_rate          (clamped 0..1)
+      - 0.05 * age_days
+```
+
+Three persistence fields (migration `0027_research_query_scoring.py`):
+- `score FLOAT NULL` — current composite. NULL = unscored (legacy / brand-new).
+- `is_deferred BOOLEAN DEFAULT FALSE` — true when this query is in the backlog (outside the current top-5).
+- `auto_aged_at TIMESTAMPTZ NULL` — set when the retention sweep auto-dismissed a stale pending query.
+
+Recompute paths:
+- **On create** — `service.ask` calls `ranking.compute_score(session, row)` before commit. Best-effort: failure here logs + swallows so it never blocks query creation.
+- **Nightly** — `ranking.recompute_all_pending(session)` is invoked from `_retention_loop`. Rescores every pending query, sorts by score DESC, flags top-N (`TOP_N_VISIBLE = 5`) as visible and the rest as deferred.
+- **Auto-age** — `ranking.auto_age_expired(session, threshold_days=30)` flips pending queries older than 30 days to `dismissed` with `approved_action={"reason":"auto-aged-out","threshold_days":30}` + sets `auto_aged_at`. Also called from `_retention_loop`. Idempotent.
+
+API:
+- `GET /v1/research/queries?order=score&include_deferred=false&limit=5` — Today landing's `PendingReviewPanel` uses this. `order=score` is opt-in; legacy callers stay on `order=asked_at`.
+- Score is included in `ResearchQueryRead` payload so frontend can show it inline (`score 4.2` badge on each row).
+
+Why this exists: pre-2026-05-13 the Today page stacked 10+ pending queries vertically with inline buttons, triggering operator's blanket-dismiss reflex. Capping at 5 + ranking by quality + auto-aging the backlog at 30 days keeps the queue tractable without losing intentionally-asked queries.
+
 ## Auto-stress weekly task
 
 Wired into `app/main.py` lifespan as `research-weekly`. Sleeps

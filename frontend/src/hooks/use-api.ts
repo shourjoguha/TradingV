@@ -1164,6 +1164,10 @@ export function useResearchQueries(params?: {
   limit?: number
   offset?: number
   status?: string
+  /** 'asked_at' (default — chronological) or 'score' (priority ranked). */
+  order?: 'asked_at' | 'score'
+  /** When false, hides backlog rows (is_deferred=true). Used by Today landing. */
+  includeDeferred?: boolean
 }) {
   const { backendId } = useBackend()
   return useQuery({
@@ -1173,6 +1177,8 @@ export function useResearchQueries(params?: {
       if (params?.limit) s.set('limit', String(params.limit))
       if (params?.offset) s.set('offset', String(params.offset))
       if (params?.status) s.set('status', params.status)
+      if (params?.order) s.set('order', params.order)
+      if (params?.includeDeferred === false) s.set('include_deferred', 'false')
       const qs = s.toString() ? `?${s}` : ''
       return apiFetch<ResearchQueriesList>(`/v1/research/queries${qs}`, { backendId })
     },

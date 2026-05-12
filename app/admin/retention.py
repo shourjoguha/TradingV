@@ -268,6 +268,33 @@ async def run_full_sweep() -> dict:
     counts["drift_alerts"] = await sweep_drift_alerts()
     counts["research_queries"] = await sweep_research_queries()
 
+    # Auto-age stale pending research queries (30d default). Operator
+    # asked us to dismiss rather than accumulate. Runs before the
+    # rerank+rebalance so freshly-aged rows leave the pending pool first.
+    try:
+        from app.research import ranking as _ranking
+
+        async with _db.SessionLocal() as session:
+            counts["research_queries_auto_aged"] = await _ranking.auto_age_expired(
+                session
+            )
+            await session.commit()
+    except Exception as e:  # noqa: BLE001
+        counts["research_auto_age_error"] = str(e)
+
+    # Nightly recompute of composite score + rebalance is_deferred for
+    # the Today landing's top-5 panel.
+    try:
+        from app.research import ranking as _ranking
+
+        async with _db.SessionLocal() as session:
+            counts["research_queries_rescored"] = await _ranking.recompute_all_pending(
+                session
+            )
+            await session.commit()
+    except Exception as e:  # noqa: BLE001
+        counts["research_rescore_error"] = str(e)
+
     # Vault file sweeps — best-effort; module imports lazy so missing
     # vault doesn't break the loop.
     try:

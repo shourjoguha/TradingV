@@ -546,6 +546,12 @@ export interface ResearchQueryRead {
   evidence: EvidenceItem[]
   macro_state: MacroSnapshotItem[]
   source_context: SourceContextItem[]
+  /** Composite ranking score (app/research/ranking.py). null on legacy rows. */
+  score: number | null
+  /** True when this query sits in the backlog (outside the visible top-5). */
+  is_deferred: boolean
+  /** Set when the retention sweep auto-aged this pending query into dismissed. */
+  auto_aged_at: string | null
 }
 
 export interface ResearchQueriesList {

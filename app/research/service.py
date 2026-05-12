@@ -447,6 +447,22 @@ async def _persist_query(
             approved_action=approved_action,
         )
         session.add(row)
+        await session.flush()
+        # Compute the initial score so the Today landing's top-5 panel can
+        # rank this query immediately. Failure here must NOT block the
+        # query persisting — ranking is best-effort.
+        if status == _models.STATUS_PENDING:
+            try:
+                from app.research import ranking as _ranking
+
+                await _ranking.compute_score(session, row)
+                # Defer/promote decision is made by recompute_all_pending
+                # during the next nightly sweep; new row defaults to
+                # is_deferred=False so it shows immediately if its score
+                # warrants top-5 placement. The nightly recompute will
+                # rebalance.
+            except Exception:  # noqa: BLE001
+                pass
         await session.commit()
 
 
