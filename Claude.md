@@ -61,6 +61,16 @@ For the **laptop (primary) backend** with dockerized Postgres on 5439 + peer syn
 3. Alembic runs at container start (entrypoint chains `alembic upgrade head && uvicorn ...`).
 4. Optional: `TS_AUTHKEY` for Tailscale tunnel back to laptop, `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` for push alerts (both no-op when unset). Full env list in [.claude/railway-deployment.md](.claude/guides/railway-deployment.md).
 
+## Demo-branch verifiability discipline
+
+The `demo` branch is the public face on Cloudflare Pages. **Every numeric claim, named feature, or capability description on demo must trace to something that actually ships in `main`.** Specifically:
+
+- **No invented rule names / strategy names.** Use the real rule labels (`rule_label` field in `app/opportunities/rules.py`, e.g. `"BUY +2% over 5d (HR≥60%)"`).
+- **No precise failure-mode numbers** (e.g. "~12pt drop", "~2× MAPE", "~6pt cohort delta") unless a query in `scripts/bake_demo_snapshot.py` computes that exact number from the live DB. Otherwise: soften to a qualitative statement.
+- **No claims of automatic behaviour that's actually opt-in or gated** (e.g. weekly research stress-test, Telegram alerts). When the live path is conditional, the demo copy must say "(when configured)" or similar.
+- **No conflation of separate ingest paths.** TradingView webhooks carry text alerts; chart screenshots arrive via operator paste — these are two pipes, document them as such.
+
+When in doubt, trim. Audit precedent: `.claude/plans/ok-now-we-have-distributed-anchor.md` "Demo Branch Claims Audit" section + the 2026-05-12 retro in [.claude/status/roadmap-shipped.md](.claude/status/roadmap-shipped.md).
 
 ## Local knowledge base catalog (auto-loaded)
 @~/.claude/kb-overview.md

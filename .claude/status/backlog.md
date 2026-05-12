@@ -320,6 +320,41 @@ Quality trade-off vs full LightRAG: weaker — no entity-relation graph, no mult
 
 ---
 
+## Demo bake-script: functionalise the placeholder skeleton
+
+**What:** `scripts/bake_demo_snapshot.py` on the `demo` branch currently has a skeleton with `# TODO:` notes; demo data is hand-placed in `demo-data/`. Operator can't refresh the demo from the live laptop DB without manually editing JSON.
+
+**Status:** ⚠️ DEFERRED — chosen at 2026-05-12 demo claim audit. Trim-copy remedy preferred over re-baking since hand-placed snapshot still works for v1.
+
+**Why deferred:** ~1 day of work to fill out the SQL queries, validate against the laptop schema, scrub correctly (drop `is_demo_safe=false`, hash identifiers, scrub raw LLM prompts), and verify the output drives all 4 demo tabs cleanly. Operator was higher-value elsewhere.
+
+**Trigger to revisit:** any one of:
+- Operator wants to refresh the frozen 2026-05-09 snapshot to a current month (snapshot decays each week it ages).
+- Operator ships one of the 3 partial-wire features below (earnings-window tagging / cap-size cohort / regime-at-alert) and wants those visible on the demo.
+- Demo viewer asks "is this current?"
+
+**Implementation pointers:** `demo` branch `scripts/bake_demo_snapshot.py` already has the structural skeleton — async sqlalchemy + JSON write paths + scrub-rule constants. Blockers per file header: (a) each `# TODO:` query needs validation against laptop schema; (b) `SCRUB_COLS` + `ID_RENAME_PREFIX` lists need updating per current table shape; (c) verification that the four demo pages still render after a real bake (regression risk).
+
+---
+
+## Demo claim partial-wire opportunities (3 candidates, all also operator-utility)
+
+**What:** Three demo claims were trimmed in 2026-05-12 because they described capabilities that don't ship in main. Each could be wired with modest effort and would primarily benefit the operator, with a "now true on demo too" side effect.
+
+**Status:** ⚠️ DEFERRED — operator picked trim-copy path for the audit. Filed here so the partial-wire option doesn't disappear.
+
+**Candidates:**
+
+1. **Earnings-window prediction tagging** (~2-3d realistic per stress test; original audit's ~6h was optimistic — backfill of historical earnings dates via EDGAR is the long pole). New column `prediction_points.near_earnings: bool`, stamped at materialisation from `earnings_calendar` lookup (already shipped). Accuracy aggregator gains a `near_earnings` segment. UI: a "MAPE near earnings vs steady-state" tile on `/accuracy`. **Operator benefit:** real signal on whether forecasts degrade around earnings; useful even without the demo angle.
+
+2. **Cap-size cohort filter on `/accuracy`** (~4h FE + ~2-4h data entry per stress test). Ticker labels (`/v1/tickers/{sym}/labels`) already support cap-size as free-form EAV. Cohort filter is a frontend addition + one aggregator query change. **Blocker:** roster needs cap-size labels populated — manual data entry per ticker. **Operator benefit:** see if forecast quality varies by cap cohort.
+
+3. **Drift `regime_at_alert` annotation** (~4h if regime is computed on-demand from `macro_series`; longer if backfill needed). Add a column to `drift_alerts` capturing the macro regime label at fire time, surface on `/accuracy` banner. Doesn't auto-throttle, but answers "did this drift correlate with a regime shift?" **Operator benefit:** regime-aware drift analysis.
+
+**Trigger to revisit:** operator decides demo persuasion needs the specific numbers back, OR independently wants any of these for personal use. Cross-ref: `.claude/plans/ok-now-we-have-distributed-anchor.md` "Demo Branch Claims Audit" decision matrix.
+
+---
+
 ## How to add an entry
 
 Use the same structure: **What** / **Status** / **Why deferred** (or **Open**) / **Trigger to revisit** / **Implementation pointers**. Include the key files involved so future-you doesn't have to re-derive context.
