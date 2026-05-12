@@ -82,7 +82,12 @@ function MiniCandleCompare({ actual, predicted }: { actual: Ohlc | null; predict
     { v: predicted?.low, x: W - 36, y: predicted?.low != null ? y(predicted.low) : 0, anchor: 'start', label: predicted?.low != null ? `L $${predicted.low.toFixed(2)}` : '' },
   ]
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="font-mono">
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      width={W}
+      height={H}
+      className="font-mono max-w-full h-auto"
+    >
       {candle(actual, 40, 'Actual')}
       {candle(predicted, W - 40, 'Predicted')}
       {refs.map((r, i) =>
@@ -110,16 +115,28 @@ function intervalSuffix(interval: string): string {
   if (interval === '15m') return 'q' // 15-min quarters; rare in this view
   return 'd'
 }
+// Default anchor for /predictions/horizon. We back up two days from today
+// (UTC) and skip weekends so the matrix lands on a session whose actual
+// close has already printed for any operator running the daily scheduler.
+//
+// History:
+//   • Original default = tomorrow → matrix was "predictions only" (no actuals).
+//   • Then today (UTC) → still mostly empty since the day's bar isn't done.
+//   • Now today − 2d, backed up over weekends → at least one column is
+//     guaranteed to have actuals if the scheduler fired the prior weekday.
+function defaultPredictionAnchor(): string {
+  const d = new Date()
+  d.setUTCDate(d.getUTCDate() - 2)
+  // 0 = Sun, 6 = Sat. Back up to the most recent weekday so target_date hits
+  // a real session bar (no weekend bars in equities, FX-spot is partial).
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
+    d.setUTCDate(d.getUTCDate() - 1)
+  }
+  return d.toISOString().split('T')[0]
+}
+
 export function PredictionsByHorizon() {
-  const [targetDate, setTargetDate] = useState(() => {
-    // Default to TODAY (UTC) so the matrix shows actuals AND predictions
-    // overlapping for any operator who ran the scheduler ≥1 day ago. With
-    // target=tomorrow (the previous default) actuals are always null
-    // because tomorrow's bar doesn't exist yet — the matrix degenerates
-    // to "predictions only", which the user reasonably perceives as a
-    // bug. To eyeball just-fired forecasts, advance the date manually.
-    return new Date().toISOString().split('T')[0]
-  })
+  const [targetDate, setTargetDate] = useState(defaultPredictionAnchor)
   const [horizons, setHorizons] = useState('1,2,3,4,5')
   const [tickers, setTickers] = useState('')
   const [tickersTouched, setTickersTouched] = useState(false)
@@ -196,11 +213,11 @@ export function PredictionsByHorizon() {
                 <Label>Anchor (made-on)</Label>
                 <button
                   type="button"
-                  onClick={() => setTargetDate(new Date().toISOString().split('T')[0])}
+                  onClick={() => setTargetDate(defaultPredictionAnchor())}
                   className="text-[10px] font-mono text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-                  title="Reset to today (UTC). Pick an earlier anchor to see columns whose targets have already elapsed."
+                  title="Reset to default anchor (today − 2 weekdays UTC) so the latest column has actuals to compare against. Use the date picker to pick a different anchor."
                 >
-                  Today
+                  Reset
                 </button>
               </div>
               <DatePicker value={targetDate} onChange={setTargetDate} />

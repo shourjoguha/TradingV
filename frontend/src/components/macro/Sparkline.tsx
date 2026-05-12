@@ -79,13 +79,22 @@ export function Sparkline({
   }, [points, width, height, weekly])
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 min-w-0">
+      {/*
+        Responsive SVG: use 100% width + viewBox so the path scales to
+        whatever cell it lands in. The width prop still drives the
+        coordinate math above (path resolution); the rendered surface
+        flexes. preserveAspectRatio='none' lets the path stretch with
+        the cell rather than letterbox.
+      */}
       <svg
-        width={width}
+        width="100%"
         height={height}
         viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
         aria-hidden
-        className="shrink-0"
+        className="block flex-1 min-w-0 max-w-full"
+        style={{ height }}
       >
         {fillPath && (
           <path d={fillPath} fill={lineColor} fillOpacity="0.12" stroke="none" />
@@ -98,12 +107,13 @@ export function Sparkline({
             strokeWidth="1.4"
             strokeLinecap="round"
             strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
           />
         )}
       </svg>
       {showPct && deltaPct != null && (
         <span
-          className="text-[10px] font-mono tabular-nums whitespace-nowrap"
+          className="text-[10px] font-mono tabular-nums whitespace-nowrap shrink-0"
           style={{ color: lineColor }}
         >
           {deltaPct > 0 ? '+' : ''}

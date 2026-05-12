@@ -28,6 +28,6 @@ Concrete signal that means "now's the time to reconsider this." e.g., "queue dep
 
 ## Cross-references
 
-- [related backlog entry](../backlog.md)
-- [related tech_debt entry](../tech_debt.md)
+- [related backlog entry](../status/backlog.md)
+- [related tech_debt entry](../status/tech_debt.md)
 - [related module doc](../<module>.md)

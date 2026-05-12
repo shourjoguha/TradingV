@@ -105,6 +105,23 @@ async def summarize_chart(
     if not api_key:
         return {"status": "skipped", "error": "ANTHROPIC_API_KEY not set"}
 
+    # Cost-aware C3 + C4 + C5: kill-switch + monthly cap + vision toggle.
+    from app.admin import service as _admin_svc
+
+    if await _admin_svc.anthropic_kill_switch_active():
+        return {
+            "status": "skipped",
+            "error": "anthropic_kill_switch_active",
+        }
+    vision_enabled = await _admin_svc.get_setting(
+        "tv_context.vision_enabled_this_month", True
+    )
+    if not bool(vision_enabled):
+        return {
+            "status": "skipped",
+            "error": "tv_context_vision_disabled_for_month",
+        }
+
     max_w = SETTINGS.TV_CTX_VISION_MAX_WIDTH_PX
     image_bytes = _downscale_png(image_bytes, max_w)
     img_b64 = base64.b64encode(image_bytes).decode("ascii")

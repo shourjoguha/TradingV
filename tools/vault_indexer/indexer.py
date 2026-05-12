@@ -12,10 +12,31 @@ from typing import Iterable
 
 import frontmatter
 
+from . import aliases as _aliases
 from . import cache as _cache
+from . import citations as _citations
 from . import embed as _embed
 from .config import CONFIG
 from .vault import VaultNode, parse_file, scan, chunk_body, is_indexable
+
+# Per-process alias map. One sidecar = one domain, so load once at module import.
+# Refreshable via :func:`reload_alias_map` if `_aliases-<domain>.md` is edited
+# while the sidecar is running (called from /reload).
+_ALIAS_MAP: dict[str, str] | None = None
+
+
+def _alias_map() -> dict[str, str]:
+    global _ALIAS_MAP
+    if _ALIAS_MAP is None:
+        _ALIAS_MAP = _aliases.load_alias_map(CONFIG.vault_path, CONFIG.domain)
+    return _ALIAS_MAP
+
+
+def reload_alias_map() -> dict[str, str]:
+    """Force re-read of `_aliases-<domain>.md`. Called by /reload."""
+    global _ALIAS_MAP
+    _ALIAS_MAP = _aliases.load_alias_map(CONFIG.vault_path, CONFIG.domain)
+    return _ALIAS_MAP
 
 
 def _now_iso() -> str:
@@ -87,14 +108,26 @@ def index_one(con, node: VaultNode, *, force: bool = False) -> bool:
                 for i, ((text, section), emb) in enumerate(zip(chunks, embeddings))
             ],
         )
-        # Parent edge — add as 'parent' if specified.
+        # Build edge batch: parent (if any) + extracted citations + temporal.
+        # 'wikilink' rows (operator-approved cross-links from review queue) are
+        # NOT touched here — replace_edges_by_kinds preserves them.
+        new_edges: list[tuple[str, str, float]] = []
         if node.parent_path:
-            _cache.replace_edges(
-                cur, node.rel_path,
-                [(node.parent_path, "parent", 1.0)],
+            new_edges.append((node.parent_path, "parent", 1.0))
+        if node.kind != "folder_context":
+            citation_edges, _dead = _citations.parse_citations(
+                node.body_md,
+                node.rel_path,
+                alias_map=_alias_map(),
+                con=con,
             )
-        else:
-            _cache.replace_edges(cur, node.rel_path, [])
+            new_edges.extend(citation_edges)
+        _cache.replace_edges_by_kinds(
+            cur,
+            node.rel_path,
+            _citations.INDEXER_OWNED_KINDS,
+            new_edges,
+        )
     return True
 
 

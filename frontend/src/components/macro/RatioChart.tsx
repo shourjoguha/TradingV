@@ -104,8 +104,8 @@ export function RatioChart({ points, height = 320, overlay, isLoading }: RatioCh
   }, [overlay])
 
   return (
-    <div className="relative w-full rounded-2xl bg-background shadow-inset-sm p-2">
-      <div ref={containerRef} style={{ height }} />
+    <div className="relative w-full min-w-0 rounded-2xl bg-background shadow-inset-sm p-2 overflow-hidden">
+      <div ref={containerRef} className="min-w-0" style={{ height }} />
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[1px] rounded-2xl">
           <span className="text-xs text-muted-foreground">Loading…</span>

@@ -66,5 +66,5 @@ The PUT's write at T1 is overwritten at T3, but with the **same** correct value 
 
 ## Cross-references
 
-- [schedule.md](../schedule.md) — operational doc.
-- [backlog.md](../backlog.md) — original bug entry.
+- [schedule.md](../modules/schedule.md) — operational doc.
+- [backlog.md](../status/backlog.md) — original bug entry.

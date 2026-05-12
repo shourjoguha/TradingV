@@ -190,14 +190,18 @@ export function PredictionsByTarget() {
       })
     }
     chart.timeScale().fitContent()
-    const handleResize = () => {
-      chart.applyOptions({
-        width: container.clientWidth,
-      })
+
+    // Window resize is the slow path; container resize (zoom, sidebar
+    // toggle, flex reflow) is the fast path. Watch both.
+    const applyWidth = () => {
+      chart.applyOptions({ width: container.clientWidth })
     }
-    window.addEventListener('resize', handleResize)
+    const ro = new ResizeObserver(applyWidth)
+    ro.observe(container)
+    window.addEventListener('resize', applyWidth)
     return () => {
-      window.removeEventListener('resize', handleResize)
+      ro.disconnect()
+      window.removeEventListener('resize', applyWidth)
       chart.remove()
     }
   }, [ohlcvData, predictions])
@@ -381,8 +385,8 @@ export function PredictionsByTarget() {
                 )}
               </div>
             </CardHeader>
-            <CardContent>
-              <div ref={chartContainerRef} className="w-full" />
+            <CardContent className="overflow-hidden">
+              <div ref={chartContainerRef} className="w-full min-w-0" />
             </CardContent>
           </Card>
 

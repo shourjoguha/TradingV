@@ -38,6 +38,8 @@ from app.boards import models as _boards_models  # noqa: F401, E402
 from app.hypotheses import models as _hypothesis_models  # noqa: F401, E402
 from app.research import models as _research_models  # noqa: F401, E402
 from app.tv_context import models as _tv_context_models  # noqa: F401, E402
+from app.admin import models as _admin_models  # noqa: F401, E402
+from app.earnings import models as _earnings_models  # noqa: F401, E402
 
 
 @pytest_asyncio.fixture

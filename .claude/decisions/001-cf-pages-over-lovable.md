@@ -34,5 +34,5 @@ Plan: `/Users/shourjosmac/.claude/plans/cloudflare-pages-port.md`.
 
 ## Cross-references
 
-- [backlog.md](../backlog.md) — "Cloud frontend hosting" RESOLVED entry
+- [backlog.md](../status/backlog.md) — "Cloud frontend hosting" RESOLVED entry
 - [frontend/dev-workflow.md](../frontend/dev-workflow.md) — Cloud deploy section

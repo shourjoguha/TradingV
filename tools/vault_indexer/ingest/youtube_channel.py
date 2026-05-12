@@ -29,13 +29,24 @@ import frontmatter
 
 from . import _channel_yaml as _cfg
 from .common import slug, write_note
-from ..config import CONFIG
+from ..config import CONFIG, passes_scope
 
 logger = logging.getLogger(__name__)
 
 
 CHANNEL_FILE = _cfg.CHANNEL_FILE
 DRAFT_SUFFIX = ".md.draft"
+
+
+def _is_short(url: str) -> bool:
+    """True for YouTube Shorts URLs (operator-rejected by default).
+
+    Detects via ``/shorts/`` path segment — the canonical Shorts URL form
+    YouTube's RSS feed surfaces. A long-form video URL (``/watch?v=…``)
+    never contains this substring. Cheap and robust enough for the volume
+    we ingest.
+    """
+    return "/shorts/" in (url or "")
 
 
 # ---------------------------------------------------------------------------
@@ -272,21 +283,42 @@ def ingest_one(
     vault_root: Path,
     max_videos_per_run: int = 3,
     pause_seconds_between: int = 0,
+    earnings_dates: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Poll one channel. Returns {fetched, drafts_written, skipped}.
     Best-effort — exceptions are caught + logged.
 
-    `pause_seconds_between` adds a fixed sleep AFTER each draft is written
-    (and AFTER state is persisted) to pace whisper-heavy backfills. The
-    lifespan task uses 0 (process all in one tick); the backfill CLI uses
-    ~2700 (45 min) so a long-running backfill can be cancelled mid-run
-    without losing more than one in-flight video.
+    ``earnings_dates`` is an optional ``{TICKER: date}`` map. When the
+    channel YAML has an ``earnings_trigger`` block, the channel only polls
+    if today (NY tz) is within the trigger window for at least one of the
+    block's tickers. Saves Whisper CPU on non-earnings days.
     """
     cfg = _cfg.load(channel_dir)
     if cfg is None:
         return {"reason": "no_yaml", "drafts_written": 0}
     if not _cfg.is_due(cfg):
         return {"reason": "not_due", "drafts_written": 0}
+
+    # Earnings-trigger gate. Optional per-channel — channels without the
+    # block (newsletters, macro feeds) keep their regular cadence.
+    earnings_trigger = cfg.get("earnings_trigger")
+    if earnings_trigger:
+        try:
+            from app.earnings import service as _earnings_svc
+
+            if not _earnings_svc.channel_in_trigger_window(
+                earnings_trigger=earnings_trigger,
+                earnings_dates=earnings_dates or {},
+            ):
+                return {
+                    "reason": "earnings_trigger_gate_closed",
+                    "drafts_written": 0,
+                }
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "earnings_trigger gate failed for %s (%s) — falling open",
+                channel_dir, e,
+            )
 
     rel_dir = str(channel_dir.relative_to(vault_root))
     cfg = {**cfg, "_rel_dir": rel_dir}              # ephemeral; not saved
@@ -316,8 +348,24 @@ def ingest_one(
 
     drafts_written = 0
     fetched_ids: list[str] = []
+    written_draft_paths: list[str] = []
+    skipped_shorts: list[str] = []
 
+    # Partition into Shorts (rejected) vs regular long-form. Shorts get
+    # marked seen so RSS re-surfacing doesn't re-process them every tick.
+    regular_entries: list[FeedEntry] = []
     for entry in new_entries:
+        if _is_short(entry.url):
+            skipped_shorts.append(entry.video_id)
+            fetched_ids.append(entry.video_id)
+            logger.info(
+                "skip-short %s (%s) for channel %s",
+                entry.video_id, entry.url, channel_id,
+            )
+        else:
+            regular_entries.append(entry)
+
+    for entry in regular_entries:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             transcript: Optional[str] = None
@@ -340,7 +388,7 @@ def ingest_one(
             cfg=cfg,
             transcript_source=source,
         )
-        write_draft(
+        draft_path = write_draft(
             vault_root=vault_root,
             rel_dir=rel_dir,
             entry=entry,
@@ -349,6 +397,10 @@ def ingest_one(
         )
         drafts_written += 1
         fetched_ids.append(entry.video_id)
+        try:
+            written_draft_paths.append(str(draft_path.relative_to(vault_root)))
+        except ValueError:
+            written_draft_paths.append(str(draft_path))
 
         # Persist incrementally so a Ctrl-C mid-backfill doesn't lose the
         # progress made so far. Re-loads the full cfg from disk to merge any
@@ -359,7 +411,7 @@ def ingest_one(
         _cfg.save(channel_dir, on_disk)
         cfg = {**on_disk, "_rel_dir": rel_dir}
 
-        if pause_seconds_between and entry is not new_entries[-1]:
+        if pause_seconds_between and entry is not regular_entries[-1]:
             logger.info(
                 "video-ingest: paced sleep %ss after %s",
                 pause_seconds_between, entry.video_id,
@@ -368,26 +420,60 @@ def ingest_one(
 
     # Final stamp. fetched_ids covers BOTH successful drafts (already
     # persisted per-video, so idempotent here) AND skipped-no-transcript
-    # videos (only seen at this point) so the next tick doesn't retry them.
+    # videos AND skipped Shorts (only seen at this point) so the next tick
+    # doesn't retry them.
     cfg.pop("_rel_dir", None)
     on_disk = _cfg.load(channel_dir) or cfg
     on_disk = _cfg.mark_polled(on_disk, video_ids=fetched_ids)
     _cfg.save(channel_dir, on_disk)
 
+    # Auto-promote: if cfg.ingest.auto_promote is True, promote drafts
+    # written this tick straight to canonical .md (skip the manual
+    # _review-queue.md tick gate). Failures are individually logged and
+    # never block the poll.
+    auto_promoted = 0
+    auto_promote_enabled = bool(
+        (on_disk.get("ingest") or {}).get("auto_promote")
+    )
+    if auto_promote_enabled and written_draft_paths:
+        from .. import review as _review
+        for rel_path in written_draft_paths:
+            try:
+                if _review.promote_draft_path(vault_root, rel_path):
+                    auto_promoted += 1
+            except Exception as e:                     # noqa: BLE001
+                logger.warning("auto-promote failed for %s: %s", rel_path, e)
+
     return {
         "channel": channel_id,
         "fetched": len(new_entries),
         "drafts_written": drafts_written,
-        "skipped_no_transcript": len(new_entries) - drafts_written,
+        "shorts_skipped": len(skipped_shorts),
+        "skipped_no_transcript": (
+            len(new_entries) - drafts_written - len(skipped_shorts)
+        ),
+        "auto_promoted": auto_promoted,
     }
 
 
 def discover_channel_dirs(vault_root: Path) -> Iterable[Path]:
-    """Yield every directory under <vault>/Videos/ that has a _channel.yaml."""
+    """Yield every directory under <vault>/Videos/ that has a _channel.yaml.
+
+    Filtered by ``passes_scope`` so a finance launch (with EXCLUDE set) never
+    discovers fitness/nutrition channels and vice versa.
+    """
     videos_root = vault_root / "Videos"
     if not videos_root.exists():
         return []
-    return [p.parent for p in videos_root.rglob(CHANNEL_FILE) if p.is_file()]
+    out: list[Path] = []
+    for p in videos_root.rglob(CHANNEL_FILE):
+        if not p.is_file():
+            continue
+        rel = str(p.relative_to(vault_root))
+        if not passes_scope(rel):
+            continue
+        out.append(p.parent)
+    return out
 
 
 def ingest_all(
@@ -395,6 +481,7 @@ def ingest_all(
     vault_root: Optional[Path] = None,
     max_videos_per_run: int = 3,
     pause_seconds_between: int = 0,
+    earnings_dates: Optional[dict[str, Any]] = None,
 ) -> list[dict[str, Any]]:
     """Top-level orchestrator — discover + ingest every channel that's due."""
     root = vault_root or CONFIG.vault_path
@@ -406,6 +493,7 @@ def ingest_all(
                 vault_root=root,
                 max_videos_per_run=max_videos_per_run,
                 pause_seconds_between=pause_seconds_between,
+                earnings_dates=earnings_dates,
             )
             out.append({"channel_dir": str(channel_dir.relative_to(root)), **result})
         except Exception as e:                       # noqa: BLE001

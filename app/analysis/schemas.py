@@ -54,6 +54,16 @@ class AnalysisJobSummary(BaseModel):
     submitted_at: datetime.datetime
     finished_at: Optional[datetime.datetime] = None
 
+    # Per-task outcome buckets — aggregated by ``service.list_jobs`` so
+    # the frontend's collapsed-row outcome bar can render eagerly without
+    # one detail-fetch per row. ``pending`` is queued-but-not-started;
+    # ``running`` is in-flight.
+    done: int = 0
+    ineligible: int = 0
+    error: int = 0
+    running: int = 0
+    pending: int = 0
+
 
 class AnalysisJobResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

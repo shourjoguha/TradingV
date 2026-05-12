@@ -1,0 +1,159 @@
+Ticker	Billionaires	Trailblazers	Insiders	Politicians	Channels	TotalBuys	Notable
+TSM	2	7	3	1	4	13	BILL[2]: David Tepper, Philippe Laffont | TB[7]: Cadian Capital, MIG Capital, Melqart Asset Management... | POL: Gilbert Cisneros | INS[3]: Ursula M Burns, Shyue-Shyh Lin
+META	3	7	0	1	3	11	BILL[3]: Dan Sundheim, David Tepper, Philippe Laffont | TB[7]: Ananym Capital, Cadian Capital, MIG Capital... | POL: Cleo Fields
+MU	1	8	0	1	3	10	BILL[1]: David Tepper | TB[8]: Atreides Management, Crosslink Capital, Kerrisdale Capital... | POL: Cleo Fields
+RDDT	2	4	1	0	3	7	BILL[2]: Dan Sundheim, Philippe Laffont | TB[4]: Ananym Capital, Kerrisdale Capital, MIG Capital... | INS[1]: Sarah E Farrell
+GOOGL	2	3	0	1	3	6	BILL[2]: David Tepper, Tom Gayner | TB[3]: MIG Capital, NZS Capital, SurgoCap Partners | POL: Cleo Fields
+AMRZ	1	3	6	0	3	10	BILL[1]: Leon Cooperman | TB[3]: Ananym Capital, Kerrisdale Capital, Slate Path Capital | INS[6]: Roald Brouwer, Mario Gross
+GEHC	2	1	4	0	3	7	BILL[2]: Dan Sundheim, Leon Cooperman | TB: Anomaly Capital | INS[4]: Lawrence H Culp JR, James Saccaro
+NKE	1	2	4	0	3	7	BILL[1]: Tom Gayner | TB[2]: Slate Path Capital, Symmetry Peak | INS[4]: Timothy D Cook, Elliott Hill
+BRK.B	1	2	1	0	3	4	BILL[1]: Tom Gayner | TB[2]: Anson Capital, Nitorum Capital | INS[1]: Michael J. O'Sullivan
+MGM	1	1	2	0	3	4	BILL[1]: Tom Gayner | TB: Engine Capital | INS[2]: IAC Inc.
+SFM	1	1	2	0	3	4	BILL[1]: Philippe Laffont | TB: Anomaly Capital | INS[2]: Kristen E Blum, Joel D Anderson
+CAT	1	1	1	0	3	3	BILL[1]: Tom Gayner | TB: Q3 Asset Management | INS[1]: David Maclennan
+NAVN	1	1	1	0	3	3	BILL[1]: Philippe Laffont | TB: Greenoaks Capital | INS[1]: Anre D Williams
+AMZN	1	13	0	0	2	14	BILL[1]: Philippe Laffont | TB[13]: 11 Capital Partners, 9823 Capital, Agave Capital...
+NVDA	2	12	0	0	2	14	BILL[2]: Dan Sundheim, Philippe Laffont | TB[12]: 9823 Capital, Agave Capital, Atreides Management...
+GOOG	2	10	0	0	2	12	BILL[2]: Philippe Laffont, Tom Gayner | TB[10]: 9823 Capital, Agave Capital, Anomaly Capital...
+MSFT	1	10	0	0	2	11	BILL[1]: David Tepper | TB[10]: 11 Capital Partners, 9823 Capital, Agave Capital...
+NU	1	9	0	0	2	10	BILL[1]: Philippe Laffont | TB[9]: 9823 Capital, Atreides Management, Crosslink Capital...
+SNOW	1	7	0	0	2	8	BILL[1]: Philippe Laffont | TB[7]: Anomaly Capital, Atreides Management, Jericho Capital...
+AVGO	2	5	0	0	2	7	BILL[2]: Dan Sundheim, Philippe Laffont | TB[5]: MIG Capital, Melqart Asset Management, Ratan Capital...
+INTC	1	6	0	0	2	7	BILL[1]: Philippe Laffont | TB[6]: NZS Capital, Octahedron Capital, Q3 Asset Management...
+MELI	1	6	0	0	2	7	BILL[1]: Dan Sundheim | TB[6]: 9823 Capital, Crosslink Capital, Kerrisdale Capital...
+SE	2	4	0	0	2	6	BILL[2]: Dan Sundheim, Leon Cooperman | TB[4]: Anomaly Capital, Atreides Management, North Peak Capital...
+SHOP	1	5	0	0	2	6	BILL[1]: Tom Gayner | TB[5]: MIG Capital, Melqart Asset Management, NZS Capital...
+SNPS	2	4	0	0	2	6	BILL[2]: Dan Sundheim, Philippe Laffont | TB[4]: Kerrisdale Capital, MIG Capital, NZS Capital...
+SPOT	3	3	0	0	2	6	BILL[3]: Dan Sundheim, Philippe Laffont, Tom Gayner | TB[3]: Anomaly Capital, MIG Capital, NZS Capital
+TSLA	1	5	0	0	2	6	BILL[1]: Philippe Laffont | TB[5]: 9823 Capital, Nightview Capital, Q3 Asset Management...
+CPNG	0	5	3	0	2	8	TB[5]: Abdiel Capital, Greenoaks Capital, Kerrisdale Capital... | INS[3]: Neil Mehta
+AFRM	1	4	0	0	2	5	BILL[1]: Dan Sundheim | TB[4]: Abdiel Capital, Atreides Management, Jericho Capital...
+AXON	1	4	0	0	2	5	BILL[1]: Philippe Laffont | TB[4]: 11 Capital Partners, Atreides Management, NZS Capital...
+CHYM	1	4	0	0	2	5	BILL[1]: Philippe Laffont | TB[4]: Atreides Management, Crosslink Capital, Tenzing Global...
+DHR	1	4	0	0	2	5	BILL[1]: Dan Sundheim | TB[4]: 11 Capital Partners, Anomaly Capital, NZS Capital...
+GEV	1	4	0	0	2	5	BILL[1]: Philippe Laffont | TB[4]: 11 Capital Partners, Ananym Capital, Anomaly Capital...
+LRCX	2	3	0	0	2	5	BILL[2]: David Tepper, Philippe Laffont | TB[3]: Crosslink Capital, MIG Capital, NZS Capital
+MRVL	1	4	0	0	2	5	BILL[1]: Philippe Laffont | TB[4]: Crosslink Capital, Melqart Asset Management, NZS Capital...
+NFLX	1	4	0	0	2	5	BILL[1]: Philippe Laffont | TB[4]: Jericho Capital, MIG Capital, Nightview Capital...
+RKT	2	3	0	0	2	5	BILL[2]: Leon Cooperman, Philippe Laffont | TB[3]: Atreides Management, Slate Path Capital, Wolf Hill Capital
+RBRK	0	4	1	0	2	5	TB[4]: Atreides Management, Melqart Asset Management, Octahedron Capital... | INS[1]: Mark D Mclaughlin
+AAPL	1	3	0	0	2	4	BILL[1]: Tom Gayner | TB[3]: 9823 Capital, NZS Capital, Symmetry Peak
+AMAT	2	2	0	0	2	4	BILL[2]: Philippe Laffont, Tom Gayner | TB[2]: MIG Capital, Q3 Asset Management
+AMD	1	3	0	0	2	4	BILL[1]: Philippe Laffont | TB[3]: Melqart Asset Management, Q3 Asset Management, Ratan Capital
+APP	2	2	0	0	2	4	BILL[2]: Dan Sundheim, Philippe Laffont | TB[2]: Ratan Capital, Whale Rock Capital
+CVNA	1	3	0	0	2	4	BILL[1]: Philippe Laffont | TB[3]: CAS Investment Partners, Greenoaks Capital, Whale Rock Capital
+DASH	1	3	0	0	2	4	BILL[1]: Philippe Laffont | TB[3]: Crosslink Capital, NZS Capital, Octahedron Capital
+GNRC	1	3	0	0	2	4	BILL[1]: Philippe Laffont | TB[3]: Atreides Management, Nitorum Capital, Tenzing Global
+LIN	2	2	0	0	2	4	BILL[2]: Dan Sundheim, Tom Gayner | TB[2]: Agave Capital, NZS Capital
+MA	1	3	0	0	2	4	BILL[1]: Tom Gayner | TB[3]: Atreides Management, Nitorum Capital, Ratan Capital
+ORCL	1	3	0	0	2	4	BILL[1]: Philippe Laffont | TB[3]: MIG Capital, Melqart Asset Management, Ratan Capital
+SATS	1	3	0	0	2	4	BILL[1]: Dan Sundheim | TB[3]: Atreides Management, Nightview Capital, Potrero Capital
+MNKD	0	3	1	0	2	4	TB[3]: Apis Capital, EcoR1 Capital, Nitorum Capital | INS[1]: Michael Castagna
+PANW	0	3	1	0	2	4	TB[3]: Anomaly Capital, Crosslink Capital, MIG Capital | INS[1]: Nikesh Arora
+BX	1	2	0	0	2	3	BILL[1]: Tom Gayner | TB[2]: 11 Capital Partners, SurgoCap Partners
+CART	1	2	0	0	2	3	BILL[1]: Dan Sundheim | TB[2]: Kerrisdale Capital, Wolf Hill Capital
+COF	1	2	0	0	2	3	BILL[1]: Dan Sundheim | TB[2]: CAS Investment Partners, Q3 Asset Management
+IQV	1	2	0	0	2	3	BILL[1]: Tom Gayner | TB[2]: Cadian Capital, Ratan Capital
+ITRYF	2	1	0	0	2	3	BILL[2]: David Tepper, Leon Cooperman | TB: Anson Capital
+JHX	1	2	0	0	2	3	BILL[1]: Dan Sundheim | TB[2]: Slate Path Capital, Wolf Hill Capital
+KNX	1	2	0	0	2	3	BILL[1]: Dan Sundheim | TB[2]: Kerrisdale Capital, Slate Path Capital
+PYPL	1	2	0	0	2	3	BILL[1]: Philippe Laffont | TB[2]: 9823 Capital, Q3 Asset Management
+SHW	2	1	0	0	2	3	BILL[2]: Dan Sundheim, Tom Gayner | TB: 11 Capital Partners
+UAL	1	2	0	0	2	3	BILL[1]: David Tepper | TB[2]: Anomaly Capital, Slate Path Capital
+UNP	1	2	0	0	2	3	BILL[1]: Tom Gayner | TB[2]: Kerrisdale Capital, Slate Path Capital
+V	1	2	0	0	2	3	BILL[1]: Tom Gayner | TB[2]: 11 Capital Partners, Kerrisdale Capital
+AVTR	0	2	2	0	2	4	TB[2]: Engine Capital, Voss Capital | INS[2]: Simon Dingemans, Sanjeev K Mehra
+FND	0	2	2	0	2	4	TB[2]: NZS Capital, Wolf Hill Capital | INS[2]: Bryan Langley, Bradley Paulsen
+GOGO	0	2	2	0	2	4	TB[2]: Cadian Capital, Tenzing Global | INS[2]: Charles C Townsend
+LULU	0	2	2	0	2	4	TB[2]: Anomaly Capital, Slate Path Capital | INS[2]: Andre Maestrini, Charles V Bergh
+VAC	0	2	2	0	2	4	TB[2]: Ananym Capital, Impactive Capital | INS[2]: Flaskey Michael
+CORZ	0	2	1	0	2	3	TB[2]: Jericho Capital, Situational Awareness | INS[1]: Eric Stanton Weiss
+FOUR	0	2	1	0	2	3	TB[2]: 9823 Capital, Ratan Capital | INS[1]: Isaacman Jared
+GTLB	0	2	1	0	2	3	TB[2]: Kerrisdale Capital, Slate Path Capital | INS[1]: William Staples
+SOFI	0	2	1	0	2	3	TB[2]: 9823 Capital, Symmetry Peak | INS[1]: Anthony Noto
+AAL	1	1	0	0	2	2	BILL[1]: David Tepper | TB: Slate Path Capital
+ABNB	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: 9823 Capital
+ACN	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Agave Capital
+ADI	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: NZS Capital
+ADSK	1	1	0	0	2	2	BILL[1]: Dan Sundheim | TB: MIG Capital
+ARM	1	1	0	0	2	2	BILL[1]: Philippe Laffont | TB: NZS Capital
+BAC	1	1	0	0	2	2	BILL[1]: Dan Sundheim | TB: Agave Capital
+CHRW	1	1	0	0	2	2	BILL[1]: Philippe Laffont | TB: Q3 Asset Management
+CNM	1	1	0	0	2	2	BILL[1]: Dan Sundheim | TB: Anomaly Capital
+COST	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Agave Capital
+CP	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: 11 Capital Partners
+CSX	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Slate Path Capital
+CVX	1	1	0	0	2	2	BILL[1]: Warren Buffett | TB: 9823 Capital
+DAL	1	1	0	0	2	2	BILL[1]: David Tepper | TB: Slate Path Capital
+DEO	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Kerrisdale Capital
+DG	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Q3 Asset Management
+EXPD	1	1	0	0	2	2	BILL[1]: Philippe Laffont | TB: Q3 Asset Management
+FWONA	1	1	0	0	2	2	BILL[1]: Warren Buffett | TB: Jericho Capital
+HCA	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Abdiel Capital
+HEI.A	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: NZS Capital
+HGTY	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Greenhaven Road
+HSY	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Voss Capital
+INFY	1	1	0	0	2	2	BILL[1]: Philippe Laffont | TB: Situational Awareness
+JNJ	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: 9823 Capital
+KBR	1	1	0	0	2	2	BILL[1]: Leon Cooperman | TB: Engine Capital
+KRC	1	1	0	0	2	2	BILL[1]: Dan Sundheim | TB: Situational Awareness
+MAR	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: 9823 Capital
+MCO	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: 11 Capital Partners
+MP	1	1	0	0	2	2	BILL[1]: Leon Cooperman | TB: Ratan Capital
+MTZ	1	1	0	0	2	2	BILL[1]: Philippe Laffont | TB: Wolf Hill Capital
+NSC	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Melqart Asset Management
+NYT	1	1	0	0	2	2	BILL[1]: Warren Buffett | TB: Slate Path Capital
+OC	1	1	0	0	2	2	BILL[1]: David Tepper | TB: Voss Capital
+PGR	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: NZS Capital
+Q	1	1	0	0	2	2	BILL[1]: Dan Sundheim | TB: Slate Path Capital
+RRX	1	1	0	0	2	2	BILL[1]: Leon Cooperman | TB: Anomaly Capital
+RTX	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Ratan Capital
+SYY	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Kerrisdale Capital
+TGT	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Symmetry Peak
+TMO	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Ratan Capital
+TXN	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: NZS Capital
+UBER	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: NZS Capital
+UNH	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: Kerrisdale Capital
+URI	1	1	0	0	2	2	BILL[1]: Tom Gayner | TB: NZS Capital
+ALKT	0	1	15	0	2	16	TB: Cadian Capital | INS[15]: GENERAL ATLANTIC GENPAR (BERMUDA), L.P. / GAP (Bermuda) L.P. / GAP Coinvestments CDA, L.P. / Atlantic (Al), L.P. General / General Atlantic (AL) SPV, L.P. / General Atlantic (SPV) GP, LLC / GA AL Holding, L.P. / General Atlantic Partners (Bermuda) IV, L.P, GENERAL ATLANTIC, L.P. / GENERAL ATLANTIC GENPAR, L.P. / General Atlantic Partners 100, L.P. / GAP COINVESTMENTS III, LLC / GAP COINVESTMENTS IV, LLC / GAP Coinvestments V, LLC / General Atlantic Partners (Bermuda) EU, L.P. / General Atlantic Partners (Lu
+SRAD	0	1	7	0	2	8	TB: Jericho Capital | INS[7]: Koerl Carsten, Marc Walder
+NSP	1	0	6	0	2	7	BILL[1]: Tom Gayner | INS[6]: Paul J Sarvadi, James D Allison
+SONO	0	1	6	0	2	7	TB: Engine Capital | INS[6]: Coliseum Capital Management, LLC / Christopher S Shackelton / Coliseum Capital, LLC / COLISEUM CAPITAL PARTNERS, L.P. / Adam Gray / Coliseum Capital Co-Invest IV, L.P.
+ZBIO	0	1	6	0	2	7	TB: EcoR1 Capital | INS[6]: Leon O Moulder JR, Fairmount Funds Management LLC / Fairmount Healthcare Fund II L.P. / Tomas Kiselak / Peter Evan Harwin
+ARE	0	1	5	0	2	6	TB: Voss Capital | INS[5]: Joel S Marcus, Gregory Calvin Thomas
+SNDA	0	1	4	0	2	5	TB: Conversant Capital | INS[4]: Michael Simanovsky / Conversant Capital LLC / Conversant GP Holdings LLC / Conversant Dallas Parkway (A) LP / Conversant Dallas Parkway (B) LP / Conversant Private GP LLC / Conversant PIF Aggregator A, LP
+WVE	0	1	4	0	2	5	TB: M28 Capital | INS[4]: RA CAPITAL MANAGEMENT, L.P. / RA Capital Healthcare Fund LP / Peter Kolchinsky / Rajeev M. Shah
+ABG	0	1	3	0	2	4	TB: Impactive Capital | INS[3]: Christopher B. Disantis, David W Hult
+EXE	0	1	3	0	2	4	TB: Slate Path Capital | INS[3]: Marcel Teunissen, Michael Wichterich
+IP	0	1	3	0	2	4	TB: Slate Path Capital | INS[3]: Scott Tozier, GUSTAFSSON ANDERS
+ALTG	0	1	2	0	2	3	TB: Voss Capital | INS[2]: Mill Road Capital III, L.P. / Mill Road Capital III GP LLC / Thomas E Lynch
+BLCO	0	1	2	0	2	3	TB: Ratan Capital | INS[2]: A Robert D Bailey, Brent L Saunders
+CRH	0	1	2	0	2	3	TB: Voss Capital | INS[2]: Richard H Fearon, Siobhan Talbot
+CRM	0	1	2	0	2	3	TB: Symmetry Peak | INS[2]: Laura Alber, David Blair Kirk
+CSGP	0	1	2	0	2	3	TB: NZS Capital | INS[2]: Andrew C Florance
+GSM	0	1	2	0	2	3	TB: Wolf Hill Capital | INS[2]: Madrid Javier Lopez, de Fuentes Silvia Villar-Mir
+LINE	1	0	2	0	2	3	BILL[1]: Dan Sundheim | INS[2]: Kevin Patrick Marchetti
+PAGS	0	1	2	0	2	3	TB: 9823 Capital | INS[2]: Luis Frias
+ACVA	0	1	1	0	2	2	TB: Atreides Management | INS[1]: George Chamoun
+AMT	0	1	1	0	2	2	TB: NZS Capital | INS[1]: Rajesh Kalathur
+AYI	1	0	1	0	2	2	BILL[1]: Tom Gayner | INS[1]: O'Shaughnessy Laura
+CME	1	0	1	0	2	2	BILL[1]: Tom Gayner | INS[1]: William R Shepard
+CPRI	0	1	1	0	2	2	TB: Melqart Asset Management | INS[1]: John D Idol
+ECL	1	0	1	0	2	2	BILL[1]: Tom Gayner | INS[1]: David Maclennan
+EPD	1	0	1	0	2	2	BILL[1]: Leon Cooperman | INS[1]: AJ Teague
+EVR	0	1	1	0	2	2	TB: Nitorum Capital | INS[1]: Sarah K Williamson
+FCN	0	1	0	1	2	2	TB: Nitorum Capital | POL: Michael McCaul
+FIS	0	1	1	0	2	2	TB: Nitorum Capital | INS[1]: Stephanie Ferris
+IBIT [ETF]	1	0	0	1	2	2	BILL[1]: Philippe Laffont | POL: Sheri Biggs
+IMNM	0	1	1	0	2	2	TB: EcoR1 Capital | INS[1]: Clay B Siegall
+JEF	0	1	1	0	2	2	TB: Symmetry Peak | INS[1]: SUMITOMO MITSUI FINANCIAL GROUP, INC.
+MBX	0	1	1	0	2	2	TB: EcoR1 Capital | INS[1]: Hawryluk P. Kent
+NEXT	0	1	1	0	2	2	TB: Wolf Hill Capital | INS[1]: Pamela K.M. Beall
+OKTA	0	1	1	0	2	2	TB: Whale Rock Capital | INS[1]: David Schellhase
+OUST	0	1	1	0	2	2	TB: Slate Path Capital | INS[1]: Virginia Boulet
+PAYX	1	0	0	1	2	2	BILL[1]: Tom Gayner | POL: Michael McCaul
+SOLV	0	1	1	0	2	2	TB: Ratan Capital | INS[1]: Amy Mcbride Wendell
+TENB	0	1	1	0	2	2	TB: Kerrisdale Capital | INS[1]: Matthew Charles Brown
+TMUS	0	1	1	0	2	2	TB: Agave Capital | INS[1]: Andre Almeida
+TXT	0	1	1	0	2	2	TB: Anomaly Capital | INS[1]: Thomas A Kennedy
+IFF	0	0	3	1	2	4	POL: Michael McCaul | INS[3]: Paul J Fribourg, Erik J Fyrwald

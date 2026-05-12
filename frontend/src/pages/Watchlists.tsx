@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
   useBoards,
   useBoard,
@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select'
-import { EmptyState, InfoBubble } from '../components/common'
+import { EmptyState } from '../components/common'
 import { Plus, Trash2, ExternalLink, ArrowRight, X } from 'lucide-react'
 
 // Open the symbol on TradingView in a new tab — operator's chosen
@@ -56,36 +56,28 @@ function fmtClose(v: number | null | undefined): string {
 }
 
 export function Watchlists() {
+  // The legacy `/watchlists/:boardId` route now redirects to `/watchlist/boards`,
+  // so URL-driven board selection would create a redirect loop with the
+  // consolidated page. Track active board in local state instead.
   const { boardId: paramBoardId } = useParams<{ boardId?: string }>()
-  const navigate = useNavigate()
   const { data: boards } = useBoards()
   const items = boards?.items ?? []
+  const [selectedId, setSelectedId] = useState<string>(paramBoardId ?? '')
 
-  const activeId = paramBoardId ?? items[0]?.id ?? ''
+  const activeId = selectedId || paramBoardId || items[0]?.id || ''
   const active = useBoard(activeId)
 
-  // Auto-pick the first board on first visit so the page isn't empty.
+  // Auto-pick the first board once the list loads. Local state — no router
+  // navigate (would loop against the legacy `/watchlists/:boardId` redirect).
   useEffect(() => {
-    if (!paramBoardId && items.length > 0) {
-      navigate(`/watchlists/${items[0].id}`, { replace: true })
+    if (!selectedId && items.length > 0) {
+      setSelectedId(items[0].id)
     }
-  }, [paramBoardId, items, navigate])
+  }, [selectedId, items])
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-2xl font-heading font-semibold tracking-tight flex items-center gap-2">
-            Watchlists
-            <InfoBubble term="watchlist_concept" />
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Casual lists for tracking tickers you're curious about. Adding here does
-            <strong> not</strong> spawn Kronos predictions — for that, use the{' '}
-            <a href="/roster" className="underline hover:text-foreground">Roster</a>.
-            Click any ticker to open it on TradingView.
-          </p>
-        </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
         <NewBoardButton />
       </div>
 
@@ -103,7 +95,7 @@ export function Watchlists() {
               <button
                 key={b.id}
                 type="button"
-                onClick={() => navigate(`/watchlists/${b.id}`)}
+                onClick={() => setSelectedId(b.id)}
                 className={[
                   'px-3 py-1.5 rounded-xl text-xs transition-all',
                   selected
@@ -129,6 +121,7 @@ export function Watchlists() {
           description={active.data.description}
           tickers={active.data.tickers}
           allBoards={items}
+          onDeleted={() => setSelectedId('')}
         />
       )}
     </div>
@@ -213,6 +206,7 @@ interface BoardDetailViewProps {
     quote_fetched_at: string | null
   }>
   allBoards: Array<{ id: string; name: string }>
+  onDeleted: () => void
 }
 
 function BoardDetailView({
@@ -221,8 +215,8 @@ function BoardDetailView({
   description,
   tickers,
   allBoards,
+  onDeleted,
 }: BoardDetailViewProps) {
-  const navigate = useNavigate()
   const [tickerInput, setTickerInput] = useState('')
   const addTicker = useAddTickerToBoard()
   const removeTicker = useRemoveTickerFromBoard()
@@ -253,7 +247,7 @@ function BoardDetailView({
                 )
               ) {
                 deleteBoard.mutate(boardId, {
-                  onSuccess: () => navigate('/watchlists', { replace: true }),
+                  onSuccess: onDeleted,
                 })
               }
             }}

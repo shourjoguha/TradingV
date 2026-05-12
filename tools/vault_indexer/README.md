@@ -110,8 +110,8 @@ python -m tools.vault_indexer.ingest.ingest_video \
   --url https://youtube.com/watch?v=...
 ```
 
-n8n drives these — see [.claude/vault.md](../../.claude/vault.md) for the
-trigger-graph pattern.
+Scheduled via launchd plists (macOS user agents). See `MULTI_DOMAIN_BRIEFING.md`
+for the multi-domain plist pattern.
 
 ## Choices baked in
 

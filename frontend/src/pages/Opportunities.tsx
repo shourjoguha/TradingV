@@ -5,6 +5,7 @@ import { Skeleton } from '../components/ui/skeleton'
 import { Badge } from '../components/ui/badge'
 import { Target, TrendingUp, TrendingDown, Receipt, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { TickerLink } from '../components/common/TickerLink'
 
 const TABS = [
   { id: 'open', label: 'Open' },
@@ -105,7 +106,7 @@ export function Opportunities() {
             <tbody>
               {items.map((o) => (
                 <tr key={o.id} className="hover:bg-white/30">
-                  <td className="px-3 py-2 font-mono">{o.ticker}</td>
+                  <td className="px-3 py-2"><TickerLink symbol={o.ticker} /></td>
                   <td className="px-3 py-2">
                     <Badge variant={o.kind === 'buy' ? 'success' : 'destructive'}>
                       {o.kind === 'buy' ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}

@@ -1,7 +1,7 @@
 # M-2 — Hypothesis object + view registry (full plan)
 
 > **Status:** Promoted from outline 2026-05-01. Execution **deferred to next session** by operator decision; this file is the contract for that work.
-> **Source-of-truth design:** [macro-workbench-brainstorm.md](../macro-workbench-brainstorm.md) § Hypothesis object.
+> **Source-of-truth design:** [macro-workbench-brainstorm.md](macro-workbench-brainstorm.md) § Hypothesis object.
 > **Predecessor:** M-1 shipped (macro series ingestion, `compute_ratio()` query-time, ratio routes).
 
 ## Context

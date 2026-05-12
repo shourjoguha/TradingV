@@ -1,6 +1,6 @@
 # Phase 3 — Stress-test endpoint
 
-> Brainstorm 2026-05-02 converged on **stress-test as the primary use case** for v1. Synthesis (`/research/digest`), additional action kinds (`cancel_hypothesis`, `create_opportunity`), Telegram digests, cross-hypothesis stress, multi-LLM cross-check, and streaming + frontend page are all parked in the active [roadmap](../roadmap.md) as 8b.3–8b.8.
+> Brainstorm 2026-05-02 converged on **stress-test as the primary use case** for v1. Synthesis (`/research/digest`), additional action kinds (`cancel_hypothesis`, `create_opportunity`), Telegram digests, cross-hypothesis stress, multi-LLM cross-check, and streaming + frontend page are all parked in the active [roadmap](../status/roadmap.md) as 8b.3–8b.8.
 
 ## Context
 

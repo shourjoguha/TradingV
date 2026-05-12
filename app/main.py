@@ -31,6 +31,8 @@ from app.research import models as _research_models  # noqa: F401
 from app.macro import models as _macro_models  # noqa: F401
 from app.boards import models as _board_models  # noqa: F401
 from app.tv_context import models as _tv_context_models  # noqa: F401
+from app.admin import models as _admin_models  # noqa: F401
+from app.earnings import models as _earnings_models  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -141,7 +143,12 @@ async def lifespan(_app: FastAPI):
         hyp_task = None
         research_task = None
         video_ingest_task = None
+        edgar_ingest_task = None
         queue_task = None
+        earnings_calendar_task = None
+        earnings_calendar_stop = asyncio.Event()
+        retention_task = None
+        retention_stop = asyncio.Event()
         accuracy_stop = asyncio.Event()
         drift_stop = asyncio.Event()
         digest_stop = asyncio.Event()
@@ -151,6 +158,7 @@ async def lifespan(_app: FastAPI):
         hyp_stop = asyncio.Event()
         research_stop = asyncio.Event()
         video_ingest_stop = asyncio.Event()
+        edgar_ingest_stop = asyncio.Event()
         queue_stop = asyncio.Event()
 
         # tv_context expire-sweep runs on BOTH sides (Railway has its own
@@ -303,7 +311,26 @@ async def lifespan(_app: FastAPI):
                         pass
                     while True:
                         try:
-                            results = await asyncio.to_thread(_yt.ingest_all)
+                            # Pass current earnings dates so IR channels with
+                            # earnings_trigger blocks only poll on release days.
+                            from app.earnings import service as _earnings_svc
+
+                            try:
+                                upcoming = await _earnings_svc.upcoming_earnings(days=60)
+                                import datetime as _dt
+                                earnings_dates = {
+                                    item["ticker"]: (
+                                        _dt.date.fromisoformat(item["expected_at"])
+                                        if item.get("expected_at")
+                                        else None
+                                    )
+                                    for item in upcoming
+                                }
+                            except Exception:  # noqa: BLE001
+                                earnings_dates = {}
+                            results = await asyncio.to_thread(
+                                _yt.ingest_all, earnings_dates=earnings_dates
+                            )
                             drafts = sum((r.get("drafts_written") or 0) for r in results)
                             if drafts:
                                 logger.info("video-ingest: %d new draft(s) across %d channels", drafts, len(results))
@@ -322,6 +349,75 @@ async def lifespan(_app: FastAPI):
                     _video_ingest_loop(), name="video-ingest"
                 )
 
+            # SEC EDGAR auto-ingest — poll every operational-watchlist
+            # ticker for new 8-K / 10-Q / 10-K filings. Idempotent on
+            # accession_number. Off by default (EDGAR_INGEST_ENABLED=false);
+            # opt in after setting EDGAR_USER_AGENT.
+            if SETTINGS.EDGAR_INGEST_ENABLED:
+                async def _edgar_ingest_loop() -> None:
+                    from sqlalchemy import select
+
+                    from app.core import db as _db_local
+                    from app.watchlist.models import WatchlistEntry
+                    from tools.vault_indexer.ingest import ingest_edgar as _edgar
+
+                    interval = SETTINGS.EDGAR_INGEST_SLEEP_SECONDS
+                    warmup = SETTINGS.EDGAR_INGEST_WARMUP_SECONDS
+                    form_types = [
+                        f.strip()
+                        for f in (SETTINGS.EDGAR_INGEST_FORM_TYPES or "").split(",")
+                        if f.strip()
+                    ]
+                    max_per_form = SETTINGS.EDGAR_INGEST_MAX_PER_FORM
+                    try:
+                        await asyncio.wait_for(
+                            edgar_ingest_stop.wait(), timeout=warmup
+                        )
+                        if edgar_ingest_stop.is_set():
+                            return
+                    except asyncio.TimeoutError:
+                        pass
+                    while True:
+                        try:
+                            async with _db_local.SessionLocal() as session:
+                                rows = await session.execute(
+                                    select(WatchlistEntry.symbol).order_by(
+                                        WatchlistEntry.symbol
+                                    )
+                                )
+                                tickers = [r[0] for r in rows]
+                            if tickers:
+                                results = await asyncio.to_thread(
+                                    _edgar.ingest_tickers,
+                                    tickers,
+                                    form_types=form_types,
+                                    max_per_form=max_per_form,
+                                )
+                                written = sum(
+                                    (r.get("written") or 0) for r in results
+                                )
+                                if written:
+                                    logger.info(
+                                        "edgar-ingest: %d new filing(s) across %d tickers",
+                                        written, len(tickers),
+                                    )
+                        except asyncio.CancelledError:
+                            raise
+                        except Exception as e:                # noqa: BLE001
+                            logger.warning("edgar-ingest tick failed: %s", e)
+                        try:
+                            await asyncio.wait_for(
+                                edgar_ingest_stop.wait(), timeout=interval
+                            )
+                            if edgar_ingest_stop.is_set():
+                                return
+                        except asyncio.TimeoutError:
+                            continue
+
+                edgar_ingest_task = asyncio.create_task(
+                    _edgar_ingest_loop(), name="edgar-ingest"
+                )
+
             # Submit-queue worker — single-flight FIFO drain. Boot recovery
             # first: any 'running' rows from a crashed prior process flip back
             # to 'pending' so this worker re-picks them.
@@ -335,6 +431,224 @@ async def lifespan(_app: FastAPI):
                 _qworker.worker_loop(stop_event=queue_stop),
                 name="queue-worker",
             )
+
+            # Earnings calendar — daily refresh of the rolling universe.
+            # Free providers; tiered cadence handled inside refresh_all.
+            from app.earnings import service as _earnings_svc
+
+            async def _earnings_calendar_loop() -> None:
+                # Warmup so first tick doesn't collide with macro/research.
+                try:
+                    await asyncio.wait_for(
+                        earnings_calendar_stop.wait(), timeout=2 * 60
+                    )
+                    if earnings_calendar_stop.is_set():
+                        return
+                except asyncio.TimeoutError:
+                    pass
+                while True:
+                    try:
+                        from app.admin import lifespan as _admin_lifespan2
+
+                        async with _admin_lifespan2.tick_status("earnings_calendar"):
+                            await _earnings_svc.refresh_all()
+                            await _earnings_svc.purge_stale_universe()
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning("earnings_calendar tick failed: %s", e)
+                    try:
+                        await asyncio.wait_for(
+                            earnings_calendar_stop.wait(), timeout=24 * 60 * 60
+                        )
+                        if earnings_calendar_stop.is_set():
+                            return
+                    except asyncio.TimeoutError:
+                        continue
+
+            earnings_calendar_task = asyncio.create_task(
+                _earnings_calendar_loop(), name="earnings-calendar"
+            )
+
+            # Retention sweep — daily. DB → vault files → indexer reload.
+            from app.admin import retention as _retention
+
+            async def _retention_loop() -> None:
+                # Warmup so first sweep doesn't collide with macro/research.
+                try:
+                    await asyncio.wait_for(retention_stop.wait(), timeout=10 * 60)
+                    if retention_stop.is_set():
+                        return
+                except asyncio.TimeoutError:
+                    pass
+                while True:
+                    try:
+                        from app.admin import lifespan as _admin_lifespan3
+
+                        async with _admin_lifespan3.tick_status("retention"):
+                            await _retention.run_full_sweep()
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning("retention tick failed: %s", e)
+                    try:
+                        await asyncio.wait_for(
+                            retention_stop.wait(), timeout=24 * 60 * 60
+                        )
+                        if retention_stop.is_set():
+                            return
+                    except asyncio.TimeoutError:
+                        continue
+
+            retention_task = asyncio.create_task(_retention_loop(), name="retention")
+
+        # ---- Admin runtime registration --------------------------------
+        # Registers a live handle per loop so /v1/admin/loops/{id}/{fire,abort}
+        # can find them. Manual fire callables call the underlying single-tick
+        # function directly; abort sets the stop_event + cancels the task.
+        from app.admin import lifespan as _admin_lifespan
+
+        async def _no_fire() -> None:
+            return None
+
+        # Always-on handles (both laptop + Railway).
+        _admin_lifespan.register_handle(
+            "tv_context_expire", stop_event=tv_context_stop, task=tv_context_task
+        )
+        _admin_lifespan.register_handle(
+            "outbox_purge", stop_event=None, task=purge_task
+        )
+        if sync_drain_task is not None:
+            _admin_lifespan.register_handle(
+                "sync_drain", stop_event=sync_drain_stop, task=sync_drain_task
+            )
+
+        if not is_railway:
+            from app.accuracy import service as _acc_svc, drift as _drift_svc
+            from app.notifications import digest as _digest_svc
+            from app.market_data import derived as _md_derived
+            from app.opportunities import service as _opps_svc
+            from app.macro import service as _macro_svc
+            from app.hypotheses import service as _hyp_svc
+            from app.core import db as _db_pkg2
+
+            async def _fire_macro() -> None:
+                async with _admin_lifespan.tick_status("macro"):
+                    await _macro_svc.refresh_all()
+
+            async def _fire_opps() -> None:
+                async with _admin_lifespan.tick_status("opps"):
+                    await _opps_svc.generate_for_predictions()
+                    await _opps_svc.expire_stale()
+
+            async def _fire_hyp() -> None:
+                async with _admin_lifespan.tick_status("hyp_tick"):
+                    async with _db_pkg2.SessionLocal() as session:
+                        await _hyp_svc.run_daily_tick(session)
+                        await session.commit()
+
+            async def _fire_accuracy() -> None:
+                async with _admin_lifespan.tick_status("accuracy"):
+                    if hasattr(_acc_svc, "evaluate_pending"):
+                        await _acc_svc.evaluate_pending()
+
+            async def _fire_drift() -> None:
+                async with _admin_lifespan.tick_status("drift"):
+                    if hasattr(_drift_svc, "detect_once"):
+                        await _drift_svc.detect_once()
+
+            async def _fire_digest() -> None:
+                async with _admin_lifespan.tick_status("digest"):
+                    if hasattr(_digest_svc, "send_digest_once"):
+                        await _digest_svc.send_digest_once()
+
+            async def _fire_market_data() -> None:
+                async with _admin_lifespan.tick_status("market_data"):
+                    if hasattr(_md_derived, "refresh_market_data_once"):
+                        await _md_derived.refresh_market_data_once()
+
+            _admin_lifespan.register_handle(
+                "accuracy", stop_event=accuracy_stop, task=accuracy_task,
+                fire_now=_fire_accuracy,
+            )
+            _admin_lifespan.register_handle(
+                "drift", stop_event=drift_stop, task=drift_task,
+                fire_now=_fire_drift,
+            )
+            _admin_lifespan.register_handle(
+                "digest", stop_event=digest_stop, task=digest_task,
+                fire_now=_fire_digest,
+            )
+            _admin_lifespan.register_handle(
+                "macro", stop_event=macro_stop, task=macro_task,
+                fire_now=_fire_macro,
+            )
+            _admin_lifespan.register_handle(
+                "opps", stop_event=opps_stop, task=opps_task,
+                fire_now=_fire_opps,
+            )
+            _admin_lifespan.register_handle(
+                "hyp_tick", stop_event=hyp_stop, task=hyp_task,
+                fire_now=_fire_hyp,
+            )
+            from app.research import weekly as _research_weekly2
+
+            async def _fire_research_weekly() -> None:
+                async with _admin_lifespan.tick_status("research_weekly"):
+                    # force=True bypasses the enabled gate (manual fire is
+                    # the operator's explicit opt-in) but keeps scope/dedupe.
+                    await _research_weekly2.run_once(force=True)
+
+            _admin_lifespan.register_handle(
+                "research_weekly",
+                stop_event=research_stop,
+                task=research_task,
+                fire_now=_fire_research_weekly,
+            )
+            _admin_lifespan.register_handle(
+                "video_ingest", stop_event=video_ingest_stop, task=video_ingest_task,
+                enabled=SETTINGS.VIDEO_INGEST_ENABLED,
+            )
+            _admin_lifespan.register_handle(
+                "edgar_ingest", stop_event=edgar_ingest_stop, task=edgar_ingest_task,
+                enabled=SETTINGS.EDGAR_INGEST_ENABLED,
+            )
+            _admin_lifespan.register_handle(
+                "queue_worker", stop_event=queue_stop, task=queue_task,
+            )
+
+            from app.earnings import service as _earnings_svc2
+
+            async def _fire_earnings_calendar() -> None:
+                async with _admin_lifespan.tick_status("earnings_calendar"):
+                    await _earnings_svc2.refresh_all(force=True)
+                    await _earnings_svc2.purge_stale_universe()
+
+            _admin_lifespan.register_handle(
+                "earnings_calendar",
+                stop_event=earnings_calendar_stop,
+                task=earnings_calendar_task,
+                fire_now=_fire_earnings_calendar,
+            )
+
+            from app.admin import retention as _retention2
+
+            async def _fire_retention() -> None:
+                async with _admin_lifespan.tick_status("retention"):
+                    await _retention2.run_full_sweep()
+
+            _admin_lifespan.register_handle(
+                "retention",
+                stop_event=retention_stop,
+                task=retention_task,
+                fire_now=_fire_retention,
+            )
+
+        # Drift check: warn if any registered handle is missing from the
+        # static loops registry. Doesn't block startup; surfaces in logs.
+        drift = await _admin_lifespan.assert_registry_drift()
+        if drift:
+            logger.warning("admin loops drift: unregistered handles: %s", drift)
 
         yield
 
@@ -356,6 +670,9 @@ async def lifespan(_app: FastAPI):
             (hyp_stop, hyp_task),
             (research_stop, research_task),
             (video_ingest_stop, video_ingest_task),
+            (edgar_ingest_stop, edgar_ingest_task),
+            (earnings_calendar_stop, earnings_calendar_task),
+            (retention_stop, retention_task),
         ):
             stop_evt.set()
             if task is not None:

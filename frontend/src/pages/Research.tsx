@@ -5,6 +5,7 @@ import { AskInput } from '../components/research/AskInput'
 import { AnswerCard } from '../components/research/AnswerCard'
 import { HistoryList } from '../components/research/HistoryList'
 import { ContextNeededBanner } from '../components/research/ContextNeededBanner'
+import { SkillPicker } from '../components/research/SkillPicker'
 import { useResearchAsk, useResearchQueries } from '../hooks/use-api'
 import { useBackend } from '../hooks/use-backend'
 
@@ -64,6 +65,7 @@ function ResearchLaptop() {
   const [tickers, setTickers] = useState('')  // comma-sep
   const [filter, setFilter] = useState('all')
   const [loadedPages, setLoadedPages] = useState(1)
+  const [skillSlug, setSkillSlug] = useState<string | null>(null)
 
   const ask = useResearchAsk()
   const queries = useResearchQueries({
@@ -93,6 +95,7 @@ function ResearchLaptop() {
       hypothesis_slugs: scope.length ? scope : undefined,
       tickers: tList.length ? tList : undefined,
       force_skip_context_gate: opts?.forceSkipContextGate,
+      skill_slug: skillSlug ?? undefined,
     })
   }
 
@@ -117,7 +120,8 @@ function ResearchLaptop() {
             supporting evidence + (sometimes) a proposed invalidator update.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <SkillPicker selected={skillSlug} onChange={setSkillSlug} />
           <AskInput
             query={query}
             setQuery={setQuery}

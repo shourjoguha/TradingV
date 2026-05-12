@@ -1,7 +1,7 @@
 # M-1 — Signal layer (Macro Workbench Phase 1)
 
-> **Status:** ✅ SHIPPED 2026-04-30. See [macro.md](../macro.md) for the as-built doc and [decisions/012](../decisions/012-macro-workbench-storage-shape.md) for the storage-shape ADR.
-> **Source-of-truth design:** [macro-workbench-brainstorm.md](../macro-workbench-brainstorm.md)
+> **Status:** ✅ SHIPPED 2026-04-30. See [macro.md](../modules/macro.md) for the as-built doc and [decisions/012](../decisions/012-macro-workbench-storage-shape.md) for the storage-shape ADR.
+> **Source-of-truth design:** [macro-workbench-brainstorm.md](macro-workbench-brainstorm.md)
 > **Pre-execution backups:**
 > - Git tag: `pre-m1-20260430-2130` (pushed)
 > - Code pushed through commit `2cfd99b`
@@ -194,19 +194,19 @@ Auto-stub at module level via fixture — block real yfinance/FRED.
 
 ## Docs to write / touch
 
-- New: [.claude/macro.md](../macro.md) — module doc following the same shape as `accuracy.md` / `predictions.md`. ~80 lines.
+- New: [.claude/macro.md](../modules/macro.md) — module doc following the same shape as `accuracy.md` / `predictions.md`. ~80 lines.
 - New: [.claude/decisions/012-macro-workbench-storage-shape.md](../decisions/012-macro-workbench-storage-shape.md) — ADR for "separate `macro_series` table over reusing `ohlcv_bars`". Brief.
 - Touch: [CLAUDE.md](../../CLAUDE.md) — add row to "module-specific docs" table.
-- Touch: [.claude/roadmap.md](../roadmap.md) — flip 8a from candidate → active.
+- Touch: [.claude/roadmap.md](../status/roadmap.md) — flip 8a from candidate → active.
 - Touch: [.claude/decisions/README.md](../decisions/README.md) — index entry for ADR-012.
-- After ship: [.claude/roadmap-shipped.md](../roadmap-shipped.md) entry.
+- After ship: [.claude/roadmap-shipped.md](../status/roadmap-shipped.md) entry.
 
 ## Cross-session continuity
 
 If this session compacts mid-execution, a fresh session can pick up by reading:
 
 1. This file (`.claude/plans/M-1-signal-layer.md`).
-2. The brainstorm: [`.claude/macro-workbench-brainstorm.md`](../macro-workbench-brainstorm.md).
+2. The brainstorm: [`.claude/macro-workbench-brainstorm.md`](macro-workbench-brainstorm.md).
 3. TodoWrite state in the session.
 4. `git log` since `pre-m1-20260430-2130` shows what's already landed.
 

@@ -242,6 +242,13 @@ export interface AnalysisJob {
   result_json?: Record<string, unknown> & {
     forecast?: Array<Record<string, unknown>>
   }
+  // Per-task outcome buckets — populated by /v1/analysis/jobs list
+  // endpoint; collapsed-row OutcomeBar reads these eagerly.
+  done?: number
+  ineligible?: number
+  error?: number
+  running?: number
+  pending?: number
 }
 
 /** Page-compat wrapper for AnalysisJob list endpoint (backend returns bare array). */
@@ -485,6 +492,20 @@ export interface AskRequest {
   hypothesis_slugs?: string[]
   tickers?: string[]
   force_skip_context_gate?: boolean
+  skill_slug?: string
+}
+
+export interface ResearchSkillInfo {
+  slug: string
+  title: string
+  description: string
+  tool: string | null
+  default: boolean
+}
+
+export interface ResearchSkillsList {
+  items: ResearchSkillInfo[]
+  count: number
 }
 
 export interface TickerContextStatus {
@@ -593,4 +614,192 @@ export interface TVContextNeededInfo {
   available_count: number
   most_recent_at: string | null
   needs_context: boolean
+}
+
+// ---------------------------------------------------------------------------
+// The Street — smart-money snapshot wrapper (Phase 2 IA reorg)
+// ---------------------------------------------------------------------------
+
+export interface StreetSnapshot {
+  date: string
+  writeup_dir: string
+  data_dir: string
+  vault_path: string
+}
+
+export interface StreetSnapshotsResponse {
+  items: StreetSnapshot[]
+  count: number
+}
+
+export interface StreetTickerRow {
+  date: string
+  channels: number
+  total_signals: number
+  billionaires: number
+  trailblazers: number
+  insiders: number
+  politicians: number
+  options_bullish: number
+  etf: boolean
+  notable: string
+  writeup_dir: string
+}
+
+export interface StreetTickerResponse {
+  ticker: string
+  items: StreetTickerRow[]
+  count: number
+}
+
+export interface StreetTierRow {
+  ticker: string
+  channels: number
+  total_signals: number
+  billionaires: number
+  trailblazers: number
+  insiders: number
+  politicians: number
+  options_bullish: number
+  notable: string
+}
+
+export interface StreetTierResponse {
+  tier: number
+  snapshot_date: string | null
+  items: StreetTierRow[]
+  count: number
+}
+
+export interface StreetPoliticianRow {
+  snapshot_date: string
+  ticker: string
+  company: string
+  traded: string
+  disclosed: string
+  value_range: string
+  fv: string
+}
+
+export interface StreetPoliticianResponse {
+  politician: string
+  items: StreetPoliticianRow[]
+  count: number
+}
+
+export interface StreetDigestFundEntry {
+  fund: string
+  company: string
+  status: string
+}
+
+export interface StreetDigestInsiderEntry {
+  date: string
+  company: string
+  person: string
+  title: string
+  value: string
+  shares: string
+  price: string
+  sign: string
+}
+
+export interface StreetDigestPoliticianEntry {
+  traded: string
+  disclosed: string
+  company: string
+  fv: string
+  member: string
+  party: string
+  district: string
+  committee: string
+  value_range: string
+}
+
+export interface StreetDigestOptionsEntry {
+  date: string
+  company: string
+  fv: string
+  signal: string
+  conviction: string
+  contract: string
+  premium: string
+  ratio: string
+}
+
+export interface StreetDigestEntry {
+  ticker: string
+  company: string
+  channel_count: number
+  total_signals: number
+  channels: {
+    billionaires?: StreetDigestFundEntry[]
+    trailblazers?: StreetDigestFundEntry[]
+    insiders?: StreetDigestInsiderEntry[]
+    politicians?: StreetDigestPoliticianEntry[]
+    options_bullish?: StreetDigestOptionsEntry[]
+  }
+  markdown: string
+}
+
+export interface StreetDigestResponse {
+  snapshot_date: string
+  ticker: string
+  found: boolean
+  entry: StreetDigestEntry | null
+}
+
+// ---------------------------------------------------------------------------
+// Vault proxy
+// ---------------------------------------------------------------------------
+
+export interface VaultSearchHit {
+  /** Full vault-relative path of the chunk's parent file. */
+  path: string
+  /** Order of this chunk within the file (0-indexed). */
+  ord: number
+  /** Full chunk body. UI shows `excerpt_sentences` first; `text` is the
+   *  expanded view. */
+  text: string
+  /** Section heading the chunk falls under, when the file has h2s. */
+  section?: string | null
+  /** Pre-computed extractive teaser — top 2 sentences from `text` ranked
+   *  by relevance to the search query, restored to original order.
+   *  See `tools/vault_indexer/excerpt.py`. */
+  excerpt_sentences: string[]
+  title?: string | null
+  kind?: string | null
+  author?: string | null
+  published_at?: string | null
+  horizon_months?: number | null
+  tags?: string[] | null
+  similarity: number
+  decay_weight: number
+  score: number
+}
+
+export interface VaultSearchResponse {
+  query: string
+  k: number
+  results: VaultSearchHit[]
+}
+
+export interface VaultFolderContextItem {
+  path: string
+  body_md: string
+  title?: string | null
+}
+
+export interface VaultFolderContextResponse {
+  items: VaultFolderContextItem[]
+}
+
+export interface VaultNodeResponse {
+  path: string
+  title?: string | null
+  body_md: string
+  kind?: string | null
+  author?: string | null
+  published_at?: string | null
+  tags?: string[]
 }

@@ -66,6 +66,6 @@ The miss row stays as a forensic artifact: `SELECT * FROM ohlcv_fetch_misses WHE
 
 ## Cross-references
 
-- [accuracy.md](../accuracy.md) — operational doc.
-- [analysis.md](../analysis.md) — sibling lazy-refresh on the input side.
-- [predictions.md](../predictions.md) — by-horizon read path that now benefits without changes.
+- [accuracy.md](../modules/accuracy.md) — operational doc.
+- [analysis.md](../modules/analysis.md) — sibling lazy-refresh on the input side.
+- [predictions.md](../modules/predictions.md) — by-horizon read path that now benefits without changes.

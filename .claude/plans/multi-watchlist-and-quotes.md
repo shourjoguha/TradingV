@@ -159,7 +159,7 @@ Backend untouched. Tests untouched (they hit `/v1/watchlist` API which remains).
 |---|---|
 | Renaming UI breaks bookmarks | Legacy redirect `/watchlist` → `/roster` |
 | `ticker_market_data` table doesn't exist for casual tickers | Auto-register via existing `upsert_ticker` on first board-add |
-| Sector hardcoded list goes stale | Quarterly review item in [backlog.md](../backlog.md) |
+| Sector hardcoded list goes stale | Quarterly review item in [backlog.md](../status/backlog.md) |
 | Frontend bundle size on link-out chart | Don't render in-app charts. Link out only. |
 | Operator confuses Roster vs Watchlists | Sidebar grouping (Admin vs Decisions) keeps mental separation; first-time onboarding tooltip on Roster ("This list drives Kronos predictions") |
 

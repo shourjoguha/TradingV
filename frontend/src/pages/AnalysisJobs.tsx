@@ -183,10 +183,25 @@ function JobRow({ job }: { job: AnalysisJob }) {
   const detail = expanded ? detailQuery.data : undefined
 
   const taskCount = detail?.tasks?.length ?? job.task_count ?? 0
-  const buckets = useMemo(
-    () => (detail?.tasks ? bucketize(detail.tasks) : { done: 0, ineligible: 0, error: 0, running: 0 }),
-    [detail],
-  )
+  // Prefer fresh task data when expanded; otherwise use the per-bucket
+  // counts the list endpoint now returns (added in the IA-reorg follow-up
+  // so collapsed rows render the OutcomeBar without a per-row fetch).
+  const buckets: Record<Bucket, number> = useMemo(() => {
+    if (detail?.tasks) return bucketize(detail.tasks)
+    return {
+      done: job.done ?? 0,
+      ineligible: job.ineligible ?? 0,
+      error: job.error ?? 0,
+      running: (job.running ?? 0) + (job.pending ?? 0),
+    }
+  }, [detail, job])
+  const hasListBuckets =
+    (job.done ?? 0) +
+      (job.ineligible ?? 0) +
+      (job.error ?? 0) +
+      (job.running ?? 0) +
+      (job.pending ?? 0) >
+    0
 
   return (
     <>
@@ -217,7 +232,7 @@ function JobRow({ job }: { job: AnalysisJob }) {
           </div>
         </TableCell>
         <TableCell className="align-top">
-          {expanded && detail?.tasks ? (
+          {(expanded && detail?.tasks) || hasListBuckets ? (
             <OutcomeBar buckets={buckets} total={taskCount} />
           ) : (
             <Badge

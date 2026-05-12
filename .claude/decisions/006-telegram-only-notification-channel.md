@@ -22,7 +22,7 @@ Phase 1.3 (drift alerts) and Phase 4 (daily digest) needed a push channel for th
 - Instant mobile push without a PWA.
 - Operator already uses Telegram regularly.
 - Single channel means single failure mode (telegraph.org down? rare).
-- Notifier no-ops gracefully when unconfigured — code ships dormant; operator activates with bot setup steps in [backlog.md](../backlog.md) Unlock #1.
+- Notifier no-ops gracefully when unconfigured — code ships dormant; operator activates with bot setup steps in [backlog.md](../status/backlog.md) Unlock #1.
 
 ## Trigger to revisit
 
@@ -39,6 +39,6 @@ Phase 1.3 (drift alerts) and Phase 4 (daily digest) needed a push channel for th
 
 ## Cross-references
 
-- [notifications.md](../notifications.md) — channel setup + body format
-- [backlog.md](../backlog.md) — Unlock #1: Telegram bot setup steps
-- [roadmap-shipped.md](../roadmap-shipped.md) — Phase 1.3 + Phase 4
+- [notifications.md](../modules/notifications.md) — channel setup + body format
+- [backlog.md](../status/backlog.md) — Unlock #1: Telegram bot setup steps
+- [roadmap-shipped.md](../status/roadmap-shipped.md) — Phase 1.3 + Phase 4

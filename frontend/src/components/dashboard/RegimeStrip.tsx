@@ -42,15 +42,15 @@ function HeadlineTile({ axis }: { axis: typeof REGIME_PANELS[number] }) {
   return (
     <Link
       to="/macro"
-      className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet rounded-2xl"
+      className="block min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet rounded-2xl"
     >
-      <Card className="hover:-translate-y-[1px] transition-transform">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <Card className="hover:-translate-y-[1px] transition-transform overflow-hidden">
+        <CardContent className="p-4 min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-1 min-w-0">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate">
               {axis.title}
             </span>
-            <span className={`text-xs font-mono tabular-nums ${deltaColor}`}>
+            <span className={`text-xs font-mono tabular-nums shrink-0 ${deltaColor}`}>
               {delta == null ? '—' : `${delta > 0 ? '+' : ''}${delta.toFixed(1)}%`}
             </span>
           </div>
@@ -58,7 +58,7 @@ function HeadlineTile({ axis }: { axis: typeof REGIME_PANELS[number] }) {
           <div className="text-[10px] font-mono text-muted-foreground truncate mb-2">
             {subtitle} · 1y
           </div>
-          <Sparkline points={points} width={180} height={28} weekly />
+          <Sparkline points={points} width={180} height={28} weekly showPct={false} />
         </CardContent>
       </Card>
     </Link>

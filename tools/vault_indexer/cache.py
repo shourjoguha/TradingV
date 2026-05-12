@@ -48,9 +48,30 @@ CREATE TABLE IF NOT EXISTS vault_edge (
   PRIMARY KEY (src_path, dst_path, kind)
 );
 
+-- Graph layer: per-edge metadata (context snippet at link site, created_at).
+-- Optional sibling to vault_edge -- rows present only when context is captured.
+CREATE TABLE IF NOT EXISTS vault_edge_meta (
+  src_path TEXT NOT NULL,
+  dst_path TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  context_snippet TEXT,
+  created_at TEXT,
+  PRIMARY KEY (src_path, dst_path, kind)
+);
+
 CREATE INDEX IF NOT EXISTS ix_vault_chunk_path ON vault_chunk(path);
 CREATE INDEX IF NOT EXISTS ix_vault_edge_dst ON vault_edge(dst_path);
+CREATE INDEX IF NOT EXISTS ix_vault_edge_kind ON vault_edge(kind);
 """
+
+# Graph-layer columns added to vault_node via idempotent migration in init().
+# Per-document scores written by graph_compute.recompute(); NULL until first run
+# or in domains below the min_edges threshold (graceful degradation).
+_GRAPH_NODE_COLUMNS = (
+    ("citation_rank", "REAL DEFAULT NULL"),
+    ("centrality", "REAL DEFAULT NULL"),
+    ("cluster_id", "INTEGER DEFAULT NULL"),
+)
 
 
 def _connect(db_path: Path) -> apsw.Connection:
@@ -59,8 +80,26 @@ def _connect(db_path: Path) -> apsw.Connection:
     con.enable_load_extension(True)
     sqlite_vec.load(con)
     con.enable_load_extension(False)
+    # WAL allows readers to proceed during a write transaction (graph recompute
+    # commits scores under one short transaction; without WAL, MCP /search calls
+    # would block). synchronous=NORMAL trades a small durability window for
+    # write throughput; safe for a rebuildable cache.
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA synchronous=NORMAL")
     con.execute("PRAGMA foreign_keys = ON")
     return con
+
+
+def _ensure_graph_columns(cur: apsw.Cursor) -> None:
+    """Idempotently add graph-layer columns to vault_node.
+
+    apsw has no ``ADD COLUMN IF NOT EXISTS``; PRAGMA table_info is the portable
+    check. Safe to run on every startup.
+    """
+    existing = {r[1] for r in cur.execute("PRAGMA table_info(vault_node)")}
+    for col, defn in _GRAPH_NODE_COLUMNS:
+        if col not in existing:
+            cur.execute(f"ALTER TABLE vault_node ADD COLUMN {col} {defn}")
 
 
 def init(db_path: Path, embedding_dim: int) -> apsw.Connection:
@@ -73,6 +112,7 @@ def init(db_path: Path, embedding_dim: int) -> apsw.Connection:
         f"CREATE VIRTUAL TABLE IF NOT EXISTS vault_chunk_vec USING vec0("
         f"chunk_id INTEGER PRIMARY KEY, embedding FLOAT[{embedding_dim}])"
     )
+    _ensure_graph_columns(cur)
     return con
 
 
@@ -187,11 +227,60 @@ def delete_node(cur: apsw.Cursor, path: str) -> None:
 
 
 def replace_edges(cur: apsw.Cursor, src_path: str, edges: Iterable[tuple[str, str, float]]) -> None:
+    """Replace ALL edges for ``src_path`` with the given list.
+
+    Destructive: wipes every edge regardless of kind. Use
+    :func:`replace_edges_by_kinds` when you only want to manage a subset
+    (e.g. preserving operator-approved ``wikilink`` rows during re-indexing).
+    """
     cur.execute("DELETE FROM vault_edge WHERE src_path = ?", (src_path,))
     cur.executemany(
         "INSERT OR REPLACE INTO vault_edge (src_path, dst_path, kind, weight) VALUES (?, ?, ?, ?)",
         [(src_path, dst, kind, weight) for dst, kind, weight in edges],
     )
+
+
+def replace_edges_by_kinds(
+    cur: apsw.Cursor,
+    src_path: str,
+    kinds: Iterable[str],
+    edges: Iterable[tuple[str, str, float]],
+) -> None:
+    """Replace edges for ``src_path`` only for the given ``kinds``.
+
+    Other kinds (e.g. ``wikilink`` rows owned by the review queue) are
+    preserved across re-indexing. ``edges`` may include any kinds; only
+    rows whose existing kind is in ``kinds`` are deleted before insert.
+    """
+    kinds_tuple = tuple(kinds)
+    if kinds_tuple:
+        placeholders = ",".join(["?"] * len(kinds_tuple))
+        cur.execute(
+            f"DELETE FROM vault_edge WHERE src_path = ? AND kind IN ({placeholders})",
+            (src_path, *kinds_tuple),
+        )
+    cur.executemany(
+        "INSERT OR REPLACE INTO vault_edge (src_path, dst_path, kind, weight) VALUES (?, ?, ?, ?)",
+        [(src_path, dst, kind, weight) for dst, kind, weight in edges],
+    )
+
+
+def total_edge_count(con: apsw.Connection) -> int:
+    """Total edge count across all kinds. Used by hybrid scorer's
+    graceful-degradation floor (``min_edges_for_hybrid``).
+    """
+    row = list(con.execute("SELECT COUNT(*) FROM vault_edge"))
+    return int(row[0][0]) if row else 0
+
+
+def edge_counts_by_kind(con: apsw.Connection) -> dict[str, int]:
+    """Per-kind edge counts. Surfaced in graph-health diagnostics."""
+    return {
+        kind: int(count)
+        for kind, count in con.execute(
+            "SELECT kind, COUNT(*) FROM vault_edge GROUP BY kind"
+        )
+    }
 
 
 def get_node(con: apsw.Connection, path: str) -> Optional[dict]:
@@ -222,6 +311,46 @@ def get_node(con: apsw.Connection, path: str) -> Optional[dict]:
 
 def all_node_paths(con: apsw.Connection) -> list[str]:
     return [r[0] for r in con.execute("SELECT path FROM vault_node")]
+
+
+def get_chunks(
+    con: apsw.Connection,
+    path: str,
+    *,
+    offset: int = 0,
+    limit: Optional[int] = None,
+) -> list[dict]:
+    """Return chunks for ``path``, ordered by ``ord``. Optional offset/limit.
+
+    Chunks come from the same `vault_chunk` rows the embedder writes during
+    indexing — no recompute. Returns ``[]`` for nodes that have no chunks
+    (e.g. ``kind=folder_context`` nodes are deliberately stored without
+    chunks; very short notes may chunk to nothing).
+    """
+    sql = (
+        "SELECT ord, text, section FROM vault_chunk "
+        "WHERE path = ? ORDER BY ord ASC"
+    )
+    params: tuple = (path,)
+    if limit is not None:
+        sql += " LIMIT ? OFFSET ?"
+        params = (path, int(limit), int(offset))
+    elif offset:
+        # OFFSET without LIMIT is non-standard; SQLite needs a LIMIT to
+        # honour OFFSET, so pass a sentinel "no real cap" value.
+        sql += " LIMIT -1 OFFSET ?"
+        params = (path, int(offset))
+    return [
+        {"ord": r[0], "text": r[1], "section": r[2]}
+        for r in con.execute(sql, params)
+    ]
+
+
+def count_chunks(con: apsw.Connection, path: str) -> int:
+    row = list(
+        con.execute("SELECT COUNT(*) FROM vault_chunk WHERE path = ?", (path,))
+    )
+    return int(row[0][0]) if row else 0
 
 
 def folder_contexts_for(con: apsw.Connection, paths: list[str]) -> list[dict]:

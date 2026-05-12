@@ -35,5 +35,5 @@ Phase 3.1 needed a way to convert Kronos predictions into BUY/SELL signals. Two 
 
 ## Cross-references
 
-- [opportunities.md](../opportunities.md) — rule engine doc
+- [opportunities.md](../modules/opportunities.md) — rule engine doc
 - [decisions/000-template.md](000-template.md) — ADR template

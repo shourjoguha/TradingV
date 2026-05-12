@@ -1,0 +1,254 @@
+# Roadmap — SHIPPED archive
+
+> Phases 0-6 of the forecasting-tool → decision-support-tool transition. **All ✅ live as of 2026-04-27.** Kept for reference: each phase's spec, exit criteria, and post-ship retrospective.
+>
+> **Active roadmap** lives at [roadmap.md](roadmap.md). For the principles that drove the sequencing, see [principles.md](../guides/principles.md). For per-decision detail (e.g. "why Telegram over email"), see [decisions/](../decisions).
+
+The shift: forecasting tool (Kronos predictions in, charts out, human decides) → decision-support tool (predictions → tested signals → tracked actions → measured outcomes). Each phase gated on the prior delivering real signal.
+
+Reference brainstorm: chat session 2026-04-27.
+
+## Retrospective notes (1 line per phase)
+
+- **Cost-aware iteration Phase 5 — Retention + costs dashboard** (2026-05-09): closes the iteration. New `app/admin/costs.py` (monthly breakdown / 30-day daily series / top queries with 5-min in-process cache) and `app/admin/retention.py` (per-class sweep functions + status listing). New vault helpers: `tools/vault_indexer/cleanup_filings.py:cleanup_old_8k()` (drops 8-K filings older than 18mo, keeps 10-Q/10-K forever) and `tools/the_street/consolidate.py:maybe_rollup_quarter()` (writes `<vault>/The Street/quarterlies/<YYYY-QN>/quarter-rollup.md` BEFORE deleting source weekly dirs — keeps last 13 raw snapshots). New `_retention_loop` in lifespan, gated `if not is_railway`, daily; manual fire via `/v1/admin/loops/retention/fire`. **Per-class retention matrix locked**: `prediction_accuracy` 365d (`evaluated_at`), `drift_alerts` 90d (acked only — unacked stay forever), `research_queries` per-status (approved + pending forever, dismissed 180d, error 90d), 8-K filings 18 months. Six new admin endpoints: `/v1/admin/costs/{monthly,recent,top-queries}` + `/v1/admin/retention` + `/v1/admin/retention/{key}/purge` (two-step preview→confirm, capped 5000 rows/click). `app_settings` allowed-prefix list extended to include `retention.*`. Frontend: `useCostsMonthly` / `useCostsRecent` / `useRetentionStatus` / `usePurgeRetention` hooks; new `CostsTab.tsx` (monthly totals + cap progress bar w/ color states + 30-day stacked mini-bar chart + Vision-monthly toggle + kill-switch banner) and `RetentionTab.tsx` (per-class table with row counts + oldest row + per-status sub-counts for research_queries + two-step purge button). 12 new tests (3 retention sweeps + 3 endpoint tests + 3 cost-aggregator tests + 3 The Street consolidate tests). Full suite **528 pass** (was 516). Frontend TS clean. Plan: [`plans/ok-now-we-have-distributed-anchor.md`](../../.claude/plans/ok-now-we-have-distributed-anchor.md). Sharp edge: PredictionAccuracy has FK chain (→ prediction_points → analysis_tasks → analysis_jobs); test coverage of that sweep simplified to empty-path assertion since all three sweeps share identical SQL pattern. Phase 4 of the original IA-reorg plan (Gekko auto-pipeline) **continues to be deferred** — most of what it covers is now redundant with EDGAR direct ingest.
+- **Cost-aware iteration Phase 2 — Earnings calendar + IR-channel trigger polling** (2026-05-09): new `app/earnings/` module + `earnings_calendar` table (migration `0026_earnings_calendar.py`). `compute_universe()` returns roster ∪ The Street Tier 1+2 over the last 4 snapshots, capped at 150 with a 90-day TTL after last appearance. Provider chain: yfinance (primary) → NASDAQ JSON (fallback) → EDGAR 8-K Item 2.02 confirm (US-only; non-US tickers like TSM/BABA skip). Stale-date sanity treats anything > 7d before today as a miss. Tiered cadence: skip the lookup when `fetched_at` is within 7 days AND `expected_at` is more than 14 days out. Lifespan loop `_earnings_calendar_loop` registered with the admin runtime; cadence editable via `/admin/cadences`; manual fire via `/v1/admin/loops/earnings_calendar/fire`. Three read endpoints: `/v1/earnings/{upcoming,{ticker}}` + a 180-day list. **IR YouTube poller modded**: `_channel.yaml` gains optional `earnings_trigger: { tickers, days_before, days_after }` block; `youtube_channel.ingest_one()` short-circuits with `reason: 'earnings_trigger_gate_closed'` outside the window — saves Whisper CPU on non-earnings days. Multi-ticker support (Alphabet IR for GOOGL + GOOG fires on either). NY-tz date math. Lifespan threads `earnings_dates` from `upcoming_earnings(60)` into `ingest_all`. `seed_ir_channel.py` writes the trigger block by default + `prefer_captions: 'manual_only'` (long-form earnings calls have flaky auto-captions). 18 new tests (universe/cap/provider chain/stale-date/purge/trigger window/multi-ticker/poller gate). Full suite **516 pass** (was 498). Frontend TS clean. **Outbox sync to Railway intentionally deferred** — laptop is the read source for v1 Today panel. Plan: [`plans/ok-now-we-have-distributed-anchor.md`](../../.claude/plans/ok-now-we-have-distributed-anchor.md). Sharp edge: existing `app/main.py:_edgar_ingest_loop` had a stale `WatchlistItem` import (real class is `WatchlistEntry`) — fixed in passing.
+- **Cost-aware iteration Phase 4 — Process status + manual fire/abort + cost guards** (2026-05-09): **biggest** of the five phases. New `app/admin/` module shipped with three files (`loops.py` static registry, `runtime.py` in-process handle store, `service.py` settings cascade + `record_tick` + cost guards), one lifespan helper (`lifespan.py` with `tick_status` async-context-manager + `register_handle` + `assert_registry_drift`), and the routes module (`/v1/admin/loops` + `/{id}/{fire,abort,cadence}` + `/v1/admin/settings`). Two new tables (`app_settings`, `process_status`) via migration `0025_admin_settings_and_process_status.py` — both per-instance, neither replicates via the sync outbox. **Settings cascade locked**: DB > env > hardcoded default. `get_setting(key)` reads on every tick so operator edits propagate without restart. **Cost guards C1–C6 implemented**: research_weekly default OFF; cap default $5/mo with auto-flip kill-switch at 100%; vision-month toggle independent of master kill-switch; manual fire is the primary path for everything Anthropic-priced. `app/research/service.py:ask` and `app/tv_context/vision.py:summarize_chart` short-circuit to synthetic responses (preserving the normal shape) when `anthropic_kill_switch_active()` returns true. **Lifespan integration**: 13 loops registered with handles (some with `fire_now` callables, all with `stop_event`/`task` for abort). 30s server-side debounce on fire returns 429 with `retry_after_seconds`. Drift check at startup logs unregistered handles. Frontend wired: `useAdminLoops`/`useFireLoop`/`useAbortLoop`/`useUpdateCadence`/`useAdminSettings`/`useUpdateAdminSetting` hooks; `ProcessRow.tsx` with status icon + relative-time + confirm-modal-on-fire for sensitive loops; `ProcessesTab` table with auto-refresh; `CadencesTab` with per-loop editor + Anthropic kill-switch toggle. **20 new tests** (8 settings cascade + 12 routes), full suite **498 pass** (was 478). Frontend TS clean. Plan: [`plans/ok-now-we-have-distributed-anchor.md`](../../.claude/plans/ok-now-we-have-distributed-anchor.md) "Handover" section. Phase 2 (earnings calendar) is next; its migration was renumbered to 0026 since 0025 is now this phase's.
+- **Cost-aware iteration Phase 3 — Admin shell with tabs** (2026-05-09): consolidated scattered admin surfaces into a single tabbed `/admin/:tab?` page mirroring `/predictions/:tab?` + `/macro/:tab?`. Six tabs: **Processes** (default) / **Cadences** / **Costs** / **Retention** / **Schedule** / **Jobs**. Each tab is conditionally rendered (no preemptive `useQuery` outside the active tab) and wrapped in a `TabErrorBoundary` so one broken tab doesn't blank the page. Schedule + Jobs render the existing pages unchanged via thin `SchedulePanel.tsx` + `JobsPanel.tsx` wrappers (`JobsPanel` switches to `AnalysisJobDetail` when `/admin/jobs/:jobId` matches). Processes/Cadences/Costs/Retention start as placeholder stubs — Phase 4 fills Processes + Cadences with the loop registry; Phase 5 fills Costs + Retention. Sidebar Admin group simplified to `[Admin (tabbed shell), Legacy Dashboard]`. New `exact?: boolean` flag on `NavLeaf` so Legacy Dashboard at `/admin/overview` doesn't accidentally also highlight the parent Admin entry. Legacy redirects: `/schedule` → `/admin/schedule`, `/health` → `/admin/jobs`, `/health/:jobId` → `/admin/jobs/:jobId`, `/analysis/:jobId` → `/admin/jobs/:jobId`. Frontend-only — no backend touch. Admin route lazy-loaded. TS clean. Plan: [`plans/ok-now-we-have-distributed-anchor.md`](../../.claude/plans/ok-now-we-have-distributed-anchor.md) "Handover" section.
+- **Cost-aware iteration Phase 1 — Skill picker on Research page** (2026-05-09): wired the operator-selectable skill picker on `/research` to the already-shipped `GET /v1/research/skills` endpoint. New `SkillPicker.tsx` renders segmented chips on desktop and switches to a native `<select>` on mobile when more than 4 skills are available; persists the chosen slug to `localStorage('research.last_skill_slug')` and falls back to the `default: true` skill on first visit. Verdict-only sub-label appears when the active skill exposes `tool: null`. `AskRequest.skill_slug` plumbed from picker → `useResearchAsk` → backend service (already accepts the field). New `useResearchSkills()` hook (5-min staleTime). Empty list fallback hides the picker entirely. Frontend-only — no backend touch. TS clean. Plan: [`plans/ok-now-we-have-distributed-anchor.md`](../../.claude/plans/ok-now-we-have-distributed-anchor.md) "Handover" section.
+- **Free-tier adoption of patterns from anthropic/financial-services** (2026-05-09): five-item follow-on plan from the external review (`.claude/reviews/2026-05-09-external-anthropic-financial-services.md`) shipped end-to-end after operator constraint update ("avoid paid services"). Item 1 — **Skills factoring**: research stress-test prompt extracted into operator-editable `skills/research/<slug>.md` with YAML frontmatter + sectioned body (methodology / example bundle / example query / example verdict / example tool call). New `app/research/skills.py` parses + caches by mtime so operator edits propagate without restart. Two new skills authored beyond the extracted stress-test: `research-comp-scan` (peer-set comparison, verdict-only) and `research-earnings-followup` (post-earnings delta, verdict-only). `/v1/research/ask` gained optional `skill_slug` param + new `GET /v1/research/skills` endpoint for the frontend. Backwards-compat preserved: when no skill matches, falls back to legacy hard-coded prompt. Item 2 — **SEC EDGAR direct ingest**: new `tools/vault_indexer/ingest/ingest_edgar.py` with ticker→CIK lookup (cached weekly under `<vault>/.indexer/edgar_company_tickers.json`), Atom feed parse, polite User-Agent enforcement (SEC requires `EDGAR_USER_AGENT`), self-throttle to 5 req/s, primary-doc URL discovery (skips SEC's `*-index.htm` metadata pages), readability-lxml text extraction, idempotent vault writes (matched on `accession_number`). Form types 8-K / 10-Q / 10-K supported in v1; Form 4 + 13F-HR deferred (different parsing). New gated lifespan loop `_edgar_ingest_loop` in `app/main.py`, opt-in via `EDGAR_INGEST_ENABLED=true`, polls every roster ticker every 6h. 14 unit tests with mocked HTTP. Item 3 — **IR YouTube channel seeder**: rather than pre-fill 12 channels with possibly-wrong handles, shipped `tools/vault_indexer/ingest/seed_ir_channel.py` which resolves a `@handle` to a UC… channel ID and creates `<vault>/Videos/earnings-<ticker>/_channel.yaml` with sensible defaults (weekly cadence, 3-month horizon, `[earnings, <TICKER>]` tags). Operator-facing `<vault>/Videos/_README.md` documents the pattern + lists candidate IR handles to verify before seeding. Item 4 — **RSS feed mode for ingest_newsletter**: extended `tools/vault_indexer/ingest/ingest_newsletter.py` with namespace-agnostic feed parser supporting both RSS 2.0 and Atom, idempotent on entry GUID (frontmatter `source_guid`), per-entry full-article fetch via existing readability path with feed-summary fallback. `--feed <url> --author <slug> --tag x --max-entries N` CLI mode. Operator can now point at Reuters RSS, Fed press releases, Treasury, SEC, etc. without code change. Item 5 — **Steering events in research weekly loop**: hypotheses pre-ranked by at-risk status (TTL ≤ 30d) and days-to-expire so urgent ones stress first. Each tick appends a structured event log to `<vault>/Research/_steering-log.md` (markdown table + fenced JSON for tooling); diagnostic file starts with `_` so the indexer skips it. Handles tz-naive Postgres TIMESTAMPTZ correctly. **Decision dropped from active list:** MCP-pluggable provider seam (originally Tier 2 in the external review; YAGNI without a second provider in flight; reactivation trigger is yfinance-the-library breaking, not per-symbol 404s). Plan: [`plans/ok-now-we-have-distributed-anchor.md`](../../.claude/plans/ok-now-we-have-distributed-anchor.md) "Follow-on Plan" section. Total: 478 tests pass (was 448), zero regression.
+- **IA reorg Phase 3 — Theses page + consolidated Watchlist** (2026-05-08): hypothesis surface promoted from sidebar-only widget to a first-class page at `/theses`. Two-column layout: filterable status chips (active/expired/invalidated/cancelled/manual_closed/all) + selectable list + detail panel rendering `body_md` markdown and `recent_evaluations` rows. Two inline action buttons: "Stress this thesis" posts to `/v1/research/ask` with `hypothesis_slugs=[slug]` and navigates the operator to `/research?id=<query_id>` on success; "Cancel" opens an inline reason input then `POST /v1/hypotheses/{id}/cancel`. Deep-link via `/theses?id=<hypothesis_id>`. New components under `frontend/src/components/theses/{ThesesList,ThesisDetail,EvaluationRow}.tsx`. **Watchlist consolidation:** the old `/roster` (operational watchlist driving Kronos run) and `/watchlists` (casual ticker boards) collapse into a single `/watchlist` surface (`WatchlistConsolidated.tsx`) — Roster at top, Boards below an `<hr/>` with `#boards` anchor. Both backend endpoints (`/v1/watchlist`, `/v1/boards`) remain separate; only the frontend mental model merges. Redirects: `/roster` → `/watchlist`, `/watchlists` → `/watchlist`, `/watchlists/:boardId` → `/watchlist#boards`. Theses + Watchlist added to nav (Theses under Think, Watchlist under Decide). Admin group cleaned (Roster removed). No backend touch this phase. Frontend TS clean. Plan: [`plans/ok-now-we-have-distributed-anchor.md`](../../.claude/plans/ok-now-we-have-distributed-anchor.md). **Phase 4 (Gekko auto-pipeline) remains future work** — config seam already in place at `<vault>/The Street/_source.yaml`.
+- **IA reorg Phase 2 — Ticker Hub + The Street UI + vault proxy + Today expansion** (2026-05-08): the Signal→Ticker→Thesis funnel now has a join page. New `/ticker/:symbol` hub aggregates predictions (h+1 accuracy pair), per-symbol smart-money snapshots, recent TV Context, hypotheses touching the symbol (client-side filter against active list — Phase 3 will add a server-side filter when `Hypothesis.tickers` becomes a column), vault chunks (semantic search), open opportunities, and recent trades. New `/the-street` page surfaces the smart-money universe in three modes: latest Tier 1/2/3 tables, per-ticker timeline, and snapshot browser that renders the snapshot's `_index.md` via the new vault-indexer node proxy. New backend modules: `app/the_street/` (thin async wrappers around `tools/the_street/query.py` — `/v1/the-street/{snapshots,ticker/{sym},tier/{1\|2\|3},politician/{name}}`) and `app/vault/` (httpx forwarder for indexer `/search`, `/folder-context`, `/node/{path}` — keeps port 8001 out of the frontend). Today expanded with TVContextStrip (recent active items across roster top-8, ring on items captured since `localStorage('today.last_visited_at')`) + WatchlistDelta (added/removed vs last snapshot). New `<TickerLink symbol={...}>` helper deep-links every ticker mention to the hub; wired on Opportunities + Trades pages this phase (more pages to migrate as touched). 25 new backend tests (15 the_street + 10 vault_proxy) all green. Frontend TS clean. Plan: [`plans/ok-now-we-have-distributed-anchor.md`](../../.claude/plans/ok-now-we-have-distributed-anchor.md).
+- **IA reorg Phase 1 — Today page + sidebar regroup** (2026-05-08): operator confirmed two pain points — intelligence layer feels disconnected from decision surface, and 13 frontend routes of unequal daily importance share equal sidebar real estate. Phase 1 ships frontend-only nav-and-home reshape: new `Today.tsx` page replaces generic `Dashboard.tsx` at `/`. Today renders DriftBanner (hidden when no alerts) + ResearchApprovalStrip (pending queries with inline Approve/Dismiss + Detail link, status filter `'pending'` per `ResearchQueryRead.status`) + FreshSignalsStrip (sparkle-flagged opportunities arriving since `localStorage('today.last_visited_at')`) + collapsed RegimeStrip. Sidebar `NAV_GROUPS` regrouped by user-job: **Today** (leaf) / **Decide** (Signals→Predictions→Macro→Watchlist) / **Think** (Research→TV Context→The Street) / **Admin** (Roster/Schedule/Health/Legacy Dashboard, collapse-default via `group.id === 'admin'` branch in `NavSection`) / **Docs**. Legacy Dashboard kept at `/admin/overview` for unchanged behaviour. New components under `frontend/src/components/today/{DriftBanner,ResearchApprovalStrip,FreshSignalsStrip}.tsx`. No backend touch. TS clean (`npx tsc --noEmit`). Phase 2 will add Ticker Hub at `/ticker/:symbol` + The Street UI at `/the-street` + thin `app/the_street` + `app/vault` route proxies. Plan: [`plans/ok-now-we-have-distributed-anchor.md`](../../.claude/plans/ok-now-we-have-distributed-anchor.md).
+- **The Street — smart-money snapshot vault folder + read CLI** (2026-05-08): packaged 2026-05-08 Gekko aggregate (4 Tier-1 META/TSM/MU/GOOGL, 25 Tier-2, 8 Tier-3) into a new vault top-level folder `~/Documents/knowledge-vault/The Street/` with `_index.md` operator vignette, `_schema.md` writeup contract, `_README.md` runbook, `_source.yaml` periodic-update config stub (gekko / SEC EDGAR Form 4 / House STOCK Act / Senate eFD / 13F-HR / options flow — all sources `enabled:false` until pipeline ships). Snapshot writeups: `tier-1/2/3-conviction.md`, `politicians-buys.md`, `insiders-top.md`, `options-bullish.md`, `methodology.md`, `_index.md`. Raw TSV/JSON copied verbatim under `data/2026-05-08/` for audit. Read-side CLI `tools/the_street/query.py` exposes `--ticker / --tier / --politician / --list-snapshots` against the aggregated TSV; library functions `find_ticker / list_tier / find_politician / latest_snapshot`. Smoke-test green: Tier-1 lists 4 expected names, Cleo Fields → 3 disclosures (META/GOOGL/MU). Vault taxonomy gained 11 tags (`smart_money`, `institutional_flow`, `insider_activity`, `political_disclosure`, `options_flow`, `cross_channel_conviction`, `tier1/2/3`, `methodology`). `.claude/vault.md` cross-link added. Periodic Gekko auto-update remains FUTURE work (Phase 4 of the IA-reorg plan).
+- **YouTube channel poller — Shorts filter + auto_promote wiring** (2026-05-08): operator's `_channel.yaml` had `auto_promote: true` set but the poller never read it — drafts piled up as `.md.draft` invisible to Obsidian (which only shows `.md` by default). Three RSS entries this week were YouTube Shorts (URLs containing `/shorts/`) which operator wanted excluded entirely. Wiring: extracted `promote_draft_path()` helper from `review.promote()`, then in `youtube_channel.ingest_one()` partition feed entries into Shorts (skipped + marked seen so RSS re-surfacing is a no-op) vs long-form (transcribed + drafted). After the draft loop, if `cfg.ingest.auto_promote` is True, walk just-written drafts and rename via the helper. New `tools/vault_indexer/cleanup_shorts.py` CLI: walks `<vault>/Videos/**/*.{md,md.draft}`, deletes files whose frontmatter `source_url` contains `/shorts/`. Idempotent; doesn't touch `_channel.yaml` (deleted video_ids stay in `seen_video_ids` to prevent re-fetch). Ran once: 3 Shorts deleted, 2 long-form drafts promoted to `.md`. Vault now clean. +4 unit tests in `tests/test_youtube_channel.py` (`_is_short`, ingest skips shorts, auto_promote on/off paths). Full suite **394 pass** (+27 since previous tally — many from concurrent test additions across the session). Docs: `.claude/vault.md` operator-edit-flows section now documents `auto_promote` semantics + the cleanup CLI; `use_me_guide.md` has a full channel-poller section.
+- **Video ASR cleanup — Canary-Qwen 2.5B fully removed from disk + venv + code** (2026-05-06, same-day): after spike showed Canary unusable on 16GB M3 (memory thrash + degenerate TTS output, real-speech unverified), operator decided "no dead space." Removed 4.8GB HF model cache, uninstalled `nemo_toolkit` + 14 NeMo-induced packages from venv (~1.1GB), stripped `transcribe_canary()` + ffmpeg-chunking helpers + `--asr` flag from `tools/vault_indexer/ingest/ingest_video.py`. Restored `numba` after discovery that Whisper depends on it for word-timestamps. Final state: ingest_video.py is back to a single Whisper code path with a richer `--whisper-model` choice list (tiny/base/small/medium/large/large-v3). Docs synchronised: `use_me_guide.md`, `.claude/vault.md`, `.claude/tech_debt.md` all reflect Whisper-only with the trigger to revisit Canary documented. 367 tests still green. Net disk reclaimed: ~6GB.
+- **Video ASR refactor — Canary-Qwen 2.5B opt-in path; Whisper stays default** (2026-05-06): planned to swap default video transcription to NVIDIA Canary-Qwen 2.5B (top of HF open-ASR leaderboard, English-only, LLM-fused decoder, claimed better numbers/jargon accuracy than Whisper-large-v3). Spike on M3 16GB revealed two blockers: (a) ~5GB model + ~7-10 min cold load + heavy memory pressure caused thrashing alongside normal operator workload (Claude Helper, Chrome, Docker, dev server); (b) initial test on synthetic TTS audio produced degenerate output (3 tokens "Transcript"+EOS) and we couldn't re-test on real speech because the follow-up MPS-vs-CPU comparison ran out of resources. Pivoted: refactored `tools/vault_indexer/ingest/ingest_video.py` into `transcribe_whisper()` + `transcribe_canary()` branches with `--asr {whisper,canary}` flag (default `whisper`). Canary path includes ffmpeg re-encode to 16kHz mono WAV + 60s chunking with 1s overlap. End-to-end run with operator's test URL (a 23:41 Australian-accented macro podcast) via Whisper-small produced a 4,829-word transcript with numbers/percentages mostly intact; only proper-noun phonetics mangled. NeMo dep + 5GB Canary model cached on disk for opt-in usage. Tech-debt entry documents the trigger to revisit (32GB+ hardware OR confirmed real-speech success) + alternative path (CoreML variant `phequals/canary-qwen-2.5b-coreml-fp16`). New `requirements.txt` deps unchanged (NeMo not pinned — operator who opts in installs ad-hoc with `pip install "nemo_toolkit[asr]"`). Plan: [`plans/check-github-for-a-proud-glacier.md`](../../.claude/plans/check-github-for-a-proud-glacier.md). Honest finding: leaderboard claims don't always survive hardware reality; the right move was data-first, then ship pragmatically.
+- **Railway cost cut — laptop-only loop gate + batched outbox drain** (2026-05-05): observed Railway bill $6.40/wk ($25.60/mo). 38% RAM, 32% CPU, 29% Postgres RAM, ~0% egress. Sync request volume confirmed irrelevant — egress was $0.0014/wk. Real cost = serverless container staying warm because **8 of 10 background loops in `app/main.py:lifespan` were running on Railway too** (accuracy_evaluator, drift_detector, digest_loop, market_data, opps_loop, macro_ingestion, hyp_tick, research_weekly, queue_worker), each self-waking on its own timer. Gated all 9 by `INSTANCE_NAME != 'railway'` (Railway gets only `outbox-purge` + tv_context expire @ daily cadence vs hourly on laptop). Removed per-analysis-job `asyncio.create_task(sync_service.drain_outbox())` from `app/analysis/service.py` and replaced with periodic 5-min drain loop on laptop side (config `SYNC_DRAIN_INTERVAL_SECONDS=300`). Outbox semantics unchanged — eventual consistency preserved, sync latency rises from instant → ≤5 min. New env vars: `TV_CTX_EXPIRE_INTERVAL_SECONDS`, `SYNC_DRAIN_INTERVAL_SECONDS`. Operator must set `INSTANCE_NAME=railway` on Railway dashboard for gate to fire. Estimated bill savings: 70-80% (Railway should drop to ~$5-8/mo). Tech-debt entry added for next lever (strip torch/Kronos from Railway image — only worth doing if `RAILWAY_FALLBACK_ENABLED=False`). 367 tests still green.
+- **TV Context follow-up — Railway gate + trade-close wiring** (2026-05-04, same-day): `TVContextInbox` page now shows a laptop-only banner when `backendId === 'railway'` (sidebar nav stays visible; only the page surface is gated; backend routes still mounted on Railway so peer outbox replication via `/v1/tv-context/import` keeps working). `update_trade` in `app/trades/service.py` now fires `tv_context.service.enrich_on_trade_close` on the open → closed transition (gated by `was_closed_before` snapshot pre-update; helper itself idempotent on `tombstone.trades` dedupe). Failures logged + swallowed; trade-close response never blocked. +2 integration tests (`test_patch_trade_close_enriches_tv_context`, `test_patch_trade_close_idempotent`). Full suite 367 green. Past-decision walkthrough via `GET /v1/tv-context/by-trade/{trade_id}` is now actually fed by trade-close events.
+- **TV Context layer (Phases 1-6 in one cycle)** (2026-05-04): all six phases shipped together. New module `app/tv_context/` (models, schemas, service, routes, vault, vision) — single polymorphic `tv_context_items` table with `kind` discriminator (webhook/screenshot/note/idea/event), per-category retention defaults + per-row override, hourly expire sweep that drops heavy payload + writes tombstone, webhook dedupe via SHA-256 rolling-window key. Migration 0024 adds `tv_context_items`, `hypothesis_tv_context_links`, `hypothesis.requires_tv_context` flag, `trades.context_refs` JSON column. Sync outbox extended with 4 new kinds (`tv_context_webhook|note|idea|event`); screenshots intentionally NOT replicated (vault path is laptop-only). Phase 4 gating: `/v1/research/ask` accepts `tickers` + `force_skip_context_gate` and short-circuits to `status='needs_context'` (no LLM call) when any flagged hypothesis lacks recent context for supplied tickers. Phase 5 trade-close enrichment walks `tv_context_items` in `entry_at±24h`, stamps tombstones with trade outcome, populates `trades.context_refs`. Phase 6 vision: Claude Sonnet 4.6 chart summarization on screenshot ingest, default ON, per-upload toggle, ~$0.012/image at 1024px max-width with Pillow downscale; cost logged to `payload.vision.cost_usd`, monthly tally surfaced via `/v1/tv-context/vision-spend`. Frontend: new `TVContextInbox` page at `/tv-context/:ticker?` with paste/drop screenshot modal + inline note/idea/event forms + ContextNeededBanner on Research page. ADRs [016](../decisions/016-tv-context-no-browser-automation.md) + [017](../decisions/017-tv-context-vision-default-on.md). Module doc at [tv_context.md](../modules/tv_context.md). Known gap filed in tech_debt: hypothesis daily tick can't auto-flag needs-context until `Hypothesis.tickers` becomes a first-class column.
+- **Phase 3.7 — Research UI v1 (single-turn)** (2026-05-02): shipped same-day as Phase 3. ~700 lines new frontend (`frontend/src/pages/Research.tsx` + 7 components under `frontend/src/components/research/`) + 5 new react-query hooks (`useResearchAsk`, `useResearchQueries`, `useResearchQuery`, `useApproveResearchQuery`, `useDismissResearchQuery`). Backend `AskResponse` + `ResearchQueryRead` extended with `evidence` + `macro_state` + `proposed_action` so single-call render works without parsing the bundle envelope. `+1` test (`test_ask_response_includes_evidence_and_macro`), 14 research tests green. Confirm-modal Approve gates DSL mutation behind a two-step preview. **Sharp edge:** `anthropic` SDK was missing from `requirements.txt` — discovered post-deploy when first live `/ask` returned `status=error` despite key being set. Fix: add `anthropic` to requirements + reinstall + restart uvicorn. Plan: [`plans/phase-3.7-research-ui-single-turn.md`](../plans/phase-3.7-research-ui-single-turn.md). Phase 3.8 (threading) deferred — gated on operator hitting "≥3 queries / same hypothesis / 7 days" trigger.
+- **Phase 3 — Research stress-test endpoint** (2026-05-02): smooth. ~1300 lines new code (`app/research/*` + `tools/vault_indexer/research_hook.py`). 13 new tests, full suite 341 green. Migration 0023 added `research_queries` audit table — applied cleanly with **no `create_all` race** (the schema-check fix from earlier in the day prevented it on first try, validating that backlog item resolution). `POST /v1/research/ask` wired end-to-end with: bundle assembler, Claude tool-use (single action: `propose_invalidator_update`), three-layer DSL validation gate, markdown answer template into `<vault>/Research/`, vault-indexer Research-tick scanner that HTTP-calls back into TradingView's approve route, weekly auto-stress per active hypothesis. ADR [015](../decisions/015-research-stress-test.md). Six parked future modes (synthesis, additional action kinds, Telegram digest, cross-hypothesis stress, multi-LLM, streaming + frontend) captured in roadmap as 8b.3–8b.8.
+- **Phase 2 — Vault + indexer** (knowledge substrate, 2026-05-02): smooth. ~1100 lines new code, 9 new tests, full suite 323 green. Operator's Obsidian vault at `~/Documents/knowledge-vault/` is the source of truth; sidecar at `tools/vault_indexer/` (port 8001) over SQLite + sqlite-vec exposes `/search`, `/traverse`, `/node`, `/promote`, `/apply-renames`, `/regenerate-review`. Embeddings via `BAAI/bge-large-en-v1.5` (cached locally, cosine-native). Auto-tag via Claude Haiku constrained to `_taxonomy.md`'s 15-tag vocabulary. Operator-in-the-loop review queue is plain markdown checkboxes — no separate UI. Migration `0022_hypothesis_node_links` adds the TradingView pointer table; routes deferred to Phase 3. ADR [014](../decisions/014-vault-indexer.md). Same `create_all` race as M-2 surfaced + handled the same way; backlog item from yesterday now has its second confirmed instance.
+- **Macro Workbench M-2** (hypothesis object + view registry, 2026-05-01): smooth. 23 new tests, full suite 314 green, no regressions. Sidebar widget shipped instead of full page (operator decision — defer until ≥10 active rows; 2-week revisit scheduled via cloud routine). Migration 0021 applied to laptop primary, all 6 drafts (5 thematic + btc-rally precondition chain) seeded, invalidator DSL hand-authored via `scripts/patch_invalidators.py`, first force-fire of the lifespan tick `{evaluated: 6, expired: 0, invalidated: 0}` — all 6 active on 2026-05-01. ADR [013](../decisions/013-hypothesis-object.md) captures the 10 locked decisions. Boot-sequence wart noted: `Base.metadata.create_all` raced ahead of `alembic upgrade head` and required hand-cleanup; backlog entry filed for the long-term cleanup.
+- **Macro Workbench M-1** (signal layer, 2026-04-30): smooth. 38 symbols cached, `/v1/macro/{series,ratio,refresh}` live, daily ingestion loop running.
+- **Phase 0** (snapshot): smooth. Tag + DB dump + bundle archive + ROLLBACK.md. Operator-driven Railway dump deferred (used Railway's built-in backup feature).
+- **Phase 1.1** (accuracy backfill): smooth. 15 new tests covered math + integration; idempotency via `UNIQUE(prediction_id)` worked first try.
+- **Phase 1.2** (`/accuracy` UI): smooth. Heatmap + drilldown built before live data — proved the "build-now-iterate-on-data" approach.
+- **Phase 1.3** (drift + Telegram): backend complete; Telegram dormant pending operator bot setup ([backlog.md](backlog.md) Unlock #1).
+- **Phase 2.1** (empty states): trivial as expected.
+- **Phase 2.2** (lightweight-charts v5): **DEFERRED** — not on critical path; tracked separately.
+- **Phase 3.1+3.2** (opportunities): smooth. Hardcoded rules + UNIQUE(prediction, rule) idempotency. Frontend tabs + cancel modal landed cleanly.
+- **Phase 4** (Telegram digest): wired into Phase 1.3 commit. Daily loop ready; dormant pending setup.
+- **Phase 5** (trades): smooth. P&L attribution by-rule will only be meaningful after several real trades.
+- **Phase 6** (IV runway): yfinance ATM IV + earnings, daily refresh. Silently collecting.
+- **Post-roadmap (queue + Neumorphism)**: shipped after Phase 6 — see [queue.md](../modules/queue.md), neumorphic redesign in [decisions/004](../decisions), [decisions/005](../decisions).
+- **2026-04-30 — Accuracy + By Horizon visual update**: composite Accuracy metric (`hit% / MAPE%`) replaces hit-rate-only color so directionally-lucky-but-magnitude-wrong models stop reading green; added `1d | 1h | all` interval toggle (backend `interval` filter on `/v1/accuracy/grid`, no migration — field already on rows); low-n masking (`n < 4` greyed); click-drill replaced with hover/focus inline panel. By Horizon cells: `$` prefix removed from Δ% values, repeated "forecast" sub-text moved to legend, secondary reference now actual close (or italic predicted close for forecast-only cells), hover tooltip with side-by-side OHLC mini-candles. See [accuracy.md](../modules/accuracy.md) and [predictions.md](../modules/predictions.md) for cell semantics.
+- **2026-04-30 — Self-healing OHLCV fetch**: accuracy evaluator's hourly tick now refreshes upstream OHLCV when a pending prediction's actual is missing; deduped per (ticker, interval) per tick, capped via new `ohlcv_fetch_misses` table after 24 attempts so unfetchable bars stop hammering yfinance. Sibling lazy-refresh added in `_process_task` warms caches for cold-start intervals (e.g. first 1h schedule). Resolves [backlog.md](backlog.md) Unlock #2. See [decisions/010](../decisions/010-self-healing-ohlcv-fetch.md).
+- **2026-04-30 — Scheduler mid-tick PUT race**: `record_run` now recomputes `next_run_at` against the freshly-loaded config (instead of a snapshot taken at tick start), so a `PUT /v1/schedule` landing during execution is honored on the way out — no more lost slots. No new flag, no new column. See [decisions/011](../decisions/011-schedule-mid-tick-put-race.md).
+- **2026-04-30 — Docs hub + jobs list redesign**: new `/docs` route (lazy-loaded). Markdown-driven reference docs with sticky scroll-spy TOC, segmented document switcher, persistent font-size control. v1 ships `metrics.md` (terms, formulas, color legends across the platform); `how-to-use.md` stubbed. Adding a doc = drop `.md` in `frontend/src/docs/` + register slug. `/analysis` page rebuilt: expandable rows replace the JobID-first table. New columns surface a friendly run summary (sym count · intervals · model), a stacked outcome bar (done/running/ineligible/error counts, lazy-fetched per row), smart relative timestamps (Today / Yesterday / MMM D), and duration. Per-task breakdown opens inline on row click — no round trip to the detail page for everyday triage. New deps: `react-markdown`, `remark-gfm`, `rehype-slug`. See [frontend/pages.md](../frontend/pages.md).
+- **2026-04-30 — Macro Workbench M-1 (signal layer)**: foundation for the regime-aware research workbench. New `macro_series` table (`migrations/0019`) holds daily close-only values from yfinance (~30 symbols) + FRED (~6 economic series). New module `app/macro/` with provider abstraction, hand-curated `registry.yaml`, service (`refresh`, `refresh_all`, `get_series`, `compute_ratio`), three `/v1/macro/*` endpoints, and a daily lifespan ingestion loop. Ratios are computed on demand (not materialised). Chunked-upsert (1000 rows/batch) avoids Postgres' 32767 bind-param limit on long-history symbols. 16 new tests (idempotency, value updates, ratio inner-join, zero-denom skip, registry fan-out, error isolation, route round-trips, FRED CSV parser, chunked-upsert regression). First live tick: 38/38 symbols ok, 220k rows. See [macro.md](../modules/macro.md), [decisions/012](../decisions/012-macro-workbench-storage-shape.md), [plans/M-1-signal-layer.md](../plans/M-1-signal-layer.md).
+- **2026-04-30 — Macro Workbench M-1f (frontend)**: new `/macro/:tab?` route, lazy-loaded. Three sub-tabs — Overview (4 regime panels × 3 sparkline rows, inline-expand to focused chart), Ratios (full-size focused chart with quick-switch dropdown across the 12 canonical ratios), Sectors (9-cell sector-vs-SPY strip with Δ%-coloured cells, click-to-expand). Default window 5Y; chips `1Y/3Y/5Y/10Y/Max`. Sparklines hand-rolled SVG at weekly close; focused charts use `lightweight-charts ^4.2.1` themed for the neumorphic palette (no new deps). Single source of truth for which ratios live where: `frontend/src/lib/macro-views.ts`. Sidebar entry between Trades and Docs. UI patterns informed by the `ui-ux-pro-max` skill (Data-Dense + line + grouped-bar) + `frontend-design`; neumorphic theme preserved — no dark mode, no glassmorphism. See [macro.md § Frontend](../modules/macro.md#frontend-macro-lazy-loaded) and [plans/M-1f-frontend.md](../plans/M-1f-frontend.md).
+- **2026-05-01 — Multi-watchlist + lightweight quotes + sector drill-in (MW-1 / MW-2 / MW-3)**: split the dual role of the original watchlist concept. **MW-1**: rebrand UI `/watchlist` → `/roster` (operational; drives Kronos). Backend untouched. **MW-2**: new `/v1/boards` module + `/watchlists` page for casual ticker lists. New `boards` + `board_tickers` tables; `ticker_market_data` gains `last_close`, `last_close_at`, `pct_1w`, `quote_fetched_at` (migration 0020). Existing daily market-data cron extended to walk roster ∪ boards (one new ~15-day yfinance call per ticker). Move-to-other-list, link-out to TradingView (no in-app charts for casual tickers — operator's brokerage covers that). 15 new tests. **MW-3**: hardcoded top-10 holdings per sector ETF (`frontend/src/lib/sector-holdings.ts`) + `/v1/quotes` bulk endpoint. When a sector cell is expanded on `/macro/sectors`, a "Top holdings" panel renders below the chart with last close + 1w Δ% per holding. 289 backend tests passing. See [boards.md](../modules/boards.md), [plans/multi-watchlist-and-quotes.md](../plans/multi-watchlist-and-quotes.md).
+- **2026-05-01 — Macro Workbench M-1.5 (stagflation regime panel)**: 5th macro panel "Inflation regime" added for tracking stagflation/inflation cycles. New symbols ingested: yfinance `^VIX` and `DBC` (broad commodities); FRED `DFII10` (10Y real yield), `T5YIE` (5Y breakevens), `PPIACO`, `CPIAUCSL`, `MORTGAGE30US`. New backend `/v1/macro/spread` endpoint with weekday-aligned forward-fill (default 7-day window) so weekly FRED series publishing on different weekdays — like `MORTGAGE30US` Thursdays vs `WGS10YR` Fridays — line up. Adds VIX to the Stress panel and Mortgage spread to Liquidity. Frontend: `RegimePanel` row type expanded to support spread rows; per-row `<InfoBubble>` (i) icons drive from `lib/glossary.ts` (~21 new entries). Tooltip width bumped to 320px and `whitespace-normal break-words` for the wordier definitions. Dashboard `RegimeStrip` now shows 5 tiles. New hypothesis draft `stagflation-regime-24m.md` added — 12 tracking signals across the new panel + cross-axis confirmers, four invalidator categories. 273 backend tests passing (3 new for spread endpoint + alignment regression). See [macro.md § Frontend](../modules/macro.md#frontend-macro-lazy-loaded) and [hypotheses/draft/stagflation-regime-24m.md](../hypotheses/draft/stagflation-regime-24m.md).
+- **2026-04-30 — UI consolidation (Phases A → E)**: cross-product polish pass. (A) Sidebar IA — 11 flat entries collapsed into 4 logical groups (Dashboard / Decisions{Macro/Predictions/Motion} / Admin{Watchlist/Schedule/Health} / Docs); new `Predictions` and `Motion` tab wrappers; `/analysis` rebranded to `/health`; legacy URLs (`/by-horizon`, `/opportunities`, `/trades`, `/analysis/...`) keep working via `<Navigate replace />`. (B) Dashboard rebuilt around regime context — 4-tile RegimeStrip (1Y Δ% + sparkline per axis), Latest Opportunity card, Accuracy 30d snapshot tile, slimmed Schedule + Queue + Recent jobs. (C) Density pass — new `PageHeader`, `EmptyState`, `LoadingStates` primitives in `components/common/`; five high-traffic pages migrated. (D) Tooltip standard — single `HoverTooltip` primitive + new `InfoBubble` (i)-circle component reading from `lib/glossary.ts` (~25 entries) so any data label can carry a hover-able inline definition with a "Read more" link to `/docs/metrics`. (E) Mobile pass — added `overflow-x-auto` on AnalysisJobs/Watchlist/TickerLabels/PredictionsByTarget table containers. UI patterns informed by `ui-ux-pro-max` (data-dense + grouped-bar) and `frontend-design`. Five commits, one per phase, with TS clean + 270 backend tests green between each. See [plans/UI-consolidation.md](../plans/UI-consolidation.md).
+
+## North-star principles
+
+1. **Trust before action.** Every "tradeable" claim must be backed by visible accuracy data sliced by `(ticker, horizon, model)`. Aggregate stats lie.
+2. **Cheap reversibility.** Every phase tagged in git; rollback path documented in `backups/ROLLBACK.md`.
+3. **Single-user, opinionated UX.** No auth tiers, no permissions. The cost of premature generality is higher than the cost of refactoring later.
+4. **External channels stay external.** This app is the *quantitative pillar*; news, policy, expert commentary, manual TV chart reads stay out of scope. Plug in only data the model itself emits or that's required to evaluate it.
+
+## Locked decisions (2026-04-27)
+
+| Decision | Choice |
+|---|---|
+| Accuracy metrics | MAPE, RMSE, directional hit-rate (all three, computed per `(ticker, horizon, model)`) |
+| Backfill scope | Existing prediction history only — no special historical batch job |
+| Drift threshold | Recent-30d MAPE > 1.5× all-time MAPE for that pair triggers flag (start strict, tune after 1 week of data) |
+| Notification channel | Telegram bot (single channel for v1; email deferred) |
+| Sequencing | Snapshot → Trust → UX → Actionability → Push → Journal → Options runway |
+
+---
+
+## Phase 0 — Snapshot (rollback safety) · ~30 min
+
+Capture the current cloud-deployed v1 (CF Pages frontend at `tradingv-83b.pages.dev` + Railway backend) in case Phase 1+ goes sideways.
+
+Artifacts (in `backups/` — gitignored except docs):
+1. **Git tag** `v1.0-pre-trust-sprint` annotated at current main HEAD.
+2. **Laptop Postgres dump** via `pg_dump` of `.env.laptop`'s `DATABASE_URL`.
+3. **Railway Postgres dump** — operator-driven (Railway CLI or psql via Railway DATABASE_URL).
+4. **OpenAPI JSON snapshot** from Railway (`/openapi.json`) — captures API contract.
+5. **Frontend bundle archive** — copy `frontend/dist/` to `backups/frontend-dist-YYYY-MM-DD/`.
+6. **Env-var inventory** — operator-driven copy of Railway + CF Pages env vars to `backups/env-inventory-YYYY-MM-DD.md` (gitignored, contains keys).
+
+Rollback path: `backups/ROLLBACK.md` (committed) names exact commands to revert: git checkout the tag, restore SQL dumps, rollback CF deployment to specific hash, re-set env vars.
+
+**Note**: Laptop DB and Railway DB are bidirectionally synced via Tailscale (Phase B1+B2). A laptop dump is functionally a Railway dump modulo unsynced rows in flight. Both are still captured for paranoia.
+
+---
+
+## Phase 1 — Trust through feedback · ~1.5 weeks · PRIORITY
+
+**One mandate**: prove or disprove Kronos accuracy at every `(ticker, horizon, model)` pair you might trade.
+
+### 1.1 — Accuracy backfill + persistence (~3 days)
+
+New table `prediction_accuracy`:
+```sql
+prediction_accuracy(
+  id, prediction_id FK, ticker, horizon_bars, model_id,
+  predicted_close NUMERIC, actual_close NUMERIC,
+  error_pct NUMERIC,           -- (actual - predicted) / actual
+  error_abs NUMERIC,           -- |actual - predicted|
+  direction_correct BOOL,      -- sign(predicted_change) == sign(actual_change)
+  generated_at TIMESTAMPTZ,
+  evaluated_at TIMESTAMPTZ,
+  UNIQUE(prediction_id)        -- idempotency
+)
+```
+
+Background job `accuracy_evaluator()` ticks daily after market close: pulls all `prediction_points` whose horizon has elapsed and aren't yet in `prediction_accuracy`, fetches `actual_close` via existing OHLCV provider, computes errors, inserts row. Idempotent.
+
+Backfill: run once on existing `prediction_points` history (~5 jobs of data). No special historical batch.
+
+### 1.2 — Per-(ticker, horizon) accuracy dashboard (~3 days)
+
+New page `/accuracy`:
+- **Heatmap table**: rows = watchlist tickers, columns = horizons in scheduled run (1d, 3d, 5d, 10d). Cells = directional hit-rate over last 30 evaluated predictions (color-graded: green ≥ 60%, yellow 50-60%, red < 50%). Secondary metric (MAPE %) shown on cell hover.
+- **Drilldown** on cell click: scatter plot predicted vs actual (diagonal = perfect), MAPE/RMSE/hit-rate trio, sparkline of accuracy over time, list of recent prediction ↔ actual pairs.
+- **Filters**: date range, model_id (when ensemble lands).
+
+### 1.3 — Drift detection + Telegram alerts (~3 days)
+
+Daily cron compares last-30d MAPE to all-time MAPE per `(ticker, horizon, model)`. Flag if recent > 1.5× all-time AND ≥ 10 evaluations in recent window (avoid noise on sparse data).
+
+New table `drift_alerts(id, ticker, horizon, model_id, recent_mape, allTime_mape, ratio, flagged_at, acknowledged_at)`.
+
+Telegram integration:
+- Bot setup via @BotFather (one-time, manual).
+- New env var `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (your DM with the bot).
+- New `app/notifications/telegram.py` posts markdown messages.
+- Drift alerts → Telegram immediately. Daily morning digest (Phase 4) reuses same channel.
+
+Drift alerts also surface as a banner on `/accuracy` and `/` (dashboard) until acknowledged.
+
+### Phase 1 exit criteria (gates Phase 3)
+
+- ≥ 1 `(ticker, horizon)` pair with directional hit-rate ≥ 60% over ≥ 20 evaluations.
+- Accuracy dashboard renders without empty states for all watchlist tickers.
+- Telegram drift alert verified end-to-end (force a drift via test data).
+
+If exit fails → pivot to retraining / model-side investigation, not Phase 3.
+
+---
+
+## Phase 2 — UX hardening · ~3 days · parallel-able with Phase 1
+
+### 2.1 — Empty states pass
+
+By-target, by-horizon, analysis pages currently render blank when there's no data. Replace with a meaningful "No data yet" UI per page, with a single CTA pointing at the first-action ("Run your first analysis" → opens Run dialog).
+
+### 2.2 — lightweight-charts v4 → v5 upgrade
+
+v5 brings: crosshair sync between panes, drawing tools, multi-pane (sets up prediction-vs-actual overlay for Phase 1.2), better mobile touch. Breaking changes minor; check release notes.
+
+Bonus: add prediction-vs-actual line overlay on `/predictions/by-target` chart — doubles as a Phase 1 visualization.
+
+(Plotly explicitly NOT chosen here — see backlog entry "Charting library — lightweight-charts v5 chosen over Plotly".)
+
+---
+
+## Phase 3 — Actionability bridge (signals layer) · ~2 weeks
+
+**Predicate**: Phase 1 exit criteria met.
+
+### 3.1 — Opportunities table + signal generator
+
+```sql
+opportunities(
+  id, ticker, kind ENUM('buy','sell'), generated_at,
+  source_prediction_id FK, source_model_id,
+  rule_id, rule_label,
+  predicted_move_pct NUMERIC, confidence NUMERIC,
+  status ENUM('open','acted','expired','dismissed'),
+  expires_at,
+  acted_at, dismissed_at, dismissed_reason
+)
+```
+
+Hardcoded rules to start (NOT a DSL):
+- `R1`: predicted_move_pct ≥ +2% over 5d AND historical_hit_rate ≥ 0.60 → BUY.
+- `R2`: predicted_move_pct ≤ -2% over 5d AND historical_hit_rate ≥ 0.60 → SELL.
+- `R3`: predicted_move_pct ≥ +5% over 10d AND historical_hit_rate ≥ 0.55 → BUY.
+- (Tune after 2 weeks of real signal data.)
+
+Generator runs after each scheduled prediction batch.
+
+### 3.2 — Opportunities UI
+
+New page `/opportunities`:
+- Today's open list (sorted by confidence × predicted_move).
+- History tab (acted + dismissed + expired with realized outcomes).
+- Per-row actions: mark acted, dismiss (with reason).
+
+---
+
+## Phase 4 — Daily Telegram digest · ~2 days
+
+Predicate: Phase 3 generates ≥ 1 opportunity per typical day.
+
+Cron at 8 AM operator-tz posts to Telegram:
+- Top N open opportunities (markdown table).
+- Any unacknowledged drift alerts.
+- One-line summary of last night's run.
+
+Reuses Telegram infra from Phase 1.3.
+
+---
+
+## Phase 5 — Trade journal · ~1 week
+
+Predicate: 2 weeks of opportunities feed observed; user has acted on ≥ a few.
+
+```sql
+trades(
+  id, opportunity_id FK NULLABLE, ticker, side ENUM('buy','sell'),
+  qty INT, entry_price NUMERIC, entry_at TIMESTAMPTZ,
+  exit_price NUMERIC, exit_at TIMESTAMPTZ,
+  realized_pnl NUMERIC, fees NUMERIC, notes_md TEXT
+)
+```
+
+Manual entry. Brokerage-API integration explicitly out of scope (single user, friction not worth it). One-click "create trade from opportunity" button on opportunities page prefills fields.
+
+`/trades` page: list view + entry form + simple P&L summary (today / week / month / all-time).
+
+Per-opportunity P&L attribution: "If you'd taken every BUY opportunity Kronos surfaced from rule R1, your P&L would be X." Closes the feedback loop on whether Kronos is worth trading on.
+
+---
+
+## Phase 6 — Options runway data layer · ~2 days · tucks into Phase 3 sprint
+
+Single background job: pull IV percentile + earnings date for each watchlist ticker (free source: yfinance, polygon free tier, or similar). Two new columns on `tickers` (or new `ticker_market_data` table — TBD). No UI yet. Just data accumulating.
+
+Sets up the eventual options chapter (strategy generator, IV surfaces) without blocking Phase 1-5.
+
+---
+
+## Out of scope (explicit)
+
+- News/policy/commentary ingestion (user owns these channels manually)
+- Brokerage API integration (single user, manual entry friction acceptable)
+- Multi-user / auth tiers / sharing
+- Mobile-first responsive layout (Telegram serves mobile; desktop-first web is fine)
+- Backtesting infrastructure beyond what `prediction_accuracy` provides
+- Multi-model ensemble (defer until at least one second model exists)
+- Public tunnel for laptop (separate backlog)
+
+---
+
+## Estimated total
+
+~5 weeks of focused work to "decision-support tool", gated phase-by-phase. Stop early at any phase whose exit criteria don't hit — that's the signal that Kronos isn't ready for the next layer of investment.

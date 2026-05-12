@@ -1,6 +1,6 @@
 # Phase 2 — Knowledge vault + indexer sidecar
 
-> **Status: SHIPPED 2026-05-02.** See [.claude/vault.md](../vault.md) and [decisions/014](../decisions/014-vault-indexer.md) for the as-built. This plan file is kept as the as-planned record.
+> **Status: SHIPPED 2026-05-02.** See [.claude/vault.md](../modules/vault.md) and [decisions/014](../decisions/014-vault-indexer.md) for the as-built. This plan file is kept as the as-planned record.
 > Supersedes the Phase-2 stub in [`M-2-then-content-then-llm.md`](M-2-then-content-then-llm.md).
 > Brainstorm converged on Obsidian-vault-as-substrate (B-mode: low-discipline authoring; embeddings carry connectivity; tags from a controlled vocabulary carry intent; folders carry hierarchy).
 

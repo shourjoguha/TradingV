@@ -6,7 +6,7 @@ Single-page React SPA under `frontend/`. Talks to the FastAPI backend on `:8000`
 
 | Area | File |
 |---|---|
-| Stack, build/run, why Vite | [architecture.md](architecture.md) |
+| Stack, build/run, why Vite | [architecture.md](../guides/architecture.md) |
 | `lib/api.ts`, `lib/backend-store.ts`, env vars | [api-client.md](api-client.md) |
 | `hooks/use-api.ts` shape adapters + new Phase 1-5 hooks | [hooks.md](hooks.md) |
 | `pages/*` purpose + endpoint map (13 routes incl. `/docs`, `/macro`) | [pages.md](pages.md) |

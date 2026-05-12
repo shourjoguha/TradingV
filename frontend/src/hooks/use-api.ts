@@ -41,12 +41,21 @@ import type {
   AskResponse,
   ResearchQueriesList,
   ResearchQueryRead,
+  ResearchSkillsList,
   TVContextItem,
   TVContextIngestResult,
   TVNoteIngest,
   TVIdeaIngest,
   TVEventIngest,
   TVVisionSpend,
+  StreetSnapshotsResponse,
+  StreetTickerResponse,
+  StreetTierResponse,
+  StreetPoliticianResponse,
+  StreetDigestResponse,
+  VaultSearchResponse,
+  VaultFolderContextResponse,
+  VaultNodeResponse,
 } from '../lib/types'
 import { toast } from 'sonner'
 
@@ -401,18 +410,26 @@ export function useAckDriftAlert() {
   })
 }
 
-export function useOpportunities(params?: { status?: string; limit?: number }) {
+export function useOpportunities(params?: {
+  status?: string
+  ticker?: string
+  limit?: number
+}) {
   const { backendId } = useBackend()
   return useQuery({
     queryKey: ['opportunities', backendId, params],
     queryFn: () => {
       const s = new URLSearchParams()
       if (params?.status) s.set('status', params.status)
+      if (params?.ticker) s.set('ticker', params.ticker)
       if (params?.limit) s.set('limit', String(params.limit))
       const qs = s.toString() ? `?${s}` : ''
       return apiFetch<{ items: Opportunity[]; count: number }>(`/v1/opportunities${qs}`, { backendId })
     },
-    refetchInterval: 60000,
+    // Throttling fix: drop the always-on 60s poll. Pages that explicitly
+    // need fresh data poll on focus or invalidate after a mutation; the
+    // Today + TickerHub views rely on the staleTime cache, not a tick.
+    staleTime: 60_000,
   })
 }
 
@@ -434,17 +451,19 @@ export function useUpdateOpportunity() {
   })
 }
 
-export function useTrades(params?: { limit?: number }) {
+export function useTrades(params?: { limit?: number; ticker?: string }) {
   const { backendId } = useBackend()
   return useQuery({
     queryKey: ['trades', backendId, params],
     queryFn: () => {
       const s = new URLSearchParams()
       if (params?.limit) s.set('limit', String(params.limit))
+      if (params?.ticker) s.set('ticker', params.ticker)
       const qs = s.toString() ? `?${s}` : ''
       return apiFetch<{ items: Trade[]; count: number; pnl_summary: any }>(`/v1/trades${qs}`, { backendId })
     },
-    refetchInterval: 60000,
+    // Manual journal — only changes on operator mutation. Cache is fine.
+    staleTime: 60_000,
   })
 }
 
@@ -879,6 +898,250 @@ export function useViews() {
 // Research — Phase 3 / 3.7
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Admin — loop registry, fire/abort, cadences, settings (Phase 4)
+// ---------------------------------------------------------------------------
+
+export interface AdminLoopRow {
+  loop_id: string
+  title: string
+  description: string
+  default_cadence_seconds: number
+  cadence_seconds: number
+  supports_abort: boolean
+  confirm_modal_required: boolean
+  cost_sensitive: boolean
+  enabled: boolean
+  running: boolean
+  fire_supported: boolean
+  last_tick_at: string | null
+  last_tick_ok: boolean | null
+  last_error: string | null
+  last_error_at: string | null
+  last_duration_ms: number | null
+  fire_cooldown_remaining_seconds: number
+}
+
+interface AdminLoopsList {
+  items: AdminLoopRow[]
+  count: number
+}
+
+export function useAdminLoops(opts?: { refetchMs?: number }) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['admin-loops', backendId],
+    queryFn: () => apiFetch<AdminLoopsList>('/v1/admin/loops', { backendId }),
+    staleTime: 5_000,
+    refetchInterval: opts?.refetchMs ?? 30_000,
+  })
+}
+
+export function useFireLoop() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (loop_id: string) =>
+      apiFetch<{ ok: boolean; loop_id: string }>(
+        `/v1/admin/loops/${loop_id}/fire`,
+        { method: 'POST', backendId },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-loops', backendId] })
+      toast.success('Loop fired')
+    },
+    onError: (err: any) => {
+      const detail = err?.detail
+      if (detail?.error === 'rate_limited') {
+        toast.error(
+          `Cooldown — try again in ${Math.ceil(detail.retry_after_seconds)}s`,
+        )
+      } else {
+        toast.error(`Fire failed: ${err?.detail || err?.message || 'unknown error'}`)
+      }
+    },
+  })
+}
+
+export function useAbortLoop() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (loop_id: string) =>
+      apiFetch<{ ok: boolean; loop_id: string }>(
+        `/v1/admin/loops/${loop_id}/abort`,
+        { method: 'POST', backendId },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-loops', backendId] })
+      toast.success('Loop abort requested')
+    },
+    onError: (err: any) =>
+      toast.error(`Abort failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+export function useUpdateCadence() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: {
+      loop_id: string
+      cadence_seconds: number
+      enabled?: boolean
+    }) =>
+      apiFetch(`/v1/admin/loops/${payload.loop_id}/cadence`, {
+        method: 'PUT',
+        body: {
+          cadence_seconds: payload.cadence_seconds,
+          enabled: payload.enabled,
+        },
+        backendId,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-loops', backendId] })
+      toast.success('Cadence updated')
+    },
+    onError: (err: any) =>
+      toast.error(`Update failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+export interface AdminSettingsResponse {
+  items: Record<string, any>
+}
+
+export function useAdminSettings() {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['admin-settings', backendId],
+    queryFn: () =>
+      apiFetch<AdminSettingsResponse>('/v1/admin/settings', { backendId }),
+    staleTime: 5_000,
+    refetchInterval: 30_000,
+  })
+}
+
+export function useUpdateAdminSetting() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { key: string; value: any }) =>
+      apiFetch(`/v1/admin/settings/${payload.key}`, {
+        method: 'PUT',
+        body: { value: payload.value },
+        backendId,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-settings', backendId] })
+      qc.invalidateQueries({ queryKey: ['admin-loops', backendId] })
+      toast.success('Setting saved')
+    },
+    onError: (err: any) =>
+      toast.error(`Save failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Costs + Retention (Phase 5)
+// ---------------------------------------------------------------------------
+
+interface CostsMonthly {
+  month: string
+  research_total_usd: number
+  research_count: number
+  vision_total_usd: number
+  vision_count: number
+  total_usd: number
+}
+
+interface CostsRecent {
+  items: { date: string; research_usd: number; vision_usd: number }[]
+  count: number
+}
+
+export function useCostsMonthly(month?: string) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['admin-costs-monthly', backendId, month ?? 'current'],
+    queryFn: () => {
+      const qs = month ? `?month=${month}` : ''
+      return apiFetch<CostsMonthly>(`/v1/admin/costs/monthly${qs}`, { backendId })
+    },
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useCostsRecent(days = 30) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['admin-costs-recent', backendId, days],
+    queryFn: () =>
+      apiFetch<CostsRecent>(`/v1/admin/costs/recent?days=${days}`, { backendId }),
+    staleTime: 5 * 60_000,
+  })
+}
+
+interface RetentionStatus {
+  items: {
+    key: string
+    title: string
+    ttl_days: number | string
+    ttl_days_extra?: Record<string, number | string>
+    row_count: number
+    row_count_extra?: Record<string, number>
+    oldest_at?: string | null
+    purge_endpoint?: string
+  }[]
+  count: number
+}
+
+export function useRetentionStatus() {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['admin-retention', backendId],
+    queryFn: () => apiFetch<RetentionStatus>('/v1/admin/retention', { backendId }),
+    staleTime: 30_000,
+  })
+}
+
+export function usePurgeRetention() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { key: string; confirm: boolean }) =>
+      apiFetch<{ deleted?: number; cap_reached?: boolean; preview?: boolean }>(
+        `/v1/admin/retention/${payload.key}/purge`,
+        {
+          method: 'POST',
+          body: { confirm: payload.confirm },
+          backendId,
+        },
+      ),
+    onSuccess: (data, vars) => {
+      qc.invalidateQueries({ queryKey: ['admin-retention', backendId] })
+      if (vars.confirm && data.deleted != null) {
+        toast.success(
+          data.cap_reached
+            ? `Purged ${data.deleted} rows — cap reached, click again to continue`
+            : `Purged ${data.deleted} rows`,
+        )
+      }
+    },
+    onError: (err: any) =>
+      toast.error(`Purge failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+export function useResearchSkills() {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['research-skills', backendId],
+    queryFn: () => apiFetch<ResearchSkillsList>('/v1/research/skills', { backendId }),
+    staleTime: 5 * 60_000,
+  })
+}
+
 export function useResearchAsk() {
   const { backendId } = useBackend()
   const qc = useQueryClient()
@@ -1155,5 +1418,133 @@ export function useDeleteResearchQuery() {
     },
     onError: (err: any) =>
       toast.error(`Delete failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// The Street — smart-money snapshot wrapper (Phase 2 IA reorg)
+// ---------------------------------------------------------------------------
+
+export function useStreetSnapshots() {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['street-snapshots', backendId],
+    queryFn: () =>
+      apiFetch<StreetSnapshotsResponse>('/v1/the-street/snapshots', { backendId }),
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useStreetTicker(ticker: string | null | undefined) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['street-ticker', backendId, ticker?.toUpperCase()],
+    queryFn: () =>
+      apiFetch<StreetTickerResponse>(
+        `/v1/the-street/ticker/${encodeURIComponent((ticker ?? '').toUpperCase())}`,
+        { backendId },
+      ),
+    enabled: !!ticker,
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useStreetTier(
+  tier: 1 | 2 | 3,
+  opts?: { date?: string; includeEtfs?: boolean },
+) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['street-tier', backendId, tier, opts?.date, opts?.includeEtfs],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (opts?.date) s.set('date', opts.date)
+      if (opts?.includeEtfs) s.set('include_etfs', 'true')
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<StreetTierResponse>(`/v1/the-street/tier/${tier}${qs}`, {
+        backendId,
+      })
+    },
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useStreetPolitician(name: string | null | undefined) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['street-politician', backendId, name],
+    queryFn: () =>
+      apiFetch<StreetPoliticianResponse>(
+        `/v1/the-street/politician/${encodeURIComponent(name ?? '')}`,
+        { backendId },
+      ),
+    enabled: !!name,
+    staleTime: 5 * 60_000,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Vault proxy — read-only forwarder to the indexer sidecar (port 8001).
+// ---------------------------------------------------------------------------
+
+export function useVaultSearch(q: string | null | undefined, k = 8) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['vault-search', backendId, q, k],
+    queryFn: () => {
+      const s = new URLSearchParams({ q: q ?? '', k: String(k) })
+      return apiFetch<VaultSearchResponse>(`/v1/vault/search?${s}`, { backendId })
+    },
+    enabled: !!q && q.length > 0,
+    staleTime: 60_000,
+  })
+}
+
+export function useVaultFolderContext(paths: string[]) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['vault-folder-context', backendId, paths],
+    queryFn: () =>
+      apiFetch<VaultFolderContextResponse>('/v1/vault/folder-context', {
+        method: 'POST',
+        body: { paths },
+        backendId,
+      }),
+    enabled: paths.length > 0,
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useVaultNode(path: string | null | undefined) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['vault-node', backendId, path],
+    queryFn: () =>
+      apiFetch<VaultNodeResponse>(
+        `/v1/vault/node/${encodeURI(path ?? '')}`,
+        { backendId },
+      ),
+    enabled: !!path,
+    staleTime: 60_000,
+  })
+}
+
+export function useStreetDigest(
+  snapshotDate: string | null | undefined,
+  ticker: string | null | undefined,
+  enabled: boolean = true,
+) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['street-digest', backendId, snapshotDate, ticker?.toUpperCase()],
+    queryFn: () =>
+      apiFetch<StreetDigestResponse>(
+        `/v1/the-street/digest/${encodeURIComponent(snapshotDate ?? '')}/${encodeURIComponent(
+          (ticker ?? '').toUpperCase(),
+        )}`,
+        { backendId },
+      ),
+    enabled: enabled && !!snapshotDate && !!ticker,
+    staleTime: 5 * 60_000,
   })
 }

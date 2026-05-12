@@ -65,8 +65,29 @@ async def ask_endpoint(
         hypothesis_slugs=payload.hypothesis_slugs,
         tickers=payload.tickers,
         force_skip_context_gate=payload.force_skip_context_gate,
+        skill_slug=payload.skill_slug,
     )
     return AskResponse(**result)
+
+
+@router.get("/skills")
+async def list_skills_endpoint(
+    _api_key: str = Depends(verify_api_key),
+) -> dict:
+    """List available research skills (parsed from ``skills/research/*.md``).
+    Frontend uses this to populate a skill selector on the Research page."""
+    from app.research import skills as _skills
+    items = [
+        {
+            "slug": s.slug,
+            "title": s.title,
+            "description": s.description,
+            "tool": s.tool,
+            "default": s.default,
+        }
+        for s in _skills.list_skills()
+    ]
+    return {"items": items, "count": len(items)}
 
 
 @router.get("/queries", response_model=ResearchQueriesList)

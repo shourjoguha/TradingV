@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, List, Clock, FlaskConical,
-  Menu, X, AlertTriangle, BookOpen, ChevronDown, ChevronRight,
-  LineChart as LineChartIcon, BarChart3, Zap, Sparkles, Camera,
+  Sun, Menu, X, AlertTriangle, BookOpen, ChevronDown, ChevronRight,
+  LineChart as LineChartIcon, Brain, Zap, Sparkles, Camera, Building2,
+  FlaskConical,
 } from 'lucide-react'
 import { BackendToggle } from './BackendToggle'
 import { HypothesisStatusWidget } from './HypothesisStatusWidget'
@@ -40,23 +40,39 @@ function BackendHealthBanner() {
 // section with children. Groups expand automatically when one of their
 // children is the active route; collapse state otherwise persists in
 // localStorage.
-type NavLeaf = { path: string; label: string; icon?: any }
+type NavLeaf = { path: string; label: string; icon?: any; exact?: boolean }
 type NavGroup = { id: string; label: string; icon?: any; children: NavLeaf[] }
 type NavEntry = NavLeaf | NavGroup
 
+// IA reorg (Phase 1): grouped by user-job not backend-module.
+//   Today  — single-screen morning catch-up (was: Dashboard).
+//   Decide — numerical / market-state surfaces operator scans daily.
+//   Think  — narrative / intelligence surfaces (research, theses, vault).
+//   Admin  — config + system health (collapsed by default).
+//   Docs   — reference.
+// Ticker Hub (`/ticker/:symbol`) is deep-linked from everywhere; not in nav.
 const NAV_GROUPS: NavEntry[] = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/', label: 'Today', icon: Sun },
   {
-    id: 'decisions',
-    label: 'Decisions',
+    id: 'decide',
+    label: 'Decide',
     icon: LineChartIcon,
     children: [
-      { path: '/macro', label: 'Macro' },
+      { path: '/motion', label: 'Signals' },
       { path: '/predictions', label: 'Predictions' },
+      { path: '/macro', label: 'Macro' },
+      { path: '/watchlist', label: 'Watchlist' },
+    ],
+  },
+  {
+    id: 'think',
+    label: 'Think',
+    icon: Brain,
+    children: [
       { path: '/research', label: 'Research', icon: Sparkles },
+      { path: '/theses', label: 'Theses', icon: FlaskConical },
       { path: '/tv-context', label: 'TV Context', icon: Camera },
-      { path: '/motion', label: 'Motion' },
-      { path: '/watchlists', label: 'Watchlists' },
+      { path: '/the-street', label: 'The Street', icon: Building2 },
     ],
   },
   {
@@ -64,9 +80,9 @@ const NAV_GROUPS: NavEntry[] = [
     label: 'Admin',
     icon: Zap,
     children: [
-      { path: '/roster', label: 'Roster' },
-      { path: '/schedule', label: 'Schedule' },
-      { path: '/health', label: 'Health' },
+      // /admin opens the tabbed shell (Processes/Cadences/Costs/Retention/Schedule/Jobs).
+      { path: '/admin', label: 'Admin' },
+      { path: '/admin/overview', label: 'Legacy Dashboard', exact: true },
     ],
   },
   { path: '/docs', label: 'Docs', icon: BookOpen },
@@ -76,8 +92,9 @@ function isLeaf(e: NavEntry): e is NavLeaf {
   return (e as NavLeaf).path !== undefined
 }
 
-function pathMatches(pathname: string, target: string): boolean {
+function pathMatches(pathname: string, target: string, exact = false): boolean {
   if (target === '/') return pathname === '/'
+  if (exact) return pathname === target
   return pathname === target || pathname.startsWith(target + '/')
 }
 
@@ -90,7 +107,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
           <NavLeafLink
             key={entry.path}
             leaf={entry}
-            active={pathMatches(location.pathname, entry.path)}
+            active={pathMatches(location.pathname, entry.path, entry.exact)}
             onNavigate={onNavigate}
           />
         ) : (
@@ -147,16 +164,18 @@ function NavSection({
   onNavigate?: () => void
 }) {
   const sectionActive = useMemo(
-    () => group.children.some((c) => pathMatches(pathname, c.path)),
+    () => group.children.some((c) => pathMatches(pathname, c.path, c.exact)),
     [group.children, pathname],
   )
   const storageKey = `sidebar.collapsed.${group.id}`
+  // Admin is system-config + recovery — not opened daily. Default-collapsed.
+  const defaultCollapsed = group.id === 'admin'
   const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
+    if (typeof window === 'undefined') return defaultCollapsed
     const stored = window.localStorage.getItem(storageKey)
     if (stored === '1') return true
     if (stored === '0') return false
-    return false
+    return defaultCollapsed
   })
 
   // Auto-expand when navigating into a child route. Don't auto-collapse —
@@ -198,7 +217,7 @@ function NavSection({
             <NavLeafLink
               key={child.path}
               leaf={child}
-              active={pathMatches(pathname, child.path)}
+              active={pathMatches(pathname, child.path, child.exact)}
               onNavigate={onNavigate}
               nested
             />
@@ -228,7 +247,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const breadcrumb =
     location.pathname === '/'
-      ? 'Dashboard'
+      ? 'Today'
       : location.pathname.split('/').filter(Boolean).join(' / ')
 
   return (

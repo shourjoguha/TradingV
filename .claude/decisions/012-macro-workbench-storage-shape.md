@@ -49,6 +49,6 @@ Reconsider if profile shows the join is the bottleneck once M-3 adds a second-by
 
 ## Cross-references
 
-- [macro.md](../macro.md) — operational doc.
-- [macro-workbench-brainstorm.md](../macro-workbench-brainstorm.md) — full design.
-- [market_data.md](../market_data.md) — sibling table for OHLCV.
+- [macro.md](../modules/macro.md) — operational doc.
+- [macro-workbench-brainstorm.md](../plans/macro-workbench-brainstorm.md) — full design.
+- [market_data.md](../modules/market_data.md) — sibling table for OHLCV.

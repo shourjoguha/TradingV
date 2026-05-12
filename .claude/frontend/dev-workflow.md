@@ -17,7 +17,7 @@ cd frontend
 npm run dev                      # http://localhost:3000
 ```
 
-Backend must be running on `:8000` (`uvicorn app.main:app` from repo root with `.env.laptop` loaded). See [.claude/laptop-setup.md](../laptop-setup.md).
+Backend must be running on `:8000` (`uvicorn app.main:app` from repo root with `.env.laptop` loaded). See [.claude/laptop-setup.md](../guides/laptop-setup.md).
 
 ## Build
 

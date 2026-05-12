@@ -18,6 +18,11 @@ class AskRequest(BaseModel):
     # proceed without context.
     tickers: Optional[list[str]] = None
     force_skip_context_gate: bool = False
+    # Operator-authored skill slug — selects a methodology + few-shot
+    # example from ``skills/research/<slug>.md``. When None, the server
+    # picks the default skill (research-stress-test). Adding a new skill
+    # requires no code change; drop a markdown file in skills/research/.
+    skill_slug: Optional[str] = None
 
 
 class EvidenceItem(BaseModel):

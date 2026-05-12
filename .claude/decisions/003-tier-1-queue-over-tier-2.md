@@ -47,6 +47,6 @@ Trade-offs accepted:
 
 ## Cross-references
 
-- [queue.md](../queue.md) — full queue contract
-- [tech_debt.md](../tech_debt.md) — Tier-2 deferral entry
-- [backlog.md](../backlog.md) — "Job submission queue" RESOLVED
+- [queue.md](../modules/queue.md) — full queue contract
+- [tech_debt.md](../status/tech_debt.md) — Tier-2 deferral entry
+- [backlog.md](../status/backlog.md) — "Job submission queue" RESOLVED

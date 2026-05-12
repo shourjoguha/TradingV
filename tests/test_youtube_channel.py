@@ -449,3 +449,187 @@ def test_ingest_one_skips_video_when_no_transcript(tmp_vault, monkeypatch):
     # Video still marked as seen so we don't retry the broken feed entry forever.
     cfg = cy.load(channel_dir)
     assert "v" in (cfg["ingest"].get("seen_video_ids") or [])
+
+
+# ---------------------------------------------------------------------------
+# Shorts filter
+# ---------------------------------------------------------------------------
+
+
+def test_is_short_detection(tmp_vault):
+    from vault_indexer.ingest.youtube_channel import _is_short
+
+    assert _is_short("https://www.youtube.com/shorts/abc123") is True
+    assert _is_short("https://youtube.com/shorts/xyz") is True
+    assert _is_short("https://www.youtube.com/watch?v=abc123") is False
+    assert _is_short("https://youtu.be/abc123") is False
+    assert _is_short("") is False
+    assert _is_short(None) is False
+
+
+def test_ingest_one_skips_shorts_marks_seen(tmp_vault, monkeypatch):
+    """Shorts in the RSS feed are skipped (no draft, no transcription) but
+    still recorded in seen_video_ids so re-polls don't reprocess them."""
+    from vault_indexer.ingest import youtube_channel as yt
+    from vault_indexer.ingest import _channel_yaml as cy
+
+    channel_dir = tmp_vault / "Videos" / "ch"
+    channel_dir.mkdir(parents=True)
+    cy.save(channel_dir, {
+        "channel_id": "UCabc",
+        "author": "X",
+        "ingest": {"enabled": True, "cadence": "daily", "prefer_captions": True},
+    })
+
+    fake_entries = [
+        yt.FeedEntry(video_id="long1", title="Long Form", published_at="2026-05-05",
+                     url="https://www.youtube.com/watch?v=long1"),
+        yt.FeedEntry(video_id="shrt1", title="Short Vid", published_at="2026-05-05",
+                     url="https://www.youtube.com/shorts/shrt1"),
+        yt.FeedEntry(video_id="shrt2", title="Another Short", published_at="2026-05-05",
+                     url="https://www.youtube.com/shorts/shrt2"),
+    ]
+    monkeypatch.setattr(yt, "fetch_feed", lambda cid: fake_entries)
+
+    captions_called: list[str] = []
+    def _fake_captions(url, *, work_dir):
+        captions_called.append(url)
+        return f"transcript for {url}"
+    monkeypatch.setattr(yt, "fetch_captions", _fake_captions)
+
+    result = yt.ingest_one(channel_dir=channel_dir, vault_root=tmp_vault)
+
+    assert result["drafts_written"] == 1
+    assert result["shorts_skipped"] == 2
+    # Captions only fetched for the long-form entry.
+    assert captions_called == ["https://www.youtube.com/watch?v=long1"]
+    # All three video_ids marked seen — shorts won't be re-fetched on next tick.
+    seen = cy.load(channel_dir)["ingest"].get("seen_video_ids") or []
+    assert "long1" in seen
+    assert "shrt1" in seen
+    assert "shrt2" in seen
+    # No draft files for shorts.
+    assert not (channel_dir / "2026-05-05-short-vid.md.draft").exists()
+    assert not (channel_dir / "2026-05-05-another-short.md.draft").exists()
+    assert (channel_dir / "2026-05-05-long-form.md.draft").exists()
+
+
+# ---------------------------------------------------------------------------
+# auto_promote
+# ---------------------------------------------------------------------------
+
+
+def test_ingest_one_auto_promote_renames_drafts_to_md(tmp_vault, monkeypatch):
+    """When _channel.yaml has ingest.auto_promote=True, drafts written this
+    tick are immediately renamed to canonical .md (with draft: true stripped
+    from frontmatter)."""
+    from vault_indexer.ingest import youtube_channel as yt
+    from vault_indexer.ingest import _channel_yaml as cy
+
+    channel_dir = tmp_vault / "Videos" / "ch"
+    channel_dir.mkdir(parents=True)
+    cy.save(channel_dir, {
+        "channel_id": "UCabc",
+        "author": "X",
+        "ingest": {
+            "enabled": True,
+            "cadence": "daily",
+            "prefer_captions": True,
+            "auto_promote": True,
+        },
+    })
+
+    monkeypatch.setattr(yt, "fetch_feed", lambda cid: [
+        yt.FeedEntry(video_id="vid1", title="First", published_at="2026-05-05",
+                     url="https://www.youtube.com/watch?v=vid1"),
+    ])
+    monkeypatch.setattr(yt, "fetch_captions", lambda url, *, work_dir: "transcript text")
+
+    result = yt.ingest_one(channel_dir=channel_dir, vault_root=tmp_vault)
+
+    assert result["drafts_written"] == 1
+    assert result["auto_promoted"] == 1
+    # .md exists, .md.draft does not.
+    assert (channel_dir / "2026-05-05-first.md").exists()
+    assert not (channel_dir / "2026-05-05-first.md.draft").exists()
+    # draft: true stripped from promoted file's frontmatter.
+    import frontmatter as _fm
+    promoted_text = (channel_dir / "2026-05-05-first.md").read_text()
+    post = _fm.loads(promoted_text)
+    assert "draft" not in post.metadata
+
+
+def test_ingest_one_auto_promote_off_keeps_drafts_as_drafts(tmp_vault, monkeypatch):
+    from vault_indexer.ingest import youtube_channel as yt
+    from vault_indexer.ingest import _channel_yaml as cy
+
+    channel_dir = tmp_vault / "Videos" / "ch"
+    channel_dir.mkdir(parents=True)
+    cy.save(channel_dir, {
+        "channel_id": "UCabc",
+        "author": "X",
+        "ingest": {
+            "enabled": True,
+            "cadence": "daily",
+            "prefer_captions": True,
+            "auto_promote": False,
+        },
+    })
+
+    monkeypatch.setattr(yt, "fetch_feed", lambda cid: [
+        yt.FeedEntry(video_id="vid1", title="First", published_at="2026-05-05",
+                     url="https://www.youtube.com/watch?v=vid1"),
+    ])
+    monkeypatch.setattr(yt, "fetch_captions", lambda url, *, work_dir: "txt")
+
+    result = yt.ingest_one(channel_dir=channel_dir, vault_root=tmp_vault)
+    assert result["drafts_written"] == 1
+    assert result["auto_promoted"] == 0
+    assert (channel_dir / "2026-05-05-first.md.draft").exists()
+    assert not (channel_dir / "2026-05-05-first.md").exists()
+
+
+# ---------------------------------------------------------------------------
+# cleanup_shorts
+# ---------------------------------------------------------------------------
+
+
+def test_cleanup_shorts_finds_and_deletes(tmp_vault):
+    from vault_indexer import cleanup_shorts as cs
+    import frontmatter as _fm
+
+    chan = tmp_vault / "Videos" / "fx"
+    chan.mkdir(parents=True)
+
+    short = chan / "2026-05-05-short.md.draft"
+    long_draft = chan / "2026-05-05-long.md.draft"
+    long_canonical = chan / "2026-05-05-long2.md"
+
+    short.write_text(_fm.dumps(_fm.Post(
+        content="x", source_url="https://www.youtube.com/shorts/abc",
+    )) + "\n")
+    long_draft.write_text(_fm.dumps(_fm.Post(
+        content="y", source_url="https://www.youtube.com/watch?v=longA",
+    )) + "\n")
+    long_canonical.write_text(_fm.dumps(_fm.Post(
+        content="z", source_url="https://www.youtube.com/watch?v=longB",
+    )) + "\n")
+
+    matches = cs.find_shorts(tmp_vault)
+    assert [str(p.relative_to(tmp_vault)) for p, _ in matches] == [
+        "Videos/fx/2026-05-05-short.md.draft",
+    ]
+
+
+def test_cleanup_shorts_idempotent_when_clean(tmp_vault):
+    from vault_indexer import cleanup_shorts as cs
+    import frontmatter as _fm
+
+    chan = tmp_vault / "Videos" / "fx"
+    chan.mkdir(parents=True)
+    (chan / "2026-05-05-long.md").write_text(_fm.dumps(_fm.Post(
+        content="x", source_url="https://www.youtube.com/watch?v=longA",
+    )) + "\n")
+
+    matches = cs.find_shorts(tmp_vault)
+    assert matches == []

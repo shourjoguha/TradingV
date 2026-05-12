@@ -182,7 +182,7 @@ export function Dashboard() {
           <CardTitle>Recent jobs</CardTitle>
           <CardDescription>The last 5 analysis jobs.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {isLoadingJobs ? (
             <div className="space-y-2">
               <Skeleton className="h-8 w-full" />

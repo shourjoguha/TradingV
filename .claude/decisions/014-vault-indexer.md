@@ -158,7 +158,7 @@ fixtures. Easy to peel off.
   shared, no second venv. (Risk noted: if dependency clash, indexer can
   move to its own venv with one config change.)
 - `pgvector` cleanup avoided. The boot-vs-alembic race triggered the
-  same `create_all` wart we filed in [backlog.md](../backlog.md);
+  same `create_all` wart we filed in [backlog.md](../status/backlog.md);
   manual cleanup applied as before. **Backlog item resolved 2026-05-02
   immediately after Phase 2 ship** — `Base.metadata.create_all` removed
   from lifespan; replaced with `app/core/schema_check.py` that logs a
@@ -197,7 +197,7 @@ Operator-prompted comparison ([`plans/i-want-to-compare-declarative-kazoo.md`](.
   pays graph-maintenance cost without using it. Parked behind a
   separate trigger (first single-source-retrieval failure where
   entity-aware filtering would have helped) as the
-  [LightRAG-lite backlog item](../backlog.md). The backlog steal
+  [LightRAG-lite backlog item](../status/backlog.md). The backlog steal
   is entity-extraction-into-frontmatter — ~70% of the entity-aware
   win at ~5% of the cost.
 - **Gemini text embeddings** (`gemini-embedding-001` /
@@ -209,7 +209,7 @@ Operator-prompted comparison ([`plans/i-want-to-compare-declarative-kazoo.md`](.
   genuinely interesting option. Doesn't replace the text path; it
   unlocks an image-modality path that doesn't yet exist. Parked behind
   the existing
-  [vision-retrieval backlog item](../backlog.md)'s 3-concrete-moments
+  [vision-retrieval backlog item](../status/backlog.md)'s 3-concrete-moments
   trigger, with Gemini-vs-local-CLIP/SigLIP as the candidate-stack
   question to resolve at trigger time.
 

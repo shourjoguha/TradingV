@@ -71,20 +71,7 @@ export function Watchlist() {
     )
   }
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-heading font-semibold tracking-tight">
-            Roster
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Tickers fed to Kronos by the daily scheduled run. Adding here
-            spawns prediction work — for casual tracking use{' '}
-            <a href="/watchlists" className="underline hover:text-foreground">Watchlists</a>{' '}instead.
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle>Tickers</CardTitle>

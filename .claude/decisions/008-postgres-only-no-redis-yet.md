@@ -34,7 +34,7 @@ Rationale:
 - Sustained queue depth > 5 OR table grows past ~1M rows on the write path.
 - Need for sub-100ms cache reads (e.g. real-time dashboard).
 - Want to share state across multiple processes (currently inline lifespan tasks suffice).
-- See [tech_debt.md](../tech_debt.md) "Tier 2 queue (Redis + arq)" for the upgrade path.
+- See [tech_debt.md](../status/tech_debt.md) "Tier 2 queue (Redis + arq)" for the upgrade path.
 
 ## Files affected
 
@@ -44,5 +44,5 @@ Rationale:
 
 ## Cross-references
 
-- [architecture.md](../architecture.md) — "Storage split" section
-- [tech_debt.md](../tech_debt.md) — Tier-2 queue deferral
+- [architecture.md](../guides/architecture.md) — "Storage split" section
+- [tech_debt.md](../status/tech_debt.md) — Tier-2 queue deferral

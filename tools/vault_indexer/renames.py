@@ -12,6 +12,7 @@ import frontmatter
 
 from . import indexer as _indexer
 from . import taxonomy as _tax
+from .config import passes_scope
 from .vault import is_indexable
 
 
@@ -28,6 +29,8 @@ def apply_renames(vault_root: Path, taxonomy_file: Path) -> list[tuple[str, str,
         n = 0
         for md in vault_root.rglob("*.md"):
             if not is_indexable(md, vault_root):
+                continue
+            if not passes_scope(str(md.relative_to(vault_root))):
                 continue
             text = md.read_text(encoding="utf-8")
             try:

@@ -83,5 +83,15 @@ class Settings(BaseSettings):
     VIDEO_INGEST_WARMUP_SECONDS: int = 3600                  # 1 hr post-boot
     VIDEO_INGEST_SLEEP_SECONDS: int = 3600                   # check hourly; per-channel cadence respected via _channel.yaml.last_polled_at
 
+    # SEC EDGAR auto-ingest. Polls every roster ticker for new 8-K / 10-Q /
+    # 10-K filings on the configured cadence. Off by default; opt-in once
+    # the operator has set EDGAR_USER_AGENT (required by SEC). Laptop-only
+    # via `if not is_railway` gate.
+    EDGAR_INGEST_ENABLED: bool = False
+    EDGAR_INGEST_WARMUP_SECONDS: int = 3600                  # 1 hr post-boot
+    EDGAR_INGEST_SLEEP_SECONDS: int = 21600                  # 6 hrs — filings rarely appear faster
+    EDGAR_INGEST_FORM_TYPES: str = "8-K,10-Q,10-K"           # comma-separated
+    EDGAR_INGEST_MAX_PER_FORM: int = 3                       # cap per ticker per tick
+
 
 SETTINGS = Settings()

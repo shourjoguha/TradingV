@@ -1,14 +1,14 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { Today } from './pages/Today'
 import { Dashboard } from './pages/Dashboard'
-import { Watchlist } from './pages/Watchlist'
-import { Schedule } from './pages/Schedule'
 import { TickerLabels } from './pages/TickerLabels'
-import { AnalysisJobs } from './pages/AnalysisJobs'
-import { AnalysisJobDetail } from './pages/AnalysisJobDetail'
 import { Predictions } from './pages/Predictions'
 import { Motion } from './pages/Motion'
+import { TickerHub } from './pages/TickerHub'
+import { Theses } from './pages/Theses'
+import { WatchlistConsolidated } from './pages/WatchlistConsolidated'
 import { Skeleton } from './components/ui/skeleton'
 
 // Lazy-load Docs so the markdown bundle (react-markdown + remark) only ships
@@ -17,11 +17,6 @@ const Docs = lazy(() => import('./pages/Docs').then((m) => ({ default: m.Docs })
 
 // Lazy-load Macro so lightweight-charts ships only when the operator opens it.
 const Macro = lazy(() => import('./pages/Macro').then((m) => ({ default: m.Macro })))
-
-// Lazy-load Watchlists (casual lists; distinct from Roster).
-const Watchlists = lazy(() =>
-  import('./pages/Watchlists').then((m) => ({ default: m.Watchlists })),
-)
 
 // Lazy-load Research (Phase 3.7).
 const Research = lazy(() =>
@@ -33,13 +28,26 @@ const TVContextInbox = lazy(() =>
   import('./pages/TVContextInbox').then((m) => ({ default: m.TVContextInbox })),
 )
 
+// Lazy-load TheStreet (Phase 2 IA reorg).
+const TheStreet = lazy(() =>
+  import('./pages/TheStreet').then((m) => ({ default: m.TheStreet })),
+)
+
+// Lazy-load Admin shell (Phase 3 cost-aware iteration). Routes:
+//   /admin            → Admin (Processes default)
+//   /admin/:tab       → Admin (cadences | costs | retention | schedule | jobs)
+//   /admin/jobs/:jobId → Admin → JobsPanel renders AnalysisJobDetail
+const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })))
+
 export function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        {/* Phase 1 IA: Today is the new root; legacy Dashboard moves to /admin/overview. */}
+        <Route path="/" element={<Today />} />
+        <Route path="/admin/overview" element={<Dashboard />} />
 
-        {/* Decisions group — Macro / Predictions / Motion */}
+        {/* Decide group — Macro / Predictions / Signals */}
         <Route
           path="/macro/:tab?"
           element={
@@ -66,21 +74,55 @@ export function App() {
           }
         />
         <Route path="/motion/:tab?" element={<Motion />} />
+
+        {/* Think — The Street */}
         <Route
-          path="/watchlists/:boardId?"
+          path="/the-street"
           element={
             <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-              <Watchlists />
+              <TheStreet />
             </Suspense>
           }
         />
 
-        {/* Admin group — Roster / Schedule / Health */}
-        <Route path="/roster" element={<Watchlist />} />
-        <Route path="/schedule" element={<Schedule />} />
-        <Route path="/health" element={<AnalysisJobs />} />
-        <Route path="/health/:jobId" element={<AnalysisJobDetail />} />
+        {/* Ticker Hub — deep-linked from everywhere (no nav entry) */}
+        <Route path="/ticker/:symbol" element={<TickerHub />} />
+
+        {/* Phase 3 IA — Theses + consolidated Watchlist */}
+        <Route path="/theses" element={<Theses />} />
+        <Route path="/watchlist/:tab?" element={<WatchlistConsolidated />} />
+
+        {/* Admin group — Phase 3 tabbed shell. Schedule + Jobs render inside. */}
+        <Route
+          path="/admin"
+          element={
+            <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+              <Admin />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/:tab"
+          element={
+            <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+              <Admin />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/:tab/:jobId"
+          element={
+            <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+              <Admin />
+            </Suspense>
+          }
+        />
         <Route path="/tickers/:symbol/labels" element={<TickerLabels />} />
+
+        {/* Legacy schedule + health redirect into the admin shell. */}
+        <Route path="/schedule" element={<Navigate to="/admin/schedule" replace />} />
+        <Route path="/health" element={<Navigate to="/admin/jobs" replace />} />
+        <Route path="/health/:jobId" element={<LegacyHealthDetailRedirect />} />
 
         {/* Docs group */}
         <Route
@@ -100,14 +142,24 @@ export function App() {
         <Route path="/trades"                 element={<Navigate to="/motion/trades" replace />} />
         <Route path="/analysis"               element={<Navigate to="/health" replace />} />
         <Route path="/analysis/:jobId"        element={<LegacyAnalysisDetailRedirect />} />
-        <Route path="/watchlist"              element={<Navigate to="/roster" replace />} />
+        {/* Phase 3 IA: /watchlist is now the consolidated surface.
+            Old /roster + /watchlists + /watchlists/:boardId redirect into it. */}
+        <Route path="/roster"                 element={<Navigate to="/watchlist/roster" replace />} />
+        <Route path="/watchlists"             element={<Navigate to="/watchlist" replace />} />
+        <Route path="/watchlists/:boardId"    element={<Navigate to="/watchlist" replace />} />
       </Routes>
     </Layout>
   )
 }
 
-// Tiny helper: preserve the :jobId param when redirecting /analysis/:jobId → /health/:jobId.
+// Tiny helper: preserve the :jobId param when redirecting /analysis/:jobId → /admin/jobs/:jobId.
 function LegacyAnalysisDetailRedirect() {
-  const path = window.location.pathname.replace(/^\/analysis\//, '/health/')
+  const path = window.location.pathname.replace(/^\/analysis\//, '/admin/jobs/')
+  return <Navigate to={path} replace />
+}
+
+// Preserve :jobId when redirecting /health/:jobId → /admin/jobs/:jobId.
+function LegacyHealthDetailRedirect() {
+  const path = window.location.pathname.replace(/^\/health\//, '/admin/jobs/')
   return <Navigate to={path} replace />
 }

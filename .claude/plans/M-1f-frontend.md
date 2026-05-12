@@ -1,8 +1,8 @@
 # M-1f — Macro Workbench frontend (signal layer UI)
 
-> **Status:** ✅ SHIPPED 2026-04-30. See [macro.md § Frontend](../macro.md#frontend-macro-lazy-loaded) for the as-built doc.
-> **Backend dependency:** M-1 ([macro.md](../macro.md)) shipped 2026-04-30 — `/v1/macro/{series,ratio,refresh}` live.
-> **Source-of-truth design:** [macro-workbench-brainstorm.md](../macro-workbench-brainstorm.md).
+> **Status:** ✅ SHIPPED 2026-04-30. See [macro.md § Frontend](../modules/macro.md#frontend-macro-lazy-loaded) for the as-built doc.
+> **Backend dependency:** M-1 ([macro.md](../modules/macro.md)) shipped 2026-04-30 — `/v1/macro/{series,ratio,refresh}` live.
+> **Source-of-truth design:** [macro-workbench-brainstorm.md](macro-workbench-brainstorm.md).
 > **UX skill consulted:** `~/.claude/skills/ui-ux-pro-max` (Data-Dense + Heatmap patterns; line + sparkline + grouped-bar recommendations) + `frontend-design`.
 
 ## Operator decisions (locked)

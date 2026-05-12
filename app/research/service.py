@@ -16,6 +16,7 @@ from app.research import client as _client
 from app.research import models as _models
 from app.research import prompts as _prompts
 from app.research import rendering as _rendering
+from app.research import skills as _skills
 
 logger = logging.getLogger(__name__)
 
@@ -173,11 +174,27 @@ async def ask(
     hypothesis_slugs: Optional[list[str]] = None,
     tickers: Optional[list[str]] = None,
     force_skip_context_gate: bool = False,
+    skill_slug: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Run a single stress-test query end-to-end. Returns a dict shaped
-    for ``AskResponse``."""
+    """Run a single research query end-to-end. Returns a dict shaped
+    for ``AskResponse``.
+
+    ``skill_slug`` selects an operator-authored skill from
+    ``skills/research/<slug>.md``. When ``None``, falls back to the default
+    skill (``research-stress-test`` or whichever is marked
+    ``default: true``); when no skill file exists, falls back to the
+    legacy hand-coded prompt in ``app/research/prompts.py`` so the call
+    path remains backwards-compatible."""
     asked_at = datetime.datetime.now(datetime.timezone.utc)
     research_query_id = str(uuid.uuid4())
+
+    # Resolve which skill to use. Operator can request explicitly via the
+    # API; otherwise the loader picks the default. Missing skill file →
+    # legacy hard-coded path (no behaviour change for existing callers).
+    if skill_slug is not None:
+        skill = _skills.get_skill(skill_slug)
+    else:
+        skill = _skills.get_default_skill()
 
     bundle = await _bundle.build_bundle(query=query, hypothesis_slugs=hypothesis_slugs)
     bundle_text = _prompts.render_bundle_text(bundle)
@@ -212,13 +229,70 @@ async def ask(
                 "context_check": context_check,
             }
 
+    # Pick the system prompt + few-shot from the resolved skill, with
+    # fallback to the legacy hard-coded constants when no skill matched.
+    if skill is not None:
+        system_prompt = skill.methodology
+        one_shot = _skills.build_one_shot_messages(
+            skill, user_message_builder=_prompts.build_user_message
+        )
+        # Skills with no `tool:` field are verdict-only; don't expose the
+        # invalidator-update tool to a peer-comp or earnings-followup skill.
+        tools = (
+            [TOOL_PROPOSE_INVALIDATOR_UPDATE]
+            if skill.tool == "propose_invalidator_update"
+            else []
+        )
+    else:
+        system_prompt = _prompts.SYSTEM_PROMPT
+        one_shot = _prompts.one_shot_messages()
+        tools = [TOOL_PROPOSE_INVALIDATOR_UPDATE]
+
+    # Cost-aware C3 + C4: gate the call on the kill-switch (operator toggle
+    # OR monthly cap). Returns a synthetic error response — same shape as a
+    # real Claude failure, so frontend renders a normal error card.
+    from app.admin import service as _admin_svc
+
+    if await _admin_svc.anthropic_kill_switch_active():
+        await _persist_query(
+            id_=research_query_id,
+            query=query,
+            hypothesis_ids=hypothesis_slugs or [],
+            bundle=bundle,
+            response={"error": "anthropic_kill_switch_active"},
+            verdict=None,
+            answer_path=None,
+            tokens_in=0,
+            tokens_out=0,
+            est_cost_usd=0.0,
+            status=_models.STATUS_ERROR,
+            approved_action=None,
+        )
+        return {
+            "query_id": research_query_id,
+            "answer_path": None,
+            "verdict": (
+                "Anthropic API is disabled by the cost guard. Enable it from "
+                "Admin → Costs (or raise the monthly cap)."
+            ),
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "est_cost_usd": 0.0,
+            "proposed_action": None,
+            "status": _models.STATUS_ERROR,
+            "evidence": _flatten_evidence(bundle),
+            "macro_state": _flatten_macro(bundle),
+            "source_context": _flatten_source_context(bundle),
+            "context_check": context_check,
+        }
+
     try:
         result = await _client.ask_claude(
-            system=_prompts.SYSTEM_PROMPT,
+            system=system_prompt,
             bundle_text=bundle_text,
             query=query,
-            tools=[TOOL_PROPOSE_INVALIDATOR_UPDATE],
-            one_shot_messages=_prompts.one_shot_messages(),
+            tools=tools,
+            one_shot_messages=one_shot,
         )
     except Exception as e:                              # noqa: BLE001
         logger.exception("Claude call failed")

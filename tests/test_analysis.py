@@ -181,6 +181,31 @@ async def test_list_jobs_returns_summaries(client):
 
 
 @pytest.mark.asyncio
+async def test_list_jobs_includes_per_bucket_counts(client):
+    """Health page collapsed-row OutcomeBar reads these eagerly so each
+    row renders without a per-row detail fetch."""
+    job = await service.submit_run(
+        tickers=["AAPL"], intervals=["1d"], model_ids=["kronos_base"]
+    )
+    r = await client.get("/v1/analysis/jobs", headers=HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    target = next(item for item in body if item["id"] == job.id)
+    # Every bucket field is present — frontend assumes a number.
+    for bucket in ("done", "ineligible", "error", "running", "pending"):
+        assert isinstance(target[bucket], int), f"bucket {bucket} missing"
+    # Buckets sum to task_count.
+    total = (
+        target["done"]
+        + target["ineligible"]
+        + target["error"]
+        + target["running"]
+        + target["pending"]
+    )
+    assert total == target["task_count"]
+
+
+@pytest.mark.asyncio
 async def test_get_job_404(client):
     r = await client.get("/v1/analysis/jobs/does-not-exist", headers=HEADERS)
     assert r.status_code == 404

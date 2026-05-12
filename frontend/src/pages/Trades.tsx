@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label'
 import { Skeleton } from '../components/ui/skeleton'
 import { Badge } from '../components/ui/badge'
 import { Receipt, Plus, X } from 'lucide-react'
+import { TickerLink } from '../components/common/TickerLink'
 
 function fmtCur(v: number | null | undefined, digits = 2) {
   if (v == null || !isFinite(v)) return '—'
@@ -87,7 +88,7 @@ export function Trades() {
             <tbody>
               {trades.data!.items.map((t) => (
                 <tr key={t.id} className="hover:bg-white/30">
-                  <td className="px-3 py-2 font-mono">{t.ticker}</td>
+                  <td className="px-3 py-2"><TickerLink symbol={t.ticker} /></td>
                   <td className="px-3 py-2">
                     <Badge variant={t.side === 'buy' ? 'success' : 'destructive'}>{t.side.toUpperCase()}</Badge>
                   </td>

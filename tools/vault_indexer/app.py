@@ -19,6 +19,9 @@ from pathlib import Path
 from fastapi import Body, FastAPI, HTTPException, Query
 
 from . import cache as _cache
+from . import graph_compute as _graph_compute
+from . import graph_search as _graph_search
+from . import graph_state as _graph_state
 from . import indexer as _indexer
 from . import renames as _renames
 from . import research_hook as _research_hook
@@ -71,16 +74,35 @@ async def health():
 
 @app.post("/reload")
 async def reload_vault():
-    """Apply pending RENAMES, full rescan, regenerate review queue."""
+    """Apply pending RENAMES, full rescan, regenerate review queue.
+
+    Also schedules a debounced graph recompute. The recompute fires after
+    `CONFIG.graph_debounce_seconds` of quiet — bursts of /reload calls
+    collapse into one recompute. Recompute runs off the event loop in
+    a background thread; /reload returns as soon as the rescan completes.
+    """
     rename_log = _renames.apply_renames(
-        CONFIG.vault_path, CONFIG.vault_path / "_taxonomy.md"
+        CONFIG.vault_path, CONFIG.vault_path / CONFIG.taxonomy_file
     )
+    _indexer.reload_alias_map()
     stats = _indexer.full_rescan(_con())
-    tax = _tax.parse_file(CONFIG.vault_path / "_taxonomy.md")
+    tax = _tax.parse_file(CONFIG.vault_path / CONFIG.taxonomy_file)
     suggestions = _review.gather_suggestions(_con(), vocabulary=tax.tags)
     suggestions["rename_log"] = rename_log
     _review.write(CONFIG.vault_path, _review.render(suggestions))
-    return {**stats, "renames": rename_log}
+    if CONFIG.graph_enabled:
+        _graph_state.schedule(_con(), debounce_seconds=CONFIG.graph_debounce_seconds)
+    return {**stats, "renames": rename_log, "graph_scheduled": CONFIG.graph_enabled}
+
+
+@app.post("/recompute_graph")
+async def recompute_graph_endpoint():
+    """Synchronously run graph recompute. Bypasses the debounce window —
+    used by ops scripts and the nightly safety-net cron. Idempotent.
+    """
+    if not CONFIG.graph_enabled:
+        return {"status": "disabled"}
+    return _graph_compute.recompute(_con())
 
 
 @app.get("/node/{path:path}")
@@ -91,12 +113,85 @@ async def get_node(path: str):
     return node
 
 
+@app.get("/chunks/{path:path}")
+async def get_chunks_endpoint(
+    path: str,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+):
+    """Pre-chunked content for a vault doc, ordered by `ord`. Paginated.
+
+    Long-form transcripts (200KB+) chunk into ~60 segments of ~600 words each.
+    Use this instead of /node when you need to walk a long doc sequentially
+    (e.g. for whole-episode summarisation) — avoids the timeout that comes
+    from JSON-encoding a 200KB body in one shot.
+
+    Returns: { path, meta, total_chunks, offset, limit, has_more, chunks: [...] }
+    Where each chunk is { ord, text, section }.
+
+    404 if the node itself isn't in the cache. Returns 200 with empty chunks
+    list when the node exists but is intentionally chunkless (e.g.
+    kind='folder_context').
+    """
+    con = _con()
+    node = _cache.get_node(con, path)
+    if node is None:
+        raise HTTPException(404, f"node not found: {path}")
+    total = _cache.count_chunks(con, path)
+    chunks = _cache.get_chunks(con, path, offset=offset, limit=limit)
+    return {
+        "path": path,
+        "meta": {
+            "kind": node.get("kind"),
+            "title": node.get("title"),
+            "author": node.get("author"),
+            "published_at": node.get("published_at"),
+            "horizon_months": node.get("horizon_months"),
+            "tags": node.get("tags") or [],
+            "last_indexed_at": node.get("last_indexed_at"),
+        },
+        "total_chunks": total,
+        "offset": offset,
+        "limit": limit,
+        "returned": len(chunks),
+        "has_more": (offset + len(chunks)) < total,
+        "next_offset": (offset + len(chunks)) if (offset + len(chunks)) < total else None,
+        "chunks": chunks,
+    }
+
+
 @app.get("/search")
 async def search_endpoint(
     q: str = Query(..., min_length=1),
     k: int = Query(8, ge=1, le=50),
+    hybrid: bool | None = Query(None, description="Override CONFIG.graph_enabled for this request. Pass false to compare hybrid vs vector ranking."),
 ):
-    return {"query": q, "k": k, "results": _search.search(_con(), q, k=k)}
+    return {
+        "query": q,
+        "k": k,
+        "results": _search.search(_con(), q, k=k, hybrid=hybrid),
+    }
+
+
+@app.get("/graph_search")
+async def graph_search_endpoint(
+    q: str = Query(..., min_length=1),
+    k: int = Query(8, ge=1, le=50),
+    max_hops: int = Query(4, ge=1, le=6),
+    seed_count: int = Query(3, ge=1, le=10),
+    beam_width: int = Query(5, ge=1, le=20),
+):
+    """Iterative-deepening graph traversal seeded by vector similarity.
+
+    Returns the same per-result shape as /search plus debug fields
+    (`hops_used`, `seed_paths`, `candidates_per_hop`). Below the
+    `min_edges_for_hybrid` floor, the hybrid re-rank is a no-op and
+    results are scored by vector similarity alone.
+    """
+    return _graph_search.graph_search(
+        _con(), q,
+        k=k, max_hops=max_hops, seed_count=seed_count, beam_width=beam_width,
+    )
 
 
 @app.post("/folder-context")
@@ -168,7 +263,7 @@ async def promote_endpoint():
     research_counts = _research_hook.scan_and_apply(CONFIG.vault_path)
     # Re-scan so applied tags + Research ticks are reflected in the cache.
     _indexer.full_rescan(_con())
-    tax = _tax.parse_file(CONFIG.vault_path / "_taxonomy.md")
+    tax = _tax.parse_file(CONFIG.vault_path / CONFIG.taxonomy_file)
     suggestions = _review.gather_suggestions(_con(), vocabulary=tax.tags)
     _review.write(CONFIG.vault_path, _review.render(suggestions))
     return {"applied": counts, "research": research_counts}
@@ -177,7 +272,7 @@ async def promote_endpoint():
 @app.post("/apply-renames")
 async def apply_renames_endpoint():
     log = _renames.apply_renames(
-        CONFIG.vault_path, CONFIG.vault_path / "_taxonomy.md"
+        CONFIG.vault_path, CONFIG.vault_path / CONFIG.taxonomy_file
     )
     _indexer.full_rescan(_con())
     return {"renames": log}
@@ -185,7 +280,7 @@ async def apply_renames_endpoint():
 
 @app.post("/regenerate-review")
 async def regenerate_review_endpoint():
-    tax = _tax.parse_file(CONFIG.vault_path / "_taxonomy.md")
+    tax = _tax.parse_file(CONFIG.vault_path / CONFIG.taxonomy_file)
     suggestions = _review.gather_suggestions(_con(), vocabulary=tax.tags)
     _review.write(CONFIG.vault_path, _review.render(suggestions))
     return {"ok": True, "vocabulary_size": len(tax.tags)}

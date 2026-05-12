@@ -10,7 +10,7 @@ from typing import Iterable, Optional
 
 import frontmatter
 
-from .config import CONFIG, is_timely
+from .config import CONFIG, is_timely, passes_scope
 
 
 # Files starting with `_` (review queue, taxonomy) are normally skipped — except
@@ -114,6 +114,9 @@ def _to_iso_ts(v) -> Optional[str]:
 def scan(vault_root: Path) -> Iterable[VaultNode]:
     for p in vault_root.rglob("*.md"):
         if not is_indexable(p, vault_root):
+            continue
+        rel = str(p.relative_to(vault_root))
+        if not passes_scope(rel):
             continue
         try:
             yield parse_file(p, vault_root)

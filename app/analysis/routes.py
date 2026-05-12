@@ -30,7 +30,22 @@ async def list_jobs(
     _api_key: str = Depends(verify_api_key),
 ):
     jobs = await service.list_jobs(limit=limit, offset=offset)
-    return [AnalysisJobSummary.model_validate(j) for j in jobs]
+    buckets = await service.task_buckets_for(j.id for j in jobs)
+    return [
+        AnalysisJobSummary(
+            id=j.id,
+            status=j.status,
+            task_count=j.task_count,
+            submitted_at=j.submitted_at,
+            finished_at=j.finished_at,
+            done=buckets.get(j.id, {}).get("done", 0),
+            ineligible=buckets.get(j.id, {}).get("ineligible", 0),
+            error=buckets.get(j.id, {}).get("error", 0),
+            running=buckets.get(j.id, {}).get("running", 0),
+            pending=buckets.get(j.id, {}).get("pending", 0),
+        )
+        for j in jobs
+    ]
 
 
 @router.post("/run", response_model=AnalysisRunResponse, status_code=202)

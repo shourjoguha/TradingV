@@ -39,6 +39,6 @@ v1 shipped with one-way sync (laptop → Railway). Reverse direction (Railway-or
 
 ## Cross-references
 
-- [backlog.md](../backlog.md) — "Reverse-direction sync: Railway → Laptop" RESOLVED
-- [railway-deployment.md](../railway-deployment.md) — Tailscale tunnel section
-- [sync.md](../sync.md) — outbox + drain semantics
+- [backlog.md](../status/backlog.md) — "Reverse-direction sync: Railway → Laptop" RESOLVED
+- [railway-deployment.md](../guides/railway-deployment.md) — Tailscale tunnel section
+- [sync.md](../modules/sync.md) — outbox + drain semantics

@@ -1,0 +1,70 @@
+
+> kronos-frontend@0.1.0 dev
+> vite
+
+(node:27756) ExperimentalWarning: CommonJS module /Users/shourjosmac/Documents/Claude/TradingView /frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js is loading ES Module /Users/shourjosmac/Documents/Claude/TradingView /frontend/node_modules/supports-color/index.js using require().
+Support for loading ES Module in require() is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+  VITE v5.4.21  ready in 142 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose
+11:02:00 AM [vite] page reload src/lib/types.ts
+11:02:09 AM [vite] hmr update /src/components/Layout.tsx, /src/index.css, /src/pages/Schedule.tsx, /src/pages/AnalysisJobs.tsx, /src/pages/AnalysisJobDetail.tsx, /src/pages/TickerLabels.tsx, /src/pages/Dashboard.tsx, /src/pages/Theses.tsx, /src/pages/Today.tsx, /src/pages/TickerHub.tsx, /src/components/HypothesisStatusWidget.tsx, /src/components/BackendToggle.tsx, /src/pages/PredictionsByHorizon.tsx, /src/pages/PredictionsByTarget.tsx, /src/pages/Accuracy.tsx, /src/components/dashboard/LatestOpportunity.tsx, /src/components/dashboard/RegimeStrip.tsx, /src/components/dashboard/AccuracyTile.tsx, /src/components/theses/ThesesList.tsx, /src/pages/Opportunities.tsx, /src/components/theses/ThesisDetail.tsx, /src/components/today/DriftBanner.tsx, /src/components/today/FreshSignalsStrip.tsx, /src/components/today/WatchlistDelta.tsx, /src/components/today/ResearchApprovalStrip.tsx, /src/pages/Trades.tsx, /src/components/today/TVContextStrip.tsx, /src/components/ticker/HypothesisRow.tsx, /src/components/ticker/PredictionStrip.tsx, /src/components/ticker/HeaderStrip.tsx, /src/components/ticker/StreetCard.tsx, /src/components/ticker/VaultChunkList.tsx, /src/pages/Watchlist.tsx, /src/pages/Research.tsx, /src/components/research/AskInput.tsx, /src/components/research/ConfirmDeleteModal.tsx, /src/components/research/ProposedActionCard.tsx, /src/components/research/ConfirmApproveModal.tsx, /src/pages/Macro.tsx, /src/components/macro/RegimePanel.tsx, /src/components/macro/SectorStrip.tsx, /src/pages/Watchlists.tsx, /src/components/the-street/SnapshotPicker.tsx, /src/components/the-street/TickerTimeline.tsx, /src/components/the-street/TierTable.tsx, /src/components/the-street/StreetDigestPanel.tsx, /src/pages/TVContextInbox.tsx, /src/components/tv-context/ContextItemCard.tsx, /src/components/tv-context/ScreenshotUploadModal.tsx
+11:02:14 AM [vite] hmr update /src/components/Layout.tsx, /src/index.css, /src/pages/Schedule.tsx, /src/pages/AnalysisJobs.tsx, /src/pages/AnalysisJobDetail.tsx, /src/pages/TickerLabels.tsx, /src/pages/Dashboard.tsx, /src/pages/Theses.tsx, /src/pages/Today.tsx, /src/pages/TickerHub.tsx, /src/components/HypothesisStatusWidget.tsx, /src/components/BackendToggle.tsx, /src/pages/PredictionsByHorizon.tsx, /src/pages/PredictionsByTarget.tsx, /src/pages/Accuracy.tsx, /src/components/dashboard/LatestOpportunity.tsx, /src/components/dashboard/RegimeStrip.tsx, /src/components/dashboard/AccuracyTile.tsx, /src/components/theses/ThesesList.tsx, /src/pages/Opportunities.tsx, /src/components/theses/ThesisDetail.tsx, /src/components/today/DriftBanner.tsx, /src/components/today/FreshSignalsStrip.tsx, /src/components/today/WatchlistDelta.tsx, /src/components/today/ResearchApprovalStrip.tsx, /src/pages/Trades.tsx, /src/components/today/TVContextStrip.tsx, /src/components/ticker/HypothesisRow.tsx, /src/components/ticker/PredictionStrip.tsx, /src/components/ticker/HeaderStrip.tsx, /src/components/ticker/StreetCard.tsx, /src/components/ticker/VaultChunkList.tsx, /src/pages/Watchlist.tsx, /src/pages/Research.tsx, /src/components/research/AskInput.tsx, /src/components/research/ConfirmDeleteModal.tsx, /src/components/research/ProposedActionCard.tsx, /src/components/research/ConfirmApproveModal.tsx, /src/pages/Macro.tsx, /src/components/macro/RegimePanel.tsx, /src/components/macro/SectorStrip.tsx, /src/pages/Watchlists.tsx, /src/components/the-street/SnapshotPicker.tsx, /src/components/the-street/TickerTimeline.tsx, /src/components/the-street/TierTable.tsx, /src/components/the-street/StreetDigestPanel.tsx, /src/pages/TVContextInbox.tsx, /src/components/tv-context/ContextItemCard.tsx, /src/components/tv-context/ScreenshotUploadModal.tsx
+11:02:15 AM [vite] page reload src/lib/types.ts
+11:02:42 AM [vite] hmr update /src/pages/Research.tsx, /src/index.css
+11:02:51 AM [vite] hmr update /src/pages/Research.tsx, /src/index.css
+11:02:56 AM [vite] hmr update /src/pages/Research.tsx, /src/index.css
+11:03:02 AM [vite] hmr update /src/pages/Research.tsx, /src/index.css
+11:06:15 AM [vite] hmr update /src/App.tsx, /src/index.css
+11:06:22 AM [vite] hmr update /src/App.tsx, /src/index.css
+11:06:31 AM [vite] hmr update /src/App.tsx, /src/index.css
+11:06:35 AM [vite] hmr update /src/App.tsx, /src/index.css
+11:06:41 AM [vite] hmr update /src/App.tsx, /src/index.css
+11:06:48 AM [vite] hmr update /src/App.tsx, /src/index.css
+11:06:53 AM [vite] hmr update /src/components/Layout.tsx, /src/index.css
+11:06:59 AM [vite] hmr update /src/components/Layout.tsx, /src/index.css
+11:07:02 AM [vite] hmr update /src/components/Layout.tsx, /src/index.css
+11:07:04 AM [vite] hmr update /src/components/Layout.tsx, /src/index.css
+11:07:09 AM [vite] hmr update /src/components/Layout.tsx, /src/index.css
+11:07:14 AM [vite] hmr update /src/components/Layout.tsx, /src/index.css
+11:07:20 AM [vite] hmr update /src/components/Layout.tsx, /src/index.css
+11:17:08 AM [vite] hmr update /src/components/Layout.tsx, /src/index.css, /src/pages/Schedule.tsx, /src/pages/AnalysisJobs.tsx, /src/pages/AnalysisJobDetail.tsx, /src/pages/TickerLabels.tsx, /src/pages/Dashboard.tsx, /src/pages/Theses.tsx, /src/pages/Today.tsx, /src/pages/TickerHub.tsx, /src/components/HypothesisStatusWidget.tsx, /src/components/BackendToggle.tsx, /src/pages/PredictionsByHorizon.tsx, /src/pages/PredictionsByTarget.tsx, /src/pages/Accuracy.tsx, /src/components/dashboard/LatestOpportunity.tsx, /src/components/dashboard/RegimeStrip.tsx, /src/components/dashboard/AccuracyTile.tsx, /src/components/theses/ThesesList.tsx, /src/pages/Opportunities.tsx, /src/components/theses/ThesisDetail.tsx, /src/components/today/DriftBanner.tsx, /src/components/today/FreshSignalsStrip.tsx, /src/components/today/WatchlistDelta.tsx, /src/components/today/ResearchApprovalStrip.tsx, /src/pages/Trades.tsx, /src/components/today/TVContextStrip.tsx, /src/components/ticker/HypothesisRow.tsx, /src/components/ticker/PredictionStrip.tsx, /src/components/ticker/HeaderStrip.tsx, /src/components/ticker/StreetCard.tsx, /src/components/ticker/VaultChunkList.tsx, /src/pages/Watchlist.tsx, /src/pages/Research.tsx, /src/components/research/AskInput.tsx, /src/components/research/ConfirmDeleteModal.tsx, /src/components/research/ProposedActionCard.tsx, /src/components/research/ConfirmApproveModal.tsx, /src/pages/Macro.tsx, /src/components/macro/RegimePanel.tsx, /src/components/macro/SectorStrip.tsx, /src/pages/Watchlists.tsx, /src/components/the-street/SnapshotPicker.tsx, /src/components/the-street/TickerTimeline.tsx, /src/components/the-street/TierTable.tsx, /src/components/the-street/StreetDigestPanel.tsx, /src/pages/TVContextInbox.tsx, /src/components/tv-context/ContextItemCard.tsx, /src/components/tv-context/ScreenshotUploadModal.tsx
+11:17:35 AM [vite] hmr update /src/components/admin/ProcessesTab.tsx, /src/index.css
+11:17:58 AM [vite] hmr update /src/components/admin/CadencesTab.tsx, /src/index.css
+11:35:12 AM [vite] hmr update /src/components/Layout.tsx, /src/index.css, /src/pages/Schedule.tsx, /src/pages/AnalysisJobs.tsx, /src/pages/AnalysisJobDetail.tsx, /src/pages/TickerLabels.tsx, /src/pages/Dashboard.tsx, /src/pages/Theses.tsx, /src/pages/Today.tsx, /src/pages/TickerHub.tsx, /src/components/HypothesisStatusWidget.tsx, /src/components/BackendToggle.tsx, /src/pages/PredictionsByHorizon.tsx, /src/pages/PredictionsByTarget.tsx, /src/pages/Accuracy.tsx, /src/components/dashboard/LatestOpportunity.tsx, /src/components/dashboard/RegimeStrip.tsx, /src/components/dashboard/AccuracyTile.tsx, /src/components/theses/ThesesList.tsx, /src/pages/Opportunities.tsx, /src/components/theses/ThesisDetail.tsx, /src/components/today/DriftBanner.tsx, /src/components/today/FreshSignalsStrip.tsx, /src/components/today/WatchlistDelta.tsx, /src/components/today/ResearchApprovalStrip.tsx, /src/pages/Trades.tsx, /src/components/today/TVContextStrip.tsx, /src/components/ticker/HypothesisRow.tsx, /src/components/ticker/PredictionStrip.tsx, /src/components/ticker/HeaderStrip.tsx, /src/components/ticker/StreetCard.tsx, /src/components/ticker/VaultChunkList.tsx, /src/pages/Watchlist.tsx, /src/pages/Research.tsx, /src/components/research/AskInput.tsx, /src/components/research/ConfirmDeleteModal.tsx, /src/components/research/ProposedActionCard.tsx, /src/components/research/ConfirmApproveModal.tsx, /src/pages/Macro.tsx, /src/components/macro/RegimePanel.tsx, /src/components/macro/SectorStrip.tsx, /src/pages/Watchlists.tsx, /src/components/the-street/SnapshotPicker.tsx, /src/components/the-street/TickerTimeline.tsx, /src/components/the-street/TierTable.tsx, /src/components/the-street/StreetDigestPanel.tsx, /src/pages/TVContextInbox.tsx, /src/components/tv-context/ContextItemCard.tsx, /src/components/tv-context/ScreenshotUploadModal.tsx, /src/components/admin/ProcessesTab.tsx, /src/components/admin/ProcessRow.tsx, /src/components/admin/CadencesTab.tsx
+11:35:43 AM [vite] hmr update /src/components/admin/CostsTab.tsx, /src/index.css
+11:36:00 AM [vite] hmr update /src/components/admin/RetentionTab.tsx, /src/index.css
+11:36:03 AM [vite] hmr update /src/components/admin/RetentionTab.tsx, /src/index.css
+11:49:59 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:50:07 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:50:10 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:50:23 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:50:29 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:50:32 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:50:37 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:50:58 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:51:05 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:51:10 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:51:27 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:51:36 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:51:40 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:52:12 AM [vite] hmr update /src/pages/WatchlistConsolidated.tsx, /src/index.css
+11:52:46 AM [vite] hmr update /src/pages/Watchlist.tsx, /src/index.css
+11:52:55 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:53:05 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+11:53:09 AM [vite] hmr update /src/pages/Watchlists.tsx, /src/index.css
+12:04:29 PM [vite] hmr update /src/components/research/SkillPicker.tsx, /src/index.css
+12:04:39 PM [vite] hmr update /src/components/research/SkillPicker.tsx, /src/index.css
+12:04:50 PM [vite] hmr update /src/components/research/SkillPicker.tsx, /src/index.css
+12:06:34 PM [vite] hmr update /src/pages/TheStreet.tsx, /src/index.css
+12:06:48 PM [vite] hmr update /src/pages/Theses.tsx, /src/index.css
+12:07:10 PM [vite] hmr update /src/pages/PredictionsByHorizon.tsx, /src/index.css
+12:07:26 PM [vite] hmr update /src/pages/PredictionsByHorizon.tsx, /src/index.css
+12:07:34 PM [vite] hmr update /src/pages/WatchlistConsolidated.tsx, /src/index.css
+12:07:37 PM [vite] hmr update /src/pages/WatchlistConsolidated.tsx, /src/index.css
+12:07:39 PM [vite] hmr update /src/pages/WatchlistConsolidated.tsx, /src/index.css
+12:07:45 PM [vite] hmr update /src/pages/WatchlistConsolidated.tsx, /src/index.css
+12:08:03 PM [vite] hmr update /src/App.tsx, /src/index.css

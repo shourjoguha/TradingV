@@ -459,3 +459,45 @@ async def list_jobs(*, limit: int = 50, offset: int = 0) -> List[AnalysisJob]:
             .offset(offset)
         )
         return list(result.scalars().all())
+
+
+async def task_buckets_for(
+    job_ids: Iterable[str],
+) -> dict[str, dict[str, int]]:
+    """Return per-job per-bucket task counts.
+
+    One ``GROUP BY (job_id, status)`` query — feeds the collapsed-row
+    outcome bar on the Health page without per-row N+1 detail fetches.
+    Status is normalised: ``'completed'`` rolls into ``'done'`` and
+    ``'failed'`` rolls into ``'error'`` to match historical variance.
+    Returns ``{job_id: {done, ineligible, error, running, pending}}``;
+    a job with no tasks gets an empty dict (caller defaults to zeros).
+    """
+    from sqlalchemy import func
+
+    ids = [j for j in job_ids if j]
+    if not ids:
+        return {}
+
+    async with _db.SessionLocal() as session:
+        rows = await session.execute(
+            select(
+                AnalysisTask.job_id,
+                AnalysisTask.status,
+                func.count().label("c"),
+            )
+            .where(AnalysisTask.job_id.in_(ids))
+            .group_by(AnalysisTask.job_id, AnalysisTask.status)
+        )
+        out: dict[str, dict[str, int]] = {}
+        for job_id, status, count in rows:
+            bucket = (status or "").lower()
+            if bucket == "completed":
+                bucket = "done"
+            elif bucket == "failed":
+                bucket = "error"
+            if bucket not in {"done", "ineligible", "error", "running", "pending"}:
+                bucket = "pending"
+            slot = out.setdefault(job_id, {})
+            slot[bucket] = slot.get(bucket, 0) + int(count)
+        return out

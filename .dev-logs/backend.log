@@ -1,0 +1,1071 @@
+INFO:     Started server process [27730]
+INFO:     Waiting for application startup.
+INFO:app.kronos.real_adapter:kronos real adapter activated
+INFO:app.accuracy.service:accuracy.evaluator_loop started (tick=3600s)
+INFO:app.accuracy.drift:accuracy.drift.detector_loop started (tick=21600s)
+INFO:app.notifications.digest:notifications.digest_loop started (hour=12 UTC)
+INFO:app.market_data.derived:market_data.loop started (tick=86400s)
+INFO:app.macro.service:macro.ingestion_loop started (tick=86400s)
+INFO:app.queue.worker:queue.worker_loop started
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:app.sync.service:sync: purged 26 completed outbox rows
+INFO:httpx:HTTP Request: POST https://tradingv-production.up.railway.app/v1/tickers "HTTP/1.1 200 OK"
+INFO:numexpr.utils:NumExpr defaulting to 8 threads.
+INFO:httpx:HTTP Request: POST https://tradingv-production.up.railway.app/v1/tickers "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://tradingv-production.up.railway.app/v1/tickers "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://tradingv-production.up.railway.app/v1/tickers "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59989 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60021 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60027 - "GET /v1/research/skills HTTP/1.1" 200 OK
+ERROR:yfinance:HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"No fundamentals data found for symbol: ETH"}}}
+ERROR:yfinance:HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"No fundamentals data found for symbol: IJS"}}}
+ERROR:yfinance:HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: JD.US"}}}
+ERROR:yfinance:HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: JD.US"}}}
+ERROR:yfinance:$JD.US: possibly delisted; no price data found  (period=14d) (Yahoo error = "No data found, symbol may be delisted")
+ERROR:yfinance:
+1 Failed download:
+ERROR:yfinance:['JD.US']: possibly delisted; no price data found  (period=14d) (Yahoo error = "No data found, symbol may be delisted")
+ERROR:yfinance:HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: MFST"}}}
+ERROR:yfinance:$MFST: possibly delisted; no price data found  (period=14d) (Yahoo error = "No data found, symbol may be delisted")
+ERROR:yfinance:
+1 Failed download:
+ERROR:yfinance:['MFST']: possibly delisted; no price data found  (period=14d) (Yahoo error = "No data found, symbol may be delisted")
+ERROR:yfinance:HTTP Error 401: {"finance":{"result":null,"error":{"code":"Unauthorized","description":"Invalid Crumb"}}}
+INFO:httpx:HTTP Request: GET https://fred.stlouisfed.org/graph/fredgraph.csv?id=WALCL "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://fred.stlouisfed.org/graph/fredgraph.csv?id=M2SL "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://fred.stlouisfed.org/graph/fredgraph.csv?id=T10YIE "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://fred.stlouisfed.org/graph/fredgraph.csv?id=WGS10YR "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://fred.stlouisfed.org/graph/fredgraph.csv?id=WGS2YR "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://fred.stlouisfed.org/graph/fredgraph.csv?id=WTREGEN "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFII10 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://fred.stlouisfed.org/graph/fredgraph.csv?id=T5YIE "HTTP/1.1 200 OK"
+ERROR:yfinance:HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"No fundamentals data found for symbol: QQQ"}}}
+INFO:httpx:HTTP Request: GET https://fred.stlouisfed.org/graph/fredgraph.csv?id=PPIACO "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://fred.stlouisfed.org/graph/fredgraph.csv?id=MORTGAGE30US "HTTP/1.1 200 OK"
+INFO:app.macro.service:macro.ingestion: rows_touched=237801 ok=43 failed=0 skipped=2 (first tick)
+INFO:app.market_data.derived:market_data.refresh: scanned=43 ok=43 failed=0
+INFO:     127.0.0.1:60164 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60175 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60177 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60175 - "OPTIONS /v1/watchlist?limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60177 - "OPTIONS /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60181 - "OPTIONS /v1/accuracy/drift HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60182 - "OPTIONS /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60184 - "OPTIONS /v1/opportunities?status=open&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60185 - "OPTIONS /v1/watchlist?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60175 - "OPTIONS /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60177 - "OPTIONS /v1/macro/series?symbol=WALCL&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60181 - "OPTIONS /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60182 - "OPTIONS /v1/macro/series?symbol=DFII10&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60184 - "OPTIONS /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60181 - "GET /v1/accuracy/drift HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60175 - "GET /v1/watchlist?limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60182 - "GET /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60177 - "GET /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60185 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60181 - "GET /v1/watchlist?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60182 - "GET /v1/macro/series?symbol=WALCL&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60175 - "GET /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60184 - "GET /v1/opportunities?status=open&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60177 - "GET /v1/macro/series?symbol=DFII10&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60184 - "OPTIONS /v1/tv-context/by-ticker/INTC HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60175 - "OPTIONS /v1/tv-context/by-ticker/PBR HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60182 - "OPTIONS /v1/tv-context/by-ticker/AVGO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60185 - "GET /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60177 - "OPTIONS /v1/tv-context/by-ticker/WMT HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60184 - "OPTIONS /v1/tv-context/by-ticker/BIDU HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60175 - "OPTIONS /v1/tv-context/by-ticker/IJS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60182 - "OPTIONS /v1/tv-context/by-ticker/ETH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60185 - "OPTIONS /v1/tv-context/by-ticker/PLG HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60175 - "GET /v1/tv-context/by-ticker/AVGO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60184 - "GET /v1/tv-context/by-ticker/PBR HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60177 - "GET /v1/tv-context/by-ticker/INTC HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60182 - "GET /v1/tv-context/by-ticker/WMT HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60185 - "GET /v1/tv-context/by-ticker/BIDU HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60175 - "GET /v1/tv-context/by-ticker/IJS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60184 - "GET /v1/tv-context/by-ticker/ETH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60177 - "GET /v1/tv-context/by-ticker/PLG HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60181 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60204 - "OPTIONS /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60205 - "OPTIONS /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60205 - "GET /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60204 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60214 - "GET /v1/tv-context/by-ticker/INTC HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60219 - "GET /v1/tv-context/by-ticker/WMT HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60217 - "GET /v1/tv-context/by-ticker/AVGO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60216 - "GET /v1/tv-context/by-ticker/PBR HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60210 - "GET /v1/accuracy/drift HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60214 - "GET /v1/tv-context/by-ticker/IJS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60217 - "GET /v1/tv-context/by-ticker/PLG HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60219 - "GET /v1/tv-context/by-ticker/ETH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60216 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/tv-context/by-ticker/BIDU HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/research/queries/2d3d6353-9a9e-476e-bf98-181a144a700a/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "POST /v1/research/queries/2d3d6353-9a9e-476e-bf98-181a144a700a/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/research/queries/09d521be-a26f-4db4-8c2e-d99aec2ddf88/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "POST /v1/research/queries/09d521be-a26f-4db4-8c2e-d99aec2ddf88/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/research/queries/56c73c72-30eb-4c7b-816e-57624f47e72a/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "POST /v1/research/queries/56c73c72-30eb-4c7b-816e-57624f47e72a/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/research/queries/f58a2b39-adae-4225-b708-fc236555a6b9/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "POST /v1/research/queries/f58a2b39-adae-4225-b708-fc236555a6b9/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/research/queries/20b91015-4666-4191-afb2-eb1dce0397f1/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "POST /v1/research/queries/20b91015-4666-4191-afb2-eb1dce0397f1/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/research/queries/ddca9e11-6871-4a00-afb8-abfb87a86327/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "POST /v1/research/queries/ddca9e11-6871-4a00-afb8-abfb87a86327/dismiss HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/opportunities?status=open&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/opportunities?status=open&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/watchlist?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60226 - "OPTIONS /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60226 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/watchlist?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/predictions/by-horizon?target_date=2026-05-09&horizons=1%2C2%2C3%2C4%2C5&tickers=INTC%2CPBR%2CAVGO%2CWMT%2CBIDU%2CIJS%2CETH%2CPLG%2CUNH%2CKR%2CADC%2CFRSH%2COXY%2CGOLD%2CAAPL%2CJD.US%2CPDD%2CBABA%2CQQQ%2CADBE%2CMSTR%2CBE%2CVST%2CTLN%2CSRE%2CNEE%2CCEG%2CVRT%2CGEV%2CPATH%2CVFF%2CPYPL%2CNKE%2CMA%2CAZO%2COKTA%2CMFST%2CMETA%2CPENG%2CLGN&interval=1d&fields=ohlc&mode=anchor HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/predictions/by-horizon?target_date=2026-05-09&horizons=1%2C2%2C3%2C4%2C5&tickers=INTC%2CPBR%2CAVGO%2CWMT%2CBIDU%2CIJS%2CETH%2CPLG%2CUNH%2CKR%2CADC%2CFRSH%2COXY%2CGOLD%2CAAPL%2CJD.US%2CPDD%2CBABA%2CQQQ%2CADBE%2CMSTR%2CBE%2CVST%2CTLN%2CSRE%2CNEE%2CCEG%2CVRT%2CGEV%2CPATH%2CVFF%2CPYPL%2CNKE%2CMA%2CAZO%2COKTA%2CMFST%2CMETA%2CPENG%2CLGN&interval=1d&fields=ohlc&mode=anchor HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60226 - "OPTIONS /v1/macro/ratio?numerator=HG%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60235 - "OPTIONS /v1/macro/ratio?numerator=CL%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60236 - "OPTIONS /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60238 - "OPTIONS /v1/macro/ratio?numerator=IWM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60240 - "OPTIONS /v1/macro/ratio?numerator=EEM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/macro/series?symbol=WALCL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60226 - "OPTIONS /v1/macro/series?symbol=T10YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60235 - "OPTIONS /v1/macro/series?symbol=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60236 - "OPTIONS /v1/macro/spread?minuend=MORTGAGE30US&subtrahend=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60238 - "OPTIONS /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60240 - "OPTIONS /v1/macro/ratio?numerator=TLT&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/macro/series?symbol=DX-Y.NYB&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60226 - "OPTIONS /v1/macro/series?symbol=%5EVIX&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60235 - "OPTIONS /v1/macro/series?symbol=DFII10&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60236 - "OPTIONS /v1/macro/series?symbol=T5YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60238 - "OPTIONS /v1/macro/ratio?numerator=PPIACO&denominator=CPIAUCSL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60240 - "OPTIONS /v1/macro/ratio?numerator=DBC&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60236 - "GET /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60238 - "GET /v1/macro/ratio?numerator=IWM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60226 - "GET /v1/macro/ratio?numerator=HG%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60235 - "GET /v1/macro/ratio?numerator=CL%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/macro/series?symbol=WALCL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60236 - "GET /v1/macro/series?symbol=T10YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60235 - "GET /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60240 - "GET /v1/macro/ratio?numerator=EEM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60238 - "GET /v1/macro/series?symbol=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60226 - "GET /v1/macro/spread?minuend=MORTGAGE30US&subtrahend=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/macro/ratio?numerator=TLT&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60238 - "GET /v1/macro/series?symbol=T5YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60240 - "GET /v1/macro/series?symbol=DFII10&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60235 - "GET /v1/macro/series?symbol=%5EVIX&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60236 - "GET /v1/macro/series?symbol=DX-Y.NYB&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60226 - "GET /v1/macro/ratio?numerator=PPIACO&denominator=CPIAUCSL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/macro/ratio?numerator=DBC&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "OPTIONS /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60220 - "GET /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60260 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60259 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60259 - "GET /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60259 - "GET /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60273 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60275 - "GET /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60278 - "GET /v1/opportunities?status=open&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60279 - "GET /v1/watchlist?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60274 - "GET /v1/accuracy/drift HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60272 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60275 - "GET /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60278 - "GET /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60279 - "GET /v1/macro/series?symbol=WALCL&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60274 - "GET /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60272 - "GET /v1/macro/series?symbol=DFII10&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60273 - "GET /v1/watchlist?limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60279 - "GET /v1/tv-context/by-ticker/PBR HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60278 - "GET /v1/tv-context/by-ticker/INTC HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60275 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60274 - "GET /v1/tv-context/by-ticker/AVGO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60278 - "GET /v1/tv-context/by-ticker/ETH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60279 - "GET /v1/tv-context/by-ticker/IJS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60272 - "GET /v1/tv-context/by-ticker/WMT HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60275 - "GET /v1/tv-context/by-ticker/PLG HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60273 - "GET /v1/tv-context/by-ticker/BIDU HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60273 - "OPTIONS /v1/the-street/tier/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60275 - "OPTIONS /v1/the-street/tier/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60272 - "OPTIONS /v1/the-street/tier/3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60272 - "GET /v1/the-street/tier/3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60273 - "GET /v1/the-street/tier/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60275 - "GET /v1/the-street/tier/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60275 - "OPTIONS /v1/the-street/digest/2026-05-08/META HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60275 - "GET /v1/the-street/digest/2026-05-08/META HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60286 - "OPTIONS /v1/the-street/digest/2026-05-08/NVDA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60286 - "GET /v1/the-street/digest/2026-05-08/NVDA HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60293 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60292 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60292 - "OPTIONS /v1/analysis/jobs?limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60297 - "OPTIONS /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60298 - "OPTIONS /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60293 - "GET /v1/watchlist?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60298 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60297 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60292 - "GET /v1/analysis/jobs?limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60292 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60292 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60300 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60300 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60309 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60311 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60313 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60313 - "GET /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60311 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60322 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60331 - "GET /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60335 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60338 - "OPTIONS /v1/research/queries/09d521be-a26f-4db4-8c2e-d99aec2ddf88 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60338 - "DELETE /v1/research/queries/09d521be-a26f-4db4-8c2e-d99aec2ddf88 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60338 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60338 - "OPTIONS /v1/research/queries/56c73c72-30eb-4c7b-816e-57624f47e72a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60338 - "DELETE /v1/research/queries/56c73c72-30eb-4c7b-816e-57624f47e72a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60338 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60338 - "OPTIONS /v1/research/queries/f58a2b39-adae-4225-b708-fc236555a6b9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60338 - "DELETE /v1/research/queries/f58a2b39-adae-4225-b708-fc236555a6b9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60338 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60338 - "GET /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60346 - "OPTIONS /v1/research/queries/20b91015-4666-4191-afb2-eb1dce0397f1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60346 - "DELETE /v1/research/queries/20b91015-4666-4191-afb2-eb1dce0397f1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60346 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60346 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60346 - "OPTIONS /v1/research/queries/ddca9e11-6871-4a00-afb8-abfb87a86327 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60346 - "DELETE /v1/research/queries/ddca9e11-6871-4a00-afb8-abfb87a86327 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60346 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60346 - "OPTIONS /v1/research/queries/2d3d6353-9a9e-476e-bf98-181a144a700a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60346 - "DELETE /v1/research/queries/2d3d6353-9a9e-476e-bf98-181a144a700a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60346 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60352 - "OPTIONS /v1/research/queries/d827bc7a-4008-4add-bff0-eb979a5de028 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60352 - "DELETE /v1/research/queries/d827bc7a-4008-4add-bff0-eb979a5de028 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60352 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60352 - "OPTIONS /v1/research/queries?limit=10&status=dismissed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60352 - "GET /v1/research/queries?limit=10&status=dismissed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60352 - "OPTIONS /v1/research/queries?limit=10&status=approved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60352 - "GET /v1/research/queries?limit=10&status=approved HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60352 - "GET /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:app.main:hypothesis tick: {'expired': 0, 'invalidated': 0, 'cancelled': 0, 'evaluated': 6}
+INFO:     127.0.0.1:60356 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60362 - "GET /v1/research/skills HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60362 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60368 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60400 - "GET /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60401 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60401 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60401 - "OPTIONS /v1/hypotheses/78a9d1e2-d716-4f69-ac2a-54de65d7da65 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60401 - "GET /v1/hypotheses/78a9d1e2-d716-4f69-ac2a-54de65d7da65 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60456 - "OPTIONS /v1/hypotheses/3d7b3112-ac9d-4212-9a2a-dd581e5cf3d4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60456 - "GET /v1/hypotheses/3d7b3112-ac9d-4212-9a2a-dd581e5cf3d4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60456 - "OPTIONS /v1/hypotheses/ddefd8b4-acf9-491d-9274-725fddfa5a03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60456 - "GET /v1/hypotheses/ddefd8b4-acf9-491d-9274-725fddfa5a03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60456 - "OPTIONS /v1/hypotheses?status=expired HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60456 - "GET /v1/hypotheses?status=expired HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60456 - "OPTIONS /v1/hypotheses?status=invalidated HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60456 - "GET /v1/hypotheses?status=invalidated HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60456 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60745 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60761 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60785 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60793 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60898 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60932 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61248 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61248 - "OPTIONS /v1/tv-context/vision-spend?month=2026-05 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61248 - "GET /v1/tv-context/vision-spend?month=2026-05 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61248 - "OPTIONS /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61252 - "OPTIONS /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61248 - "GET /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61252 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61252 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61252 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61252 - "OPTIONS /v1/the-street/tier/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61248 - "OPTIONS /v1/the-street/tier/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61255 - "OPTIONS /v1/the-street/tier/3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61248 - "GET /v1/the-street/tier/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61252 - "GET /v1/the-street/tier/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61255 - "GET /v1/the-street/tier/3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61267 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61271 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61288 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61296 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61311 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61334 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61344 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61369 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61392 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61398 - "OPTIONS /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61399 - "OPTIONS /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61398 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61399 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61411 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61411 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61411 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61424 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61725 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61732 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61745 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61752 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61757 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61761 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61765 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61791 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61811 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61885 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61911 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61999 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62034 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62097 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62111 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62143 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62152 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62164 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62164 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62164 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62164 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62176 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62181 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62193 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62195 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62205 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62208 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62220 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62222 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62235 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62238 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62264 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62267 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62513 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62517 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62527 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62529 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62542 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62549 - "OPTIONS /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62549 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62560 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62560 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62560 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62589 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62593 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62602 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62604 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62623 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62627 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62635 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62637 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62649 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62657 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62673 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62678 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62690 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62694 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62706 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62708 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62718 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62723 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62738 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62738 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62738 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62738 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62753 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62756 - "GET /v1/schedule HTTP/1.1" 200 OK
+WARNING:app.research.bundle:vault-indexer search failed: 
+INFO:httpx:HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://localhost:8001/search?q=What+is+the+strongest+counterargument+or+risk+to+this+thesis+based+on+recent+vault+content+%2B+current+macro+state%3F+Propose+a+concrete+invalidator+tightening+if+the+evidence+supports+it.&k=12 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:8001/folder-context "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://localhost:8001/search?q=What+is+the+strongest+counterargument+or+risk+to+this+thesis+based+on+recent+vault+content+%2B+current+macro+state%3F+Propose+a+concrete+invalidator+tightening+if+the+evidence+supports+it.&k=12 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:8001/folder-context "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://localhost:8001/search?q=What+is+the+strongest+counterargument+or+risk+to+this+thesis+based+on+recent+vault+content+%2B+current+macro+state%3F+Propose+a+concrete+invalidator+tightening+if+the+evidence+supports+it.&k=12 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:8001/folder-context "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://localhost:8001/search?q=What+is+the+strongest+counterargument+or+risk+to+this+thesis+based+on+recent+vault+content+%2B+current+macro+state%3F+Propose+a+concrete+invalidator+tightening+if+the+evidence+supports+it.&k=12 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:8001/folder-context "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://localhost:8001/search?q=What+is+the+strongest+counterargument+or+risk+to+this+thesis+based+on+recent+vault+content+%2B+current+macro+state%3F+Propose+a+concrete+invalidator+tightening+if+the+evidence+supports+it.&k=12 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:8001/folder-context "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+INFO:app.research.weekly:research weekly stress: {'hypotheses': 6, 'ok': 6, 'errors': 0, 'at_risk_first': 0}
+INFO:     127.0.0.1:65310 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65311 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65314 - "OPTIONS /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65315 - "OPTIONS /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65315 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65310 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65314 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65327 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65328 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65328 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65336 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65328 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65341 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65336 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65340 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49168 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49167 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49167 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49176 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49183 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49183 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49183 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49193 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49193 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49203 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49804 - "OPTIONS /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49805 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49804 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49884 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49884 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50130 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50130 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50145 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50149 - "OPTIONS /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50149 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50148 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50188 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50189 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50325 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50325 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50950 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50950 - "OPTIONS /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50950 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51336 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51338 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51340 - "OPTIONS /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51340 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51339 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51336 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51605 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51605 - "OPTIONS /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51605 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51616 - "OPTIONS /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51618 - "OPTIONS /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51620 - "OPTIONS /v1/macro/series?symbol=WALCL&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51622 - "OPTIONS /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51618 - "OPTIONS /v1/opportunities?status=open&limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51616 - "OPTIONS /v1/accuracy/grid?last_n=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51624 - "OPTIONS /v1/macro/series?symbol=DFII10&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51620 - "OPTIONS /v1/analysis/jobs?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51622 - "OPTIONS /v1/analysis/queue/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51618 - "OPTIONS /v1/analysis/queue?status=pending&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51616 - "OPTIONS /v1/analysis/queue?status=running&limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51626 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51616 - "GET /v1/opportunities?status=open&limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51622 - "GET /v1/macro/series?symbol=WALCL&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51620 - "GET /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51624 - "GET /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51616 - "GET /v1/macro/series?symbol=DFII10&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51616 - "GET /v1/analysis/queue?status=running&limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51624 - "GET /v1/analysis/queue?status=pending&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51620 - "GET /v1/analysis/queue/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51618 - "GET /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51622 - "GET /v1/analysis/jobs?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51626 - "GET /v1/accuracy/grid?last_n=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51626 - "OPTIONS /v1/admin/loops HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51626 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51626 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51626 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51626 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51626 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51626 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51626 - "OPTIONS /v1/admin/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51626 - "GET /v1/admin/settings HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51626 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51642 - "GET /v1/admin/settings HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51642 - "GET /v1/admin/settings HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51626 - "OPTIONS /v1/admin/costs/monthly HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51644 - "OPTIONS /v1/admin/costs/recent?days=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51626 - "GET /v1/admin/costs/monthly HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51644 - "GET /v1/admin/costs/recent?days=30 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51644 - "GET /v1/admin/settings HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51626 - "GET /v1/admin/costs/monthly HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51642 - "GET /v1/admin/costs/recent?days=30 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51642 - "OPTIONS /v1/admin/retention HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/admin/retention HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51642 - "GET /v1/admin/retention HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51626 - "OPTIONS /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51626 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "OPTIONS /v1/analysis/jobs?limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51626 - "OPTIONS /v1/watchlist?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51644 - "OPTIONS /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51649 - "OPTIONS /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51644 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51626 - "GET /v1/watchlist?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51649 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/jobs?limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "OPTIONS /v1/analysis/jobs/e465f59e-cc0d-4a96-9879-2dc1634413fc HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/jobs/e465f59e-cc0d-4a96-9879-2dc1634413fc HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "OPTIONS /v1/analysis/jobs/60f2860a-cb7b-4319-90c8-415ee5807ed8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/jobs/60f2860a-cb7b-4319-90c8-415ee5807ed8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/jobs?limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51642 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51657 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51657 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51659 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51666 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "OPTIONS /v1/opportunities?status=open&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "GET /v1/opportunities?status=open&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "OPTIONS /v1/predictions/by-horizon?target_date=2026-05-09&horizons=1%2C2%2C3%2C4%2C5&tickers=INTC%2CPBR%2CAVGO%2CWMT%2CBIDU%2CIJS%2CETH%2CPLG%2CUNH%2CKR%2CADC%2CFRSH%2COXY%2CGOLD%2CAAPL%2CJD.US%2CPDD%2CBABA%2CQQQ%2CADBE%2CMSTR%2CBE%2CVST%2CTLN%2CSRE%2CNEE%2CCEG%2CVRT%2CGEV%2CPATH%2CVFF%2CPYPL%2CNKE%2CMA%2CAZO%2COKTA%2CMFST%2CMETA%2CPENG%2CLGN&interval=1d&fields=ohlc&mode=anchor HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "GET /v1/predictions/by-horizon?target_date=2026-05-09&horizons=1%2C2%2C3%2C4%2C5&tickers=INTC%2CPBR%2CAVGO%2CWMT%2CBIDU%2CIJS%2CETH%2CPLG%2CUNH%2CKR%2CADC%2CFRSH%2COXY%2CGOLD%2CAAPL%2CJD.US%2CPDD%2CBABA%2CQQQ%2CADBE%2CMSTR%2CBE%2CVST%2CTLN%2CSRE%2CNEE%2CCEG%2CVRT%2CGEV%2CPATH%2CVFF%2CPYPL%2CNKE%2CMA%2CAZO%2COKTA%2CMFST%2CMETA%2CPENG%2CLGN&interval=1d&fields=ohlc&mode=anchor HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "OPTIONS /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51666 - "OPTIONS /v1/macro/ratio?numerator=HG%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "OPTIONS /v1/macro/series?symbol=WALCL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51672 - "OPTIONS /v1/macro/ratio?numerator=CL%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51673 - "OPTIONS /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51675 - "OPTIONS /v1/macro/ratio?numerator=IWM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51666 - "OPTIONS /v1/macro/series?symbol=T10YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51677 - "OPTIONS /v1/macro/ratio?numerator=EEM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "OPTIONS /v1/macro/series?symbol=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51672 - "OPTIONS /v1/macro/spread?minuend=MORTGAGE30US&subtrahend=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51673 - "OPTIONS /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51675 - "OPTIONS /v1/macro/ratio?numerator=TLT&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51666 - "OPTIONS /v1/macro/series?symbol=DX-Y.NYB&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51677 - "OPTIONS /v1/macro/series?symbol=%5EVIX&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "OPTIONS /v1/macro/series?symbol=DFII10&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51672 - "OPTIONS /v1/macro/series?symbol=T5YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51673 - "OPTIONS /v1/macro/ratio?numerator=PPIACO&denominator=CPIAUCSL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51675 - "OPTIONS /v1/macro/ratio?numerator=DBC&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "GET /v1/macro/series?symbol=WALCL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51666 - "GET /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51673 - "GET /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "GET /v1/macro/series?symbol=T10YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51672 - "GET /v1/macro/ratio?numerator=CL%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51677 - "GET /v1/macro/ratio?numerator=HG%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51675 - "GET /v1/macro/ratio?numerator=IWM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51673 - "GET /v1/macro/series?symbol=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "GET /v1/macro/spread?minuend=MORTGAGE30US&subtrahend=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51675 - "GET /v1/macro/series?symbol=DX-Y.NYB&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51673 - "GET /v1/macro/series?symbol=%5EVIX&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51677 - "GET /v1/macro/ratio?numerator=TLT&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51664 - "GET /v1/macro/series?symbol=DFII10&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51666 - "GET /v1/macro/ratio?numerator=EEM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51672 - "GET /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51675 - "GET /v1/macro/series?symbol=T5YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51673 - "GET /v1/macro/ratio?numerator=PPIACO&denominator=CPIAUCSL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51677 - "GET /v1/macro/ratio?numerator=DBC&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51677 - "OPTIONS /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51677 - "GET /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51677 - "OPTIONS /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51677 - "GET /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51685 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51698 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51711 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51723 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51975 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51975 - "GET /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "GET /v1/macro/series?symbol=DFII10&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51986 - "GET /v1/macro/series?symbol=WALCL&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51984 - "GET /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51988 - "GET /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51988 - "GET /v1/analysis/queue?status=pending&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51984 - "GET /v1/analysis/queue/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51986 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51991 - "GET /v1/opportunities?status=open&limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51988 - "GET /v1/analysis/queue?status=running&limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "GET /v1/analysis/jobs?limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "GET /v1/accuracy/grid?last_n=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51996 - "GET /v1/analysis/queue?status=running&limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "GET /v1/analysis/queue/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "GET /v1/analysis/queue?status=pending&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "OPTIONS /v1/research/skills HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "OPTIONS /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51996 - "OPTIONS /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "GET /v1/research/skills HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "GET /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51996 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51996 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51996 - "OPTIONS /v1/tv-context/vision-spend?month=2026-05 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51996 - "GET /v1/tv-context/vision-spend?month=2026-05 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51996 - "OPTIONS /v1/the-street/tier/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "OPTIONS /v1/the-street/tier/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "OPTIONS /v1/the-street/tier/3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "GET /v1/the-street/tier/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51996 - "GET /v1/the-street/tier/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "GET /v1/the-street/tier/3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "OPTIONS /v1/the-street/digest/2026-05-08/META HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "GET /v1/the-street/digest/2026-05-08/META HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "OPTIONS /v1/the-street/digest/2026-05-08/TSM HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "GET /v1/the-street/digest/2026-05-08/TSM HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52034 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52068 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52104 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52146 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52167 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52187 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52227 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52244 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52257 - "OPTIONS /v1/the-street/snapshots HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52257 - "GET /v1/the-street/snapshots HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52257 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52257 - "OPTIONS /v1/vault/node/The%20Street/snapshots/2026-05-08/_index.md HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://localhost:8001/node/The%20Street/snapshots/2026-05-08/_index.md "HTTP/1.1 404 Not Found"
+WARNING:app.vault.routes:vault-indexer HTTP 404: Client error '404 Not Found' for url 'http://localhost:8001/node/The%20Street/snapshots/2026-05-08/_index.md'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+INFO:     127.0.0.1:52257 - "GET /v1/vault/node/The%20Street/snapshots/2026-05-08/_index.md HTTP/1.1" 502 Bad Gateway
+INFO:httpx:HTTP Request: GET http://localhost:8001/node/The%20Street/snapshots/2026-05-08/_index.md "HTTP/1.1 404 Not Found"
+WARNING:app.vault.routes:vault-indexer HTTP 404: Client error '404 Not Found' for url 'http://localhost:8001/node/The%20Street/snapshots/2026-05-08/_index.md'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+INFO:     127.0.0.1:52257 - "GET /v1/vault/node/The%20Street/snapshots/2026-05-08/_index.md HTTP/1.1" 502 Bad Gateway
+INFO:     127.0.0.1:52264 - "OPTIONS /v1/the-street/ticker/META HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52264 - "GET /v1/the-street/ticker/META HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52268 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52268 - "GET /v1/the-street/tier/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52272 - "GET /v1/the-street/tier/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52273 - "GET /v1/the-street/tier/3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52273 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52273 - "GET /v1/research/skills HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52272 - "GET /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52268 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52268 - "GET /v1/tv-context/vision-spend?month=2026-05 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52286 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52285 - "GET /v1/watchlist?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52285 - "GET /v1/predictions/by-horizon?target_date=2026-05-09&horizons=1%2C2%2C3%2C4%2C5&tickers=INTC%2CPBR%2CAVGO%2CWMT%2CBIDU%2CIJS%2CETH%2CPLG%2CUNH%2CKR%2CADC%2CFRSH%2COXY%2CGOLD%2CAAPL%2CJD.US%2CPDD%2CBABA%2CQQQ%2CADBE%2CMSTR%2CBE%2CVST%2CTLN%2CSRE%2CNEE%2CCEG%2CVRT%2CGEV%2CPATH%2CVFF%2CPYPL%2CNKE%2CMA%2CAZO%2COKTA%2CMFST%2CMETA%2CPENG%2CLGN&interval=1d&fields=ohlc&mode=anchor HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52285 - "GET /v1/opportunities?status=open&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52286 - "GET /v1/macro/ratio?numerator=HG%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52288 - "GET /v1/macro/ratio?numerator=CL%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52285 - "GET /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52293 - "GET /v1/macro/ratio?numerator=IWM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52290 - "GET /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52286 - "GET /v1/macro/series?symbol=WALCL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52285 - "GET /v1/macro/series?symbol=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52288 - "GET /v1/macro/series?symbol=T10YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52294 - "GET /v1/macro/ratio?numerator=EEM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52290 - "GET /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52293 - "GET /v1/macro/spread?minuend=MORTGAGE30US&subtrahend=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52285 - "GET /v1/macro/series?symbol=DX-Y.NYB&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52286 - "GET /v1/macro/ratio?numerator=TLT&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52288 - "GET /v1/macro/series?symbol=%5EVIX&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52294 - "GET /v1/macro/series?symbol=DFII10&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52290 - "GET /v1/macro/series?symbol=T5YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52293 - "GET /v1/macro/ratio?numerator=PPIACO&denominator=CPIAUCSL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52285 - "GET /v1/macro/ratio?numerator=DBC&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52285 - "GET /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52285 - "GET /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52307 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52307 - "OPTIONS /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52307 - "GET /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52307 - "GET /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52315 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52335 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52358 - "OPTIONS /v1/accuracy/drift HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "OPTIONS /v1/opportunities?status=open&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52358 - "OPTIONS /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52364 - "OPTIONS /v1/watchlist?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52366 - "OPTIONS /v1/watchlist?limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "OPTIONS /v1/macro/series?symbol=WALCL&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52367 - "OPTIONS /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52358 - "OPTIONS /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52364 - "OPTIONS /v1/macro/series?symbol=DFII10&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52366 - "OPTIONS /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "GET /v1/accuracy/drift HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52367 - "GET /v1/opportunities?status=open&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52360 - "GET /v1/research/queries?limit=10&status=pending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52364 - "GET /v1/watchlist?limit=8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52358 - "GET /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "GET /v1/macro/series?symbol=WALCL&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "OPTIONS /v1/tv-context/by-ticker/INTC HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "OPTIONS /v1/tv-context/by-ticker/PBR HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "OPTIONS /v1/tv-context/by-ticker/AVGO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52364 - "GET /v1/macro/series?symbol=DFII10&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52367 - "GET /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "OPTIONS /v1/tv-context/by-ticker/WMT HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52364 - "OPTIONS /v1/tv-context/by-ticker/BIDU HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52367 - "OPTIONS /v1/tv-context/by-ticker/IJS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "OPTIONS /v1/tv-context/by-ticker/ETH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52360 - "GET /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2025-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52364 - "OPTIONS /v1/tv-context/by-ticker/PLG HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52366 - "GET /v1/watchlist?limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52358 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "GET /v1/tv-context/by-ticker/PBR HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52367 - "GET /v1/tv-context/by-ticker/INTC HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52364 - "GET /v1/tv-context/by-ticker/WMT HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52366 - "GET /v1/tv-context/by-ticker/BIDU HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52360 - "GET /v1/tv-context/by-ticker/AVGO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52358 - "GET /v1/tv-context/by-ticker/IJS HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "GET /v1/tv-context/by-ticker/ETH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52367 - "GET /v1/tv-context/by-ticker/PLG HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52373 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52378 - "GET /v1/opportunities?status=open&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52378 - "OPTIONS /v1/watchlist?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52378 - "GET /v1/watchlist?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52378 - "GET /v1/predictions/by-horizon?target_date=2026-05-09&horizons=1%2C2%2C3%2C4%2C5&tickers=INTC%2CPBR%2CAVGO%2CWMT%2CBIDU%2CIJS%2CETH%2CPLG%2CUNH%2CKR%2CADC%2CFRSH%2COXY%2CGOLD%2CAAPL%2CJD.US%2CPDD%2CBABA%2CQQQ%2CADBE%2CMSTR%2CBE%2CVST%2CTLN%2CSRE%2CNEE%2CCEG%2CVRT%2CGEV%2CPATH%2CVFF%2CPYPL%2CNKE%2CMA%2CAZO%2COKTA%2CMFST%2CMETA%2CPENG%2CLGN&interval=1d&fields=ohlc&mode=anchor HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52382 - "GET /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52384 - "GET /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52384 - "GET /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52382 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52391 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52400 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52424 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52441 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52469 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52476 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52476 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52476 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52500 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "OPTIONS /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/watchlist?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "OPTIONS /v1/predictions/by-horizon?target_date=2026-05-09&horizons=1%2C2%2C3%2C4%2C5&tickers=INTC%2CPBR%2CAVGO%2CWMT%2CBIDU%2CIJS%2CETH%2CPLG%2CUNH%2CKR%2CADC%2CFRSH%2COXY%2CGOLD%2CAAPL%2CJD.US%2CPDD%2CBABA%2CQQQ%2CADBE%2CMSTR%2CBE%2CVST%2CTLN%2CSRE%2CNEE%2CCEG%2CVRT%2CGEV%2CPATH%2CVFF%2CPYPL%2CNKE%2CMA%2CAZO%2COKTA%2CMFST%2CMETA%2CPENG%2CLGN&interval=1d&fields=ohlc&mode=anchor HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/predictions/by-horizon?target_date=2026-05-09&horizons=1%2C2%2C3%2C4%2C5&tickers=INTC%2CPBR%2CAVGO%2CWMT%2CBIDU%2CIJS%2CETH%2CPLG%2CUNH%2CKR%2CADC%2CFRSH%2COXY%2CGOLD%2CAAPL%2CJD.US%2CPDD%2CBABA%2CQQQ%2CADBE%2CMSTR%2CBE%2CVST%2CTLN%2CSRE%2CNEE%2CCEG%2CVRT%2CGEV%2CPATH%2CVFF%2CPYPL%2CNKE%2CMA%2CAZO%2COKTA%2CMFST%2CMETA%2CPENG%2CLGN&interval=1d&fields=ohlc&mode=anchor HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "OPTIONS /v1/predictions/by-target?ticker=INTC&target_date=2026-05-10&interval=1d&fields=close HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "OPTIONS /v1/ohlcv?symbol=INTC&interval=1d&refresh=false&limit=60 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/ohlcv?symbol=INTC&interval=1d&refresh=false&limit=60 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/predictions/by-target?ticker=INTC&target_date=2026-05-10&interval=1d&fields=close HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "OPTIONS /v1/accuracy/grid?interval=1d&last_n=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/accuracy/drift HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/accuracy/grid?interval=1d&last_n=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "OPTIONS /v1/accuracy/pair?ticker=AAPL&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "OPTIONS /v1/accuracy/pair?ticker=ADBE&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/accuracy/pair?ticker=AAPL&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/accuracy/pair?ticker=ADBE&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "OPTIONS /v1/accuracy/pair?ticker=ADC&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/accuracy/pair?ticker=ADC&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "OPTIONS /v1/accuracy/pair?ticker=NVDA&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/accuracy/pair?ticker=NVDA&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "OPTIONS /v1/accuracy/pair?ticker=OXY&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/accuracy/pair?ticker=OXY&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "OPTIONS /v1/accuracy/pair?ticker=PDD&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/accuracy/pair?ticker=PDD&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "OPTIONS /v1/accuracy/pair?ticker=PLG&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/accuracy/pair?ticker=PLG&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "OPTIONS /v1/accuracy/pair?ticker=SRE&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/accuracy/pair?ticker=SRE&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "OPTIONS /v1/accuracy/pair?ticker=UNH&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/accuracy/pair?ticker=UNH&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "OPTIONS /v1/accuracy/pair?ticker=VFF&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /v1/accuracy/pair?ticker=VFF&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "OPTIONS /v1/accuracy/pair?ticker=VRT&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/accuracy/pair?ticker=VRT&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "OPTIONS /v1/accuracy/pair?ticker=WMT&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/accuracy/pair?ticker=WMT&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/accuracy/pair?ticker=VRT&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "OPTIONS /v1/accuracy/pair?ticker=BABA&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/accuracy/pair?ticker=BABA&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/accuracy/pair?ticker=ADC&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/accuracy/pair?ticker=ADBE&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /v1/accuracy/pair?ticker=AAPL&horizon_offset=1&model_id=kronos_base&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52505 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52539 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52550 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52563 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52585 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52609 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52630 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52638 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52654 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52654 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52686 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52713 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52763 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52775 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52798 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52825 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52825 - "OPTIONS /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52825 - "GET /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52825 - "OPTIONS /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52825 - "GET /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52852 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52865 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52888 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52910 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52910 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52913 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52931 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52951 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52976 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52986 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52997 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53004 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53019 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53090 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53101 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "OPTIONS /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "OPTIONS /v1/macro/ratio?numerator=HG%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "OPTIONS /v1/macro/ratio?numerator=CL%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53115 - "OPTIONS /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53117 - "OPTIONS /v1/macro/ratio?numerator=IWM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "OPTIONS /v1/macro/series?symbol=WALCL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "OPTIONS /v1/macro/series?symbol=T10YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "OPTIONS /v1/macro/series?symbol=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53115 - "OPTIONS /v1/macro/spread?minuend=MORTGAGE30US&subtrahend=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53118 - "OPTIONS /v1/macro/ratio?numerator=EEM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53117 - "OPTIONS /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "OPTIONS /v1/macro/ratio?numerator=TLT&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "OPTIONS /v1/macro/series?symbol=DX-Y.NYB&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "OPTIONS /v1/macro/series?symbol=%5EVIX&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53115 - "OPTIONS /v1/macro/series?symbol=DFII10&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53118 - "OPTIONS /v1/macro/series?symbol=T5YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53117 - "OPTIONS /v1/macro/ratio?numerator=PPIACO&denominator=CPIAUCSL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "OPTIONS /v1/macro/ratio?numerator=DBC&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "GET /v1/macro/ratio?numerator=GC%3DF&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53118 - "GET /v1/macro/ratio?numerator=RSP&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53115 - "GET /v1/macro/ratio?numerator=CL%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "GET /v1/macro/ratio?numerator=HG%3DF&denominator=GC%3DF&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53117 - "GET /v1/macro/ratio?numerator=IWM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53118 - "GET /v1/macro/series?symbol=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "GET /v1/macro/series?symbol=T10YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "GET /v1/macro/ratio?numerator=EEM&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53117 - "GET /v1/macro/ratio?numerator=HYG&denominator=LQD&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "GET /v1/macro/series?symbol=DX-Y.NYB&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53115 - "GET /v1/macro/spread?minuend=MORTGAGE30US&subtrahend=WGS10YR&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "GET /v1/macro/series?symbol=WALCL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53118 - "GET /v1/macro/ratio?numerator=TLT&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53117 - "GET /v1/macro/series?symbol=DFII10&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "GET /v1/macro/series?symbol=%5EVIX&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53115 - "GET /v1/macro/series?symbol=T5YIE&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "GET /v1/macro/ratio?numerator=PPIACO&denominator=CPIAUCSL&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "GET /v1/macro/ratio?numerator=DBC&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "GET /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "GET /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "OPTIONS /v1/watchlist?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "OPTIONS /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "GET /v1/watchlist?limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "OPTIONS /v1/predictions/by-horizon?target_date=2026-05-07&horizons=1%2C2%2C3%2C4%2C5&tickers=INTC%2CPBR%2CAVGO%2CWMT%2CBIDU%2CIJS%2CETH%2CPLG%2CUNH%2CKR%2CADC%2CFRSH%2COXY%2CGOLD%2CAAPL%2CJD.US%2CPDD%2CBABA%2CQQQ%2CADBE%2CMSTR%2CBE%2CVST%2CTLN%2CSRE%2CNEE%2CCEG%2CVRT%2CGEV%2CPATH%2CVFF%2CPYPL%2CNKE%2CMA%2CAZO%2COKTA%2CMFST%2CMETA%2CPENG%2CLGN&interval=1d&fields=ohlc&mode=anchor HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "GET /v1/predictions/by-horizon?target_date=2026-05-07&horizons=1%2C2%2C3%2C4%2C5&tickers=INTC%2CPBR%2CAVGO%2CWMT%2CBIDU%2CIJS%2CETH%2CPLG%2CUNH%2CKR%2CADC%2CFRSH%2COXY%2CGOLD%2CAAPL%2CJD.US%2CPDD%2CBABA%2CQQQ%2CADBE%2CMSTR%2CBE%2CVST%2CTLN%2CSRE%2CNEE%2CCEG%2CVRT%2CGEV%2CPATH%2CVFF%2CPYPL%2CNKE%2CMA%2CAZO%2COKTA%2CMFST%2CMETA%2CPENG%2CLGN&interval=1d&fields=ohlc&mode=anchor HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "OPTIONS /v1/the-street/tier/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "OPTIONS /v1/the-street/tier/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53121 - "OPTIONS /v1/the-street/tier/3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53121 - "GET /v1/the-street/tier/3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "GET /v1/the-street/tier/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "GET /v1/the-street/tier/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "OPTIONS /v1/tv-context/vision-spend?month=2026-05 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "GET /v1/tv-context/vision-spend?month=2026-05 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "OPTIONS /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "GET /v1/hypotheses?status=active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "OPTIONS /v1/research/skills HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "OPTIONS /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53110 - "GET /v1/research/skills HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53112 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53128 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53128 - "OPTIONS /v1/opportunities?status=open&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53128 - "GET /v1/opportunities?status=open&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53128 - "OPTIONS /v1/opportunities?status=acted&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53128 - "GET /v1/opportunities?status=acted&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53128 - "OPTIONS /v1/opportunities?status=dismissed&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53128 - "GET /v1/opportunities?status=dismissed&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53128 - "OPTIONS /v1/opportunities?status=expired&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53128 - "GET /v1/opportunities?status=expired&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53128 - "OPTIONS /v1/trades?limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53128 - "GET /v1/trades?limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "OPTIONS /v1/admin/loops HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "OPTIONS /v1/admin/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53136 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "GET /v1/admin/settings HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "OPTIONS /v1/admin/costs/monthly HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53136 - "OPTIONS /v1/admin/costs/recent?days=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "GET /v1/admin/costs/monthly HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53136 - "GET /v1/admin/costs/recent?days=30 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "GET /v1/admin/settings HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "OPTIONS /v1/admin/retention HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "GET /v1/admin/retention HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "GET /v1/admin/retention HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "OPTIONS /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "GET /v1/schedule HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "OPTIONS /v1/analysis/jobs?limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53136 - "OPTIONS /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53139 - "OPTIONS /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53139 - "GET /v1/analysis/queue?status=pending&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53136 - "GET /v1/analysis/queue?status=running&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "GET /v1/analysis/jobs?limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "GET /v1/admin/settings HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53136 - "GET /v1/admin/loops HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53136 - "GET /v1/admin/costs/monthly HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "GET /v1/admin/costs/recent?days=30 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "GET /v1/admin/settings HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53134 - "GET /v1/research/queries?limit=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53145 - "OPTIONS /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53147 - "OPTIONS /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53147 - "GET /v1/boards/61e84b40-80dd-41db-a55d-31903c3d90a1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53145 - "GET /v1/boards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53153 - "OPTIONS /v1/macro/ratio?numerator=XLK&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53155 - "OPTIONS /v1/macro/ratio?numerator=XLF&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53156 - "OPTIONS /v1/macro/ratio?numerator=XLE&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53158 - "OPTIONS /v1/macro/ratio?numerator=XLV&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53160 - "OPTIONS /v1/macro/ratio?numerator=XLI&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53161 - "OPTIONS /v1/macro/ratio?numerator=XLP&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53153 - "OPTIONS /v1/macro/ratio?numerator=XLY&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53155 - "OPTIONS /v1/macro/ratio?numerator=XLU&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53156 - "OPTIONS /v1/macro/ratio?numerator=XLB&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53155 - "GET /v1/macro/ratio?numerator=XLI&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53158 - "GET /v1/macro/ratio?numerator=XLK&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53161 - "GET /v1/macro/ratio?numerator=XLE&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53153 - "GET /v1/macro/ratio?numerator=XLV&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53160 - "GET /v1/macro/ratio?numerator=XLF&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53155 - "GET /v1/macro/ratio?numerator=XLY&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53156 - "GET /v1/macro/ratio?numerator=XLP&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53158 - "GET /v1/macro/ratio?numerator=XLU&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53161 - "GET /v1/macro/ratio?numerator=XLB&denominator=SPY&since=2021-05-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53170 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53177 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53187 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53194 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53209 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53231 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53247 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53269 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53276 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53276 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53283 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53296 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53303 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53313 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53340 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53349 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53370 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53394 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53412 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53426 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53441 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53460 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53482 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53498 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53561 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53593 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53612 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53624 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53648 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53657 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53657 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53660 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53687 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53700 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53715 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53735 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54048 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54072 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54092 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54107 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54115 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54376 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54393 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54401 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54530 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54543 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54566 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54579 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54592 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54600 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54600 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54604 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54616 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54641 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54778 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54979 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54991 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54997 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55020 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55038 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55051 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55057 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55061 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55074 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55087 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55104 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55117 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55130 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55145 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55183 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55207 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55212 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55212 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55215 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55246 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55252 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55269 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55277 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55288 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55296 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55318 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55387 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55740 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56140 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56183 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56456 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56485 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56490 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56490 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56492 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56513 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56518 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56531 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56540 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56557 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56566 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56597 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56610 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56619 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56623 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56635 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57170 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57320 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58641 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58660 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58671 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58696 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58709 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58723 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58884 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58884 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58887 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58898 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58906 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58916 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58935 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59046 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59268 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59514 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59532 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59689 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59728 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59746 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59778 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59796 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59813 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59825 - "OPTIONS /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59825 - "GET /v1/hypotheses/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59831 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59850 - "GET /health HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [27730]

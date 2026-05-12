@@ -21,6 +21,8 @@ Architecture Decision Records — one file per significant choice, with the why 
 | 013 | [Hypothesis object — schema, DSL, cascade timing, ship-shape](013-hypothesis-object.md) | 2026-05-01 | Accepted |
 | 014 | [Vault-indexer — substrate, storage, embedder, authoring discipline](014-vault-indexer.md) | 2026-05-02 | Accepted |
 | 015 | [Research stress-test endpoint — Phase 3](015-research-stress-test.md) | 2026-05-02 | Accepted |
+| 016 | [TV Context — no browser automation, webhook-first](016-tv-context-no-browser-automation.md) | 2026-05-04 | Accepted |
+| 017 | [TV Context vision — default ON for screenshot ingest](017-tv-context-vision-default-on.md) | 2026-05-04 | Accepted |
 
 ## How to add a new ADR
 
@@ -31,8 +33,15 @@ Architecture Decision Records — one file per significant choice, with the why 
 
 ## When to add an ADR vs a backlog/tech_debt entry
 
-- **ADR** — a decision that shapes design or trade-offs (we picked X over Y for these reasons).
-- **backlog** — a feature deferred for product reasons.
-- **tech_debt** — code cruft we knowingly left behind.
+- **ADR** (this folder) — a decision that shapes design or trade-offs (we picked X over Y for these reasons).
+- **[backlog](../status/backlog.md)** — a feature deferred for product reasons.
+- **[tech_debt](../status/tech_debt.md)** — code cruft we knowingly left behind.
 
 These overlap. When in doubt: if you're choosing between options, ADR. If you're deciding to NOT do something, backlog or tech_debt.
+
+## See also
+
+- [`../guides/principles.md`](../guides/principles.md) — north-star principles that ADRs reference
+- [`../status/`](../status/) — living state (roadmap / backlog / tech debt)
+- [`../plans/`](../plans/) — phase plans where ADRs often originate
+- [`../../CLAUDE.md`](../../CLAUDE.md) — top-level reading paths
