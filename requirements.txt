@@ -23,6 +23,10 @@ yt-dlp
 feedparser
 openai-whisper
 
+# Video-vision L2 (Scene + OCR). Requires `brew install tesseract` system
+# binary too. See .claude/modules/video_vision.md.
+pytesseract
+
 # Kronos runtime (always installed; KRONOS_ENABLED toggles use, not install).
 torch>=2.0.0
 huggingface_hub==0.33.1

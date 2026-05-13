@@ -212,19 +212,31 @@ def render_draft(
     transcript: str,
     cfg: dict[str, Any],
     transcript_source: str,             # 'captions' | 'whisper'
+    visual_notes_md: Optional[str] = None,
+    visual_notes_frame_count: int = 0,
 ) -> tuple[str, dict[str, Any]]:
-    """Return (body_md, metadata_dict) for the draft note."""
+    """Return (body_md, metadata_dict) for the draft note.
+
+    When ``visual_notes_md`` is non-empty, splice it between the header
+    block and the transcript so vault search hits visual content first.
+    """
     author = cfg.get("author") or "(unknown)"
     body_lines = [
         f"# {entry.title}",
         "",
         f"*{author} · {entry.published_at} · [Watch]({entry.url})*",
         "",
+    ]
+    if visual_notes_md:
+        body_lines.append(visual_notes_md)
+        # render_visual_notes_table emits its own trailing blank line; no
+        # need to add another.
+    body_lines.extend([
         "## Transcript",
         f"_(source: {transcript_source})_",
         "",
         transcript or "_(empty)_",
-    ]
+    ])
     metadata = {
         "kind": cfg.get("default_kind", "video"),
         "title": entry.title,
@@ -238,6 +250,9 @@ def render_draft(
         "asr": transcript_source,
         "draft": True,
     }
+    if visual_notes_frame_count > 0:
+        metadata["visual_notes_count"] = visual_notes_frame_count
+        metadata["visual_notes_strategy"] = "L2-OCR"
     return "\n".join(body_lines), metadata
 
 
@@ -366,6 +381,8 @@ def ingest_one(
             regular_entries.append(entry)
 
     for entry in regular_entries:
+        visual_notes_md = ""
+        visual_notes_count = 0
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             transcript: Optional[str] = None
@@ -382,11 +399,36 @@ def ingest_one(
                 )
                 fetched_ids.append(entry.video_id)
                 continue
+
+            # Optional per-channel video-vision. Runs inside the same
+            # TemporaryDirectory so frames + downloaded video are deleted
+            # on block exit. Failure here NEVER blocks the draft.
+            try:
+                from . import video_vision as _vv
+
+                vc = _vv.VisionConfig.from_mapping(cfg.get("vision"))
+                if vc.enabled:
+                    vr = _vv.process_video(entry.url, cfg=vc, work_dir=tmp_path)
+                    visual_notes_md = vr.markdown
+                    visual_notes_count = vr.frame_count
+                    if vr.diagnostics:
+                        logger.info(
+                            "video-vision %s: %s",
+                            entry.video_id, vr.diagnostics,
+                        )
+            except Exception as e:                          # noqa: BLE001
+                logger.warning(
+                    "video-vision failed for %s (%s); proceeding without notes",
+                    entry.video_id, e,
+                )
+
         body, metadata = render_draft(
             entry=entry,
             transcript=transcript,
             cfg=cfg,
             transcript_source=source,
+            visual_notes_md=visual_notes_md,
+            visual_notes_frame_count=visual_notes_count,
         )
         draft_path = write_draft(
             vault_root=vault_root,
