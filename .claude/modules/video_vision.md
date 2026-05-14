@@ -98,6 +98,101 @@ Every external boundary returns `""` or empty `VisionResult` on error rather tha
 
 `render_visual_notes_table([])` returns `""` — no orphan `## Visual notes` heading when nothing usable comes through.
 
+## Structured chart references (Phase A/A2/B/C — 2026-05-14)
+
+Beyond free-form captions, channels with `vision.chart_extraction.enabled: true` get **structured chart-reference extraction** — Stage 1 Qwen2-VL emits YAML/JSON with `chart_type`, `timeframe`, `tickers`, `topics`, `caption` fields; Stage 2 (Python heuristic in `chart_extractor.py`) regex-salvages anything that didn't parse; Stage 3 last-resort regex extracts individual fields directly from raw output.
+
+**End-to-end signal recovery (2026-05-14 pilot, click-capital):** 5 frames → 5 structured chart_references emitted. Even on YAML/JSON parse failure, the regex-salvage path captures `chart_type` + `timeframe` + `tickers` + `caption` fields independently.
+
+### Channel YAML schema (extended)
+
+```yaml
+vision:
+  enabled: true
+  frame_budget: 50
+  scene_threshold: 0.10
+  min_gap_seconds: 10
+  ssim_threshold: 0.92
+  ocr_lang: eng
+  semantic_captions: true       # L3 free-form captions
+  chart_extraction:             # NEW — Phase A/A2/B/C
+    enabled: true               # default OFF; finance channels only
+    rollup_cap: 10              # entries kept in channel _index.md
+```
+
+### What lands in the vault
+
+**Per-video frontmatter** gains:
+
+```yaml
+chart_references:
+  - timestamp: "5:27"
+    timestamp_seconds: 327.0
+    chart_type: line
+    timeframe: 1h
+    tickers: [AAPL, MSFT, AMZN]
+    topics: [AI infrastructure, Fed minutes, bubble parallel]
+    caption: "If you weren't trading in 1999-2000..."
+visual_notes_strategy: L3-structured
+```
+
+**Per-video body** gains a one-line summary block above the Visual Notes table:
+
+```markdown
+**Charts referenced (5):** 2× line, 1× bar, 1× candlestick (1d), 1× gauge
+**Timeframes:** 4h, 1d, 1w
+**Tickers:** BTC, META, AAPL
+**Topics:** AI bubble parallel, semiconductor boom, Fed minutes
+```
+
+**Per-channel `_index.md`** gains a sentinel-bounded auto-section:
+
+```markdown
+<!-- AUTO:chart-references:start -->
+## Recent chart references (auto-generated)
+
+| Date | Video | Charts |
+|---|---|---|
+| 2026-05-14 | [the-bull-and-bear-statue](Videos/click-capital/2026-W19-foo.md) | BTC (4h candlestick); NASDAQ (line) |
+| 2026-05-13 | [semiconductor-boom](Videos/click-capital/2026-W19-bar.md) | KOSPI (1d candlestick) |
+
+_Auto-generated; operator-edited content above and below this block is preserved._
+<!-- AUTO:chart-references:end -->
+```
+
+Operator-authored content above and below the sentinel markers is **preserved across upserts**. Dedupe key is `rel_path` (markdown link target); FIFO eviction at `rollup_cap`. The vault-indexer's `/folder-context` endpoint returns `_index.md` verbatim, so research bundles + hypothesis stress-tests inherit this signal automatically.
+
+### Ticker whitelist
+
+Stage 2 heuristic ticker extraction filters against the dynamic union of:
+- Operator's `watchlist` table (roster)
+- All `boards` tickers
+- The Street tier-1/2 from the last 4 snapshots
+
+Loaded fresh at the start of each video ingest via `chart_extractor.load_ticker_whitelist_sync()`. False positives like `AI`, `USA`, `GDP` are filtered by a static stoplist even with empty whitelist.
+
+### Three-stage extraction chain
+
+| Stage | What it does | Source |
+|---|---|---|
+| 1. Qwen2-VL structured YAML/JSON | LLM-extracted full structured output | `vlm_adapter.caption_frame_structured` |
+| 2. Heuristic regex on caption text | Stage 2 backfill via regex on prose | `chart_extractor.extract_from_caption` |
+| 3. Field-by-field regex salvage from raw output | Last-resort recovery on parse failure | `vlm_adapter._regex_salvage` |
+
+Stage 3 is critical — Qwen2-VL frequently outputs JSON-fenced-as-YAML with subtle invalidities (trailing commas, hallucinated repeats). The field-by-field regex catches `chart_type: line` / `timeframe: 4h` / `tickers: ['BTC']` patterns regardless of overall validity.
+
+### Files
+
+- `tools/vault_indexer/ingest/vlm_adapter.py` — Stage 1 + Stage 3 (regex salvage)
+- `tools/vault_indexer/ingest/chart_extractor.py` — Stage 2 heuristic + whitelist loader
+- `tools/vault_indexer/ingest/vignette_updater.py` — channel `_index.md` upsert
+- `tools/vault_indexer/ingest/video_vision.py` — orchestrator
+- `tools/vault_indexer/ingest/youtube_channel.py` — render_draft + vignette wiring
+
+### Deferred to Commit 2 (next session)
+
+- **Ticker review queue** — Stage 1 emits tickers NOT in the whitelist; currently logged-only (`unknown_tickers` field on VisionResult). Phase D wires them to a new `app/ticker_review/` module with DB queue + Today UI strip + Sunday Obsidian digest. Plan: `.claude/plans/ok-now-we-have-distributed-anchor.md` "Phase D" section.
+
 ## L3 — semantic captions via MLX Qwen2-VL (Apple Silicon)
 
 Enable per channel with `vision.semantic_captions: true`. Adds a "Visual" column to the visual-notes table with a one-line VLM-generated caption per frame. Independent of OCR — captions and OCR are two signals that combine in a 3-column table.

@@ -205,6 +205,51 @@ def whisper_transcribe(url: str, *, work_dir: Path, model: str = "small") -> Opt
 # ---------------------------------------------------------------------------
 
 
+def _render_chart_summary_line(chart_refs: list[dict]) -> str:
+    """One-line summary block above the Visual Notes table.
+
+    Aggregates per-frame chart_references into:
+      "**Charts referenced (N):** ..."
+      "**Timeframes:** 1D, 4H"
+      "**Tickers:** BTC, META"
+
+    Empty input → empty string (no orphan heading).
+    """
+    if not chart_refs:
+        return ""
+    # Counts per (chart_type, timeframe) combo.
+    chart_counts: dict[str, int] = {}
+    timeframes: list[str] = []
+    tickers: list[str] = []
+    topics: list[str] = []
+    for r in chart_refs:
+        ct = r.get("chart_type") or "chart"
+        tf = r.get("timeframe") or ""
+        key = f"{tf} {ct}".strip() if tf else ct
+        chart_counts[key] = chart_counts.get(key, 0) + 1
+        if tf and tf not in timeframes:
+            timeframes.append(tf)
+        for t in r.get("tickers") or []:
+            if t not in tickers:
+                tickers.append(t)
+        for tp in r.get("topics") or []:
+            if tp not in topics:
+                topics.append(tp)
+    total = sum(chart_counts.values())
+    composition = ", ".join(
+        f"{n}× {k}" for k, n in sorted(chart_counts.items(), key=lambda kv: -kv[1])
+    )
+    lines: list[str] = []
+    lines.append(f"**Charts referenced ({total}):** {composition}")
+    if timeframes:
+        lines.append(f"**Timeframes:** {', '.join(timeframes)}")
+    if tickers:
+        lines.append(f"**Tickers:** {', '.join(tickers)}")
+    if topics:
+        lines.append(f"**Topics:** {', '.join(topics)}")
+    return "\n".join(lines) + "\n"
+
+
 def render_draft(
     *,
     entry: FeedEntry,
@@ -213,11 +258,15 @@ def render_draft(
     transcript_source: str,             # 'captions' | 'whisper'
     visual_notes_md: Optional[str] = None,
     visual_notes_frame_count: int = 0,
+    chart_references: Optional[list[dict]] = None,
 ) -> tuple[str, dict[str, Any]]:
     """Return (body_md, metadata_dict) for the draft note.
 
     When ``visual_notes_md`` is non-empty, splice it between the header
     block and the transcript so vault search hits visual content first.
+    When ``chart_references`` is non-empty, a one-line summary block is
+    inserted above the Visual Notes table, and the structured list is
+    embedded in frontmatter as ``chart_references``.
     """
     author = cfg.get("author") or "(unknown)"
     body_lines = [
@@ -226,17 +275,18 @@ def render_draft(
         f"*{author} · {entry.published_at} · [Watch]({entry.url})*",
         "",
     ]
+    summary_line = _render_chart_summary_line(chart_references or [])
+    if summary_line:
+        body_lines.append(summary_line)
     if visual_notes_md:
         body_lines.append(visual_notes_md)
-        # render_visual_notes_table emits its own trailing blank line; no
-        # need to add another.
     body_lines.extend([
         "## Transcript",
         f"_(source: {transcript_source})_",
         "",
         transcript or "_(empty)_",
     ])
-    metadata = {
+    metadata: dict[str, Any] = {
         "kind": cfg.get("default_kind", "video"),
         "title": entry.title,
         "author": author,
@@ -252,6 +302,9 @@ def render_draft(
     if visual_notes_frame_count > 0:
         metadata["visual_notes_count"] = visual_notes_frame_count
         metadata["visual_notes_strategy"] = "L2-OCR"
+    if chart_references:
+        metadata["chart_references"] = chart_references
+        metadata["visual_notes_strategy"] = "L3-structured"
     return "\n".join(body_lines), metadata
 
 
@@ -382,6 +435,10 @@ def ingest_one(
     for entry in regular_entries:
         visual_notes_md = ""
         visual_notes_count = 0
+        chart_refs: list[dict] = []
+        unknown_tickers: list[str] = []
+        chart_extraction_on = False
+        rollup_cap = 10
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             transcript: Optional[str] = None
@@ -406,10 +463,14 @@ def ingest_one(
                 from . import video_vision as _vv
 
                 vc = _vv.VisionConfig.from_mapping(cfg.get("vision"))
+                chart_extraction_on = vc.chart_extraction.enabled
+                rollup_cap = vc.chart_extraction.rollup_cap
                 if vc.enabled:
                     vr = _vv.process_video(entry.url, cfg=vc, work_dir=tmp_path)
                     visual_notes_md = vr.markdown
                     visual_notes_count = vr.frame_count
+                    chart_refs = vr.chart_references
+                    unknown_tickers = vr.unknown_tickers
                     if vr.diagnostics:
                         logger.info(
                             "video-vision %s: %s",
@@ -428,7 +489,17 @@ def ingest_one(
             transcript_source=source,
             visual_notes_md=visual_notes_md,
             visual_notes_frame_count=visual_notes_count,
+            chart_references=chart_refs if chart_refs else None,
         )
+
+        # Unknown tickers (Stage 1 emitted but not in operator's whitelist).
+        # Phase D wires these to the ticker_review queue; for Commit 1 we
+        # just log them. Operator can scan logs to see what's accumulating.
+        if unknown_tickers:
+            logger.info(
+                "ticker-review pending: video=%s tickers=%s",
+                entry.video_id, unknown_tickers,
+            )
         draft_path = write_draft(
             vault_root=vault_root,
             rel_dir=rel_dir,
@@ -442,6 +513,35 @@ def ingest_one(
             written_draft_paths.append(str(draft_path.relative_to(vault_root)))
         except ValueError:
             written_draft_paths.append(str(draft_path))
+
+        # Channel _index.md auto-enrichment (sentinel-bounded block).
+        # Only fires when chart_extraction is on AND there are refs to summarise.
+        if chart_extraction_on and chart_refs:
+            try:
+                from . import vignette_updater as _vu
+
+                summary = _vu.summarise_chart_references(chart_refs)
+                if summary:
+                    try:
+                        rel_video_path = str(draft_path.relative_to(vault_root))
+                    except ValueError:
+                        rel_video_path = str(draft_path)
+                    _vu.upsert(
+                        _vu.channel_index_path_for(vault_root, rel_dir),
+                        new_entry={
+                            "video_id": entry.video_id,
+                            "published_at": entry.published_at,
+                            "title": entry.title,
+                            "rel_path": rel_video_path,
+                            "summary": summary,
+                        },
+                        rollup_cap=rollup_cap,
+                    )
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    "vignette_updater failed for channel=%s video=%s: %s",
+                    cfg.get("author") or rel_dir, entry.video_id, e,
+                )
 
         # Persist incrementally so a Ctrl-C mid-backfill doesn't lose the
         # progress made so far. Re-loads the full cfg from disk to merge any

@@ -66,7 +66,27 @@ DEFAULT_PROMPT = (
     "(1D, 4H, weekly, etc). Otherwise describe what is shown."
 )
 
+# Structured (L3+) prompt. Used when chart_extraction is enabled. Asks
+# Qwen2-VL to output YAML for downstream parsing into frontmatter
+# chart_references list. Defensive parse falls back to free-form via
+# the chart_extractor heuristic — see vlm_adapter.caption_frame_structured.
+STRUCTURED_PROMPT = (
+    "Analyse this video frame. Output ONLY a YAML block with these keys "
+    "(use the literal word null when unclear):\n"
+    "  chart_type: one of [candlestick, line, bar, area, gauge, scatter, "
+    "histogram, pie, other, none]\n"
+    "  timeframe: one of [1m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, "
+    "2d, 3d, 1w, 2w, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, other, null]\n"
+    "  tickers: list of UPPERCASE symbols visible on the chart "
+    "(empty list when none)\n"
+    "  topics: list of 1-3 short topic tags (e.g. 'AI infrastructure', "
+    "'Fed minutes', 'bubble parallel')\n"
+    "  caption: one-sentence prose description for human reading\n"
+    "Do not add anything outside the YAML block."
+)
+
 DEFAULT_MAX_TOKENS = 60
+STRUCTURED_MAX_TOKENS = 200
 
 
 # Module-level cache. (model, processor, config) tuple — None until
@@ -214,3 +234,232 @@ def reset_model_cache() -> None:
     global _MODEL_CACHE, _LOAD_FAILED
     _MODEL_CACHE = None
     _LOAD_FAILED = False
+
+
+# ---------------------------------------------------------------------------
+# Structured caption (chart_extraction path)
+# ---------------------------------------------------------------------------
+
+
+def _regex_salvage(raw: str) -> dict:
+    """Last-resort field-by-field extraction from raw YAML/JSON-ish output.
+
+    When the structured parser fails entirely, scan the raw text with
+    individual regexes for ``chart_type``, ``timeframe``, ``tickers``,
+    ``topics``, ``caption``. Each field is independently salvageable —
+    a partial result is better than no result.
+
+    Returns a dict with only the keys it could find. Caller merges with
+    the empty default.
+    """
+    import re as _re
+
+    out: dict = {}
+
+    def _scalar(field: str) -> Optional[str]:
+        """Find ``field: "value"`` or ``"field": "value"`` or ``field: value``."""
+        patterns = [
+            rf'"{field}"\s*:\s*"([^"]+)"',
+            rf"'{field}'\s*:\s*'([^']+)'",
+            rf'{field}\s*:\s*"([^"]+)"',
+            rf"{field}\s*:\s*'([^']+)'",
+            rf'{field}\s*:\s*([A-Za-z0-9_\-]+)',
+        ]
+        for p in patterns:
+            m = _re.search(p, raw, _re.IGNORECASE)
+            if m:
+                val = m.group(1).strip()
+                if val.lower() in ("null", "none", ""):
+                    return None
+                return val
+        return None
+
+    def _list_field(field: str) -> list[str]:
+        """Find ``field: [a, b, c]`` or ``field: ['a', 'b']`` lists."""
+        m = _re.search(
+            rf'{field}\s*:\s*\[([^\]]*)\]', raw, _re.IGNORECASE,
+        )
+        if not m:
+            return []
+        inner = m.group(1)
+        items = _re.findall(r'["\']([^"\']+)["\']', inner)
+        # Filter junk + dedupe preserve order.
+        seen: set[str] = set()
+        result: list[str] = []
+        for item in items:
+            s = item.strip()
+            if not s or s.lower() in ("null", "none"):
+                continue
+            if s in seen:
+                continue
+            seen.add(s)
+            result.append(s)
+        return result
+
+    chart_type = _scalar("chart_type")
+    if chart_type:
+        out["chart_type"] = chart_type
+    timeframe = _scalar("timeframe")
+    if timeframe:
+        out["timeframe"] = timeframe
+    tickers = _list_field("tickers")
+    if tickers:
+        out["tickers"] = [t.upper() for t in tickers]
+    topics = _list_field("topics")
+    if topics:
+        out["topics"] = topics
+    caption = _scalar("caption")
+    if caption:
+        out["caption"] = _normalise(caption)
+    return out
+
+
+def _parse_structured_yaml(raw: str) -> Optional[dict]:
+    """Best-effort structured parse. Returns dict on success, None on failure.
+
+    Qwen2-VL sometimes outputs strict JSON inside a ```yaml fence — strict
+    JSON is technically a subset of YAML, but `yaml.safe_load` can choke
+    on quirks. So we try YAML first, then JSON, then a regex caption
+    extractor as a last resort before giving up.
+    """
+    if not raw:
+        return None
+    text = raw.strip()
+    # Strip ``` fences if present.
+    if text.startswith("```"):
+        lines = text.split("\n")
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        # Drop any trailing fence (possibly orphaned mid-content).
+        while lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+
+    # 1. Try YAML.
+    try:
+        import yaml
+        data = yaml.safe_load(text)
+        if isinstance(data, dict):
+            return data
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 2. Try JSON (handles JSON-with-trailing-commas + minor quirks via
+    # forgiving extraction — sometimes Qwen wraps JSON as YAML and the
+    # YAML parser dies on unquoted-key heuristics).
+    try:
+        import json
+        # Truncate at first valid }-balance for hallucination tolerance.
+        # Find the first complete top-level JSON object via brace counting.
+        if text.startswith("{"):
+            depth = 0
+            end_idx = -1
+            in_str = False
+            esc = False
+            for i, ch in enumerate(text):
+                if esc:
+                    esc = False
+                    continue
+                if ch == "\\":
+                    esc = True
+                    continue
+                if ch == '"':
+                    in_str = not in_str
+                    continue
+                if in_str:
+                    continue
+                if ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        end_idx = i + 1
+                        break
+            if end_idx > 0:
+                data = json.loads(text[:end_idx])
+                if isinstance(data, dict):
+                    return data
+    except Exception:  # noqa: BLE001
+        pass
+
+    return None
+
+
+def caption_frame_structured(
+    image_path: Path,
+    *,
+    max_tokens: int = STRUCTURED_MAX_TOKENS,
+) -> dict:
+    """Run the structured-output Qwen2-VL prompt. Returns a dict with keys:
+
+      chart_type: str | None
+      timeframe: str | None
+      tickers: list[str]
+      topics: list[str]
+      caption: str
+      raw: str (the full model output for audit)
+      parse_failed: bool (True when YAML couldn't be parsed)
+
+    Caller (chart_extractor) decides whether to invoke the heuristic
+    fallback based on `parse_failed` or empty structured fields.
+    """
+    empty: dict = {
+        "chart_type": None,
+        "timeframe": None,
+        "tickers": [],
+        "topics": [],
+        "caption": "",
+        "raw": "",
+        "parse_failed": True,
+    }
+    if not available():
+        return empty
+    if not Path(image_path).exists():
+        return empty
+    if _load_model() is None:
+        return empty
+    try:
+        raw = _generate_once(image_path, prompt=STRUCTURED_PROMPT, max_tokens=max_tokens)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("vlm_adapter (structured): generation failed: %s", e)
+        return empty
+
+    parsed = _parse_structured_yaml(raw)
+    if parsed is None:
+        logger.warning(
+            "vlm_adapter (structured): YAML/JSON parse failed for %s; raw=%s",
+            image_path.name, raw[:200],
+        )
+        # Regex-salvage individual fields from the raw output. Avoids
+        # putting raw YAML/JSON garbage into the visual-notes table cell
+        # AND tries to preserve structured signal field-by-field. Caller
+        # may still invoke the chart_extractor heuristic on top of this.
+        return {**empty, "raw": raw, **_regex_salvage(raw)}
+
+    # Normalise fields with defensive type coercion.
+    def _to_list_of_str(v: Any) -> list[str]:
+        if not v:
+            return []
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        if isinstance(v, list):
+            return [str(s).strip() for s in v if s is not None and str(s).strip()]
+        return []
+
+    def _to_opt_str(v: Any) -> Optional[str]:
+        if v is None:
+            return None
+        s = str(v).strip()
+        if not s or s.lower() == "null":
+            return None
+        return s
+
+    return {
+        "chart_type": _to_opt_str(parsed.get("chart_type")),
+        "timeframe": _to_opt_str(parsed.get("timeframe")),
+        "tickers": [t.upper() for t in _to_list_of_str(parsed.get("tickers"))],
+        "topics": _to_list_of_str(parsed.get("topics")),
+        "caption": _normalise(str(parsed.get("caption") or "")),
+        "raw": raw,
+        "parse_failed": False,
+    }

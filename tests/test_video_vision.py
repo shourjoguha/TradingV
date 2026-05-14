@@ -405,3 +405,152 @@ def test_vision_config_semantic_captions_default_false() -> None:
 def test_vision_config_semantic_captions_yaml_flag() -> None:
     cfg = VisionConfig.from_mapping({"enabled": True, "semantic_captions": True})
     assert cfg.semantic_captions is True
+
+
+# ---------------------------------------------------------------------------
+# chart_extraction nested config + 2-stage extraction wiring
+# ---------------------------------------------------------------------------
+
+
+def test_vision_config_chart_extraction_defaults_off() -> None:
+    cfg = VisionConfig.from_mapping({"enabled": True})
+    assert cfg.chart_extraction.enabled is False
+    assert cfg.chart_extraction.rollup_cap == 10
+
+
+def test_vision_config_chart_extraction_nested_parse() -> None:
+    cfg = VisionConfig.from_mapping({
+        "enabled": True,
+        "chart_extraction": {"enabled": True, "rollup_cap": 5},
+    })
+    assert cfg.chart_extraction.enabled is True
+    assert cfg.chart_extraction.rollup_cap == 5
+
+
+def test_vision_config_chart_extraction_handles_malformed() -> None:
+    """Missing or non-dict chart_extraction → defaults to disabled."""
+    cfg = VisionConfig.from_mapping({"enabled": True, "chart_extraction": None})
+    assert cfg.chart_extraction.enabled is False
+    cfg = VisionConfig.from_mapping({"enabled": True, "chart_extraction": "garbage"})
+    assert cfg.chart_extraction.enabled is False
+
+
+def test_process_video_chart_extraction_enabled_collects_structured(tmp_path: Path) -> None:
+    from tools.vault_indexer.ingest.video_vision import ChartExtractionConfig
+
+    cfg = VisionConfig(
+        enabled=True,
+        frame_budget=10,
+        chart_extraction=ChartExtractionConfig(enabled=True, rollup_cap=10),
+    )
+    fake_video = tmp_path / "video.mp4"
+    fake_video.touch()
+    fake_frames = [
+        SceneCandidate(timestamp_seconds=42.0, scene_score=0.5, frame_path=tmp_path / "f1.png"),
+    ]
+    from tools.vault_indexer.ingest import vlm_adapter as _vlm
+    from tools.vault_indexer.ingest import chart_extractor as _ce
+    structured_response = {
+        "chart_type": "candlestick",
+        "timeframe": "4h",
+        "tickers": ["BTC"],
+        "topics": ["bubble parallel"],
+        "caption": "Candlestick chart of BTC on 4H",
+        "raw": "...",
+        "parse_failed": False,
+    }
+    with patch.object(v, "_download_video", return_value=fake_video), patch.object(
+        v, "extract_scene_frames", return_value=(fake_frames, False)
+    ), patch.object(v, "ocr_frame", return_value="BTC"), patch.object(
+        _vlm, "available", return_value=True
+    ), patch.object(
+        _vlm, "caption_frame_structured", return_value=structured_response
+    ), patch.object(_ce, "load_ticker_whitelist_sync", return_value={"BTC"}):
+        result = v.process_video("https://x/v?v=abc", cfg=cfg, work_dir=tmp_path)
+    assert len(result.chart_references) == 1
+    ref = result.chart_references[0]
+    assert ref["chart_type"] == "candlestick"
+    assert ref["timeframe"] == "4h"
+    assert ref["tickers"] == ["BTC"]
+    assert ref["topics"] == ["bubble parallel"]
+    assert result.unknown_tickers == []
+    assert result.diagnostics["chart_extraction_enabled"] is True
+
+
+def test_process_video_chart_extraction_collects_unknown_tickers(tmp_path: Path) -> None:
+    """Stage 1 emits PLTR (not in whitelist) → unknown_tickers captures it."""
+    from tools.vault_indexer.ingest.video_vision import ChartExtractionConfig
+
+    cfg = VisionConfig(
+        enabled=True,
+        frame_budget=10,
+        chart_extraction=ChartExtractionConfig(enabled=True),
+    )
+    fake_video = tmp_path / "video.mp4"
+    fake_video.touch()
+    fake_frames = [
+        SceneCandidate(timestamp_seconds=10.0, scene_score=0.5, frame_path=tmp_path / "f1.png"),
+    ]
+    from tools.vault_indexer.ingest import vlm_adapter as _vlm
+    from tools.vault_indexer.ingest import chart_extractor as _ce
+    structured_response = {
+        "chart_type": "candlestick",
+        "timeframe": "1d",
+        "tickers": ["PLTR"],
+        "topics": [],
+        "caption": "PLTR on 1D",
+        "raw": "...",
+        "parse_failed": False,
+    }
+    with patch.object(v, "_download_video", return_value=fake_video), patch.object(
+        v, "extract_scene_frames", return_value=(fake_frames, False)
+    ), patch.object(v, "ocr_frame", return_value=""), patch.object(
+        _vlm, "available", return_value=True
+    ), patch.object(
+        _vlm, "caption_frame_structured", return_value=structured_response
+    ), patch.object(_ce, "load_ticker_whitelist_sync", return_value={"BTC", "META"}):
+        result = v.process_video("https://x/v?v=abc", cfg=cfg, work_dir=tmp_path)
+    # PLTR not in whitelist → goes to unknown bucket.
+    assert "PLTR" in result.unknown_tickers
+
+
+def test_process_video_chart_extraction_yaml_fail_uses_heuristic(tmp_path: Path) -> None:
+    """parse_failed=True path → chart_extractor fallback salvages from caption."""
+    from tools.vault_indexer.ingest.video_vision import ChartExtractionConfig
+
+    cfg = VisionConfig(
+        enabled=True,
+        frame_budget=10,
+        chart_extraction=ChartExtractionConfig(enabled=True),
+    )
+    fake_video = tmp_path / "video.mp4"
+    fake_video.touch()
+    fake_frames = [
+        SceneCandidate(timestamp_seconds=10.0, scene_score=0.5, frame_path=tmp_path / "f1.png"),
+    ]
+    from tools.vault_indexer.ingest import vlm_adapter as _vlm
+    from tools.vault_indexer.ingest import chart_extractor as _ce
+    # YAML parse failed but caption salvageable by regex.
+    structured_response = {
+        "chart_type": None,
+        "timeframe": None,
+        "tickers": [],
+        "topics": [],
+        "caption": "Candlestick chart of BTC on 4H",
+        "raw": "garbled output",
+        "parse_failed": True,
+    }
+    with patch.object(v, "_download_video", return_value=fake_video), patch.object(
+        v, "extract_scene_frames", return_value=(fake_frames, False)
+    ), patch.object(v, "ocr_frame", return_value=""), patch.object(
+        _vlm, "available", return_value=True
+    ), patch.object(
+        _vlm, "caption_frame_structured", return_value=structured_response
+    ), patch.object(_ce, "load_ticker_whitelist_sync", return_value={"BTC"}):
+        result = v.process_video("https://x/v?v=abc", cfg=cfg, work_dir=tmp_path)
+    # Heuristic salvaged the fields from the caption.
+    assert len(result.chart_references) == 1
+    ref = result.chart_references[0]
+    assert ref["chart_type"] == "candlestick"
+    assert ref["timeframe"] == "4h"
+    assert ref["tickers"] == ["BTC"]

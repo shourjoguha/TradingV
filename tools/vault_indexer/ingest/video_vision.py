@@ -58,6 +58,14 @@ _VISUAL_NOTES_HEADING = "## Visual notes"
 
 
 @dataclass(frozen=True)
+class ChartExtractionConfig:
+    """Per-channel chart-extraction config (nested under ``vision``)."""
+
+    enabled: bool = False
+    rollup_cap: int = 10  # entries kept in channel _index.md auto-block
+
+
+@dataclass(frozen=True)
 class VisionConfig:
     """Per-channel vision config parsed from ``_channel.yaml``."""
 
@@ -67,12 +75,20 @@ class VisionConfig:
     min_gap_seconds: int = DEFAULT_MIN_GAP_SECONDS
     ssim_threshold: Optional[float] = DEFAULT_SSIM_THRESHOLD
     ocr_lang: str = DEFAULT_OCR_LANG
-    semantic_captions: bool = False  # L3 — not implemented in L2 baseline.
+    semantic_captions: bool = False  # L3 free-form caption mode
+    chart_extraction: ChartExtractionConfig = ChartExtractionConfig()
 
     @classmethod
     def from_mapping(cls, raw: Optional[dict]) -> "VisionConfig":
         if not raw or not isinstance(raw, dict):
             return cls()
+        ce_raw = raw.get("chart_extraction") or {}
+        if not isinstance(ce_raw, dict):
+            ce_raw = {}
+        chart_extraction = ChartExtractionConfig(
+            enabled=bool(ce_raw.get("enabled", False)),
+            rollup_cap=int(ce_raw.get("rollup_cap", 10)),
+        )
         return cls(
             enabled=bool(raw.get("enabled", False)),
             frame_budget=int(raw.get("frame_budget", DEFAULT_FRAME_BUDGET)),
@@ -88,6 +104,7 @@ class VisionConfig:
             ),
             ocr_lang=str(raw.get("ocr_lang", DEFAULT_OCR_LANG)),
             semantic_captions=bool(raw.get("semantic_captions", False)),
+            chart_extraction=chart_extraction,
         )
 
 
@@ -108,6 +125,15 @@ class VisionResult:
     frame_count: int = 0
     truncated_to_budget: bool = False
     diagnostics: dict = field(default_factory=dict)
+    # Structured chart references (list of dicts with timestamp / chart_type /
+    # timeframe / tickers / topics / caption). Empty when chart_extraction
+    # disabled or no extractable signal. Caller embeds into frontmatter.
+    chart_references: list[dict] = field(default_factory=list)
+    # Tickers Stage 1 (Qwen2-VL) emitted but NOT in the operator's whitelist.
+    # Caller (channel poller) forwards these to the ticker_review queue
+    # (Phase D, separate commit). Until D ships, the channel poller ignores
+    # this field — captured here so the data path is wired.
+    unknown_tickers: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -495,36 +521,121 @@ def process_video(
         )
         if not frames:
             return VisionResult(diagnostics={**diag, "reason": "no_scene_frames"})
+
         rows: list[tuple[float, str]] = []
         captions: list[tuple[float, str]] = []
         use_captions = bool(cfg.semantic_captions)
-        # Lazy import keeps mlx_vlm out of the import graph when L3 is off.
+        use_extraction = bool(cfg.chart_extraction.enabled)
+
+        # Lazy imports keep mlx_vlm + chart_extractor out of the import
+        # graph when their features are off.
         vlm = None
-        if use_captions:
+        if use_captions or use_extraction:
             try:
                 from . import vlm_adapter as _vlm
                 if _vlm.available():
                     vlm = _vlm
                 else:
                     use_captions = False
+                    use_extraction = False
             except ImportError:
                 use_captions = False
+                use_extraction = False
+
+        # Whitelist resolution for chart_extraction (Stage 2 + unknown-ticker
+        # detection for the review queue).
+        whitelist: set[str] = set()
+        if use_extraction:
+            try:
+                from . import chart_extractor as _ce
+                whitelist = _ce.load_ticker_whitelist_sync()
+            except Exception:  # noqa: BLE001
+                pass
+
+        chart_refs: list[dict] = []
+        unknown_tickers: list[str] = []
+
         for c in frames:
             text = ocr_frame(c.frame_path, lang=cfg.ocr_lang)
             rows.append((c.timestamp_seconds, text))
-            if use_captions and vlm is not None:
+
+            # L3 path branches: free-form OR structured.
+            if use_extraction and vlm is not None:
+                structured = vlm.caption_frame_structured(c.frame_path)
+                # Stage 2 heuristic fallback. Two trigger conditions:
+                #   (a) YAML parse failed (raw garbled but some fields may
+                #       have been regex-salvaged inside vlm_adapter)
+                #   (b) Parse succeeded but emitted no usable signal
+                # In both cases, run the heuristic over the salvaged
+                # caption text AND backfill any missing fields. Stage 1
+                # signals always win — heuristic only fills gaps.
+                if structured.get("parse_failed") or not any(
+                    [structured.get("chart_type"), structured.get("timeframe"),
+                     structured.get("tickers"), structured.get("topics")]
+                ):
+                    try:
+                        from . import chart_extractor as _ce
+                        salvaged = _ce.extract_from_caption(
+                            structured.get("caption", "") or "",
+                            ticker_whitelist=whitelist,
+                        )
+                        for k in ("chart_type", "timeframe"):
+                            if not structured.get(k):
+                                structured[k] = salvaged.get(k)
+                        if not structured.get("tickers"):
+                            structured["tickers"] = salvaged.get("tickers", [])
+                    except Exception:  # noqa: BLE001
+                        pass
+
+                # Filter out the literal "none" sentinel — Qwen2-VL emits
+                # `chart_type: none` for non-chart frames; we treat that
+                # as no chart (don't surface as a chart reference).
+                if (structured.get("chart_type") or "").lower() == "none":
+                    structured["chart_type"] = None
+                caption_text = structured.get("caption", "")
+                captions.append((c.timestamp_seconds, caption_text))
+
+                # Capture structured chart reference (only when there's any signal).
+                if any([
+                    structured.get("chart_type"),
+                    structured.get("timeframe"),
+                    structured.get("tickers"),
+                    structured.get("topics"),
+                ]):
+                    chart_refs.append({
+                        "timestamp": _format_timestamp(c.timestamp_seconds),
+                        "timestamp_seconds": c.timestamp_seconds,
+                        "chart_type": structured.get("chart_type"),
+                        "timeframe": structured.get("timeframe"),
+                        "tickers": structured.get("tickers") or [],
+                        "topics": structured.get("topics") or [],
+                        "caption": caption_text,
+                    })
+
+                # Flag tickers Stage 1 emitted that aren't in the whitelist.
+                # Used by Phase D ticker review queue (separate commit).
+                for tkr in structured.get("tickers") or []:
+                    if whitelist and tkr not in whitelist and tkr not in unknown_tickers:
+                        unknown_tickers.append(tkr)
+
+            elif use_captions and vlm is not None:
                 cap = vlm.caption_frame(c.frame_path)
                 captions.append((c.timestamp_seconds, cap))
+
         markdown = render_visual_notes_table(
             rows,
             truncated=truncated,
-            captions=captions if use_captions else None,
+            captions=captions if (use_captions or use_extraction) else None,
         )
         kept_ocr = sum(1 for _, t in rows if t)
         kept_caps = sum(1 for _, t in captions if t)
         kept = sum(
             1 for i in range(len(rows))
-            if rows[i][1] or (use_captions and captions and captions[i][1])
+            if rows[i][1] or (
+                (use_captions or use_extraction)
+                and captions
+                and i < len(captions) and captions[i][1]
+            )
         )
         return VisionResult(
             markdown=markdown,
@@ -535,8 +646,14 @@ def process_video(
                 "raw_frames": len(frames),
                 "kept_ocr_rows": kept_ocr,
                 "kept_caption_rows": kept_caps,
-                "captions_enabled": use_captions,
+                "captions_enabled": use_captions or use_extraction,
+                "chart_extraction_enabled": use_extraction,
+                "chart_refs_emitted": len(chart_refs),
+                "unknown_tickers_count": len(unknown_tickers),
+                "whitelist_size": len(whitelist),
             },
+            chart_references=chart_refs,
+            unknown_tickers=unknown_tickers,
         )
 
     if work_dir is not None:
@@ -581,7 +698,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     ap.add_argument(
         "--semantic-captions", action="store_true",
-        help="L3: enable Moondream2 VLM captions via MLX (Apple Silicon only).",
+        help="L3: enable VLM captions via MLX (Apple Silicon only).",
+    )
+    ap.add_argument(
+        "--chart-extraction", action="store_true",
+        help="L3+: enable structured chart-reference extraction (YAML + heuristic fallback).",
     )
     ap.add_argument(
         "--dry-run", action="store_true",
@@ -611,6 +732,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         ssim_threshold=None if args.ssim_threshold < 0 else args.ssim_threshold,
         ocr_lang=args.ocr_lang,
         semantic_captions=bool(args.semantic_captions),
+        chart_extraction=ChartExtractionConfig(enabled=bool(args.chart_extraction)),
     )
     result = process_video(args.url, cfg=cfg)
 
