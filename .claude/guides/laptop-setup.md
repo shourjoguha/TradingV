@@ -57,6 +57,30 @@ HF_HUB_CACHE="$PWD/hf-cache" python3 -c "from huggingface_hub import snapshot_do
 
 Cached in `./hf-cache/` (gitignored). `.env.laptop` sets `HF_HUB_CACHE="/Users/shourjosmac/Documents/Claude/TradingView /hf-cache"` (absolute path, so uvicorn reuses regardless of launch CWD). Re-run only if upstream NeoQuasar pushes new weights.
 
+## Video-vision deps (one-time, Apple Silicon)
+
+Optional but required for the L2 OCR / L3 caption / structured chart-extraction layers on the channel poller. See [`.claude/modules/video_vision.md`](../modules/video_vision.md) for the full pipeline.
+
+```bash
+# Tesseract system binary (~50MB) — required for L2 OCR.
+brew install tesseract
+
+# MLX wheels — required for L3 captions + Whisper-MLX acceleration on M-series.
+# Already in requirements.txt; the `mlx-vlm` install pulls 200+ deps.
+source venv/bin/activate
+pip install -r requirements.txt  # picks up mlx-whisper + mlx-vlm + pytesseract
+```
+
+**First-run model downloads (lazy, ~3GB total):**
+- `whisper-small` MLX checkpoint (~500MB) — first ASR call
+- `Qwen2-VL-2B-Instruct-4bit` (~1GB) — first chart caption call (L3)
+
+Both cached at `~/.cache/huggingface/`. No action required; first ingest tick will block ~2-3 min on the downloads.
+
+**Env overrides:**
+- `FORCE_TORCH_WHISPER=1` — disables MLX, uses openai-whisper torch path (debugging / non-M3)
+- `DISABLE_MLX_VLM=1` — disables L3 captioning entirely
+
 ## Daily boot
 
 ```bash

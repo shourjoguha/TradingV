@@ -29,7 +29,7 @@ The docs are grouped into themed folders. **Always read the folder README first*
 
 | Concern | Folder | What's inside (see folder README for the full index) |
 | :--- | :--- | :--- |
-| Touching a specific `app/<module>/` | [.claude/modules/](.claude/modules/README.md) | One file per app module: `accuracy.md`, `admin.md`, `analysis.md`, `boards.md`, `core.md`, `earnings.md`, `hypotheses.md`, `kronos.md`, `labels.md`, `macro.md`, `market_data.md`, `notifications.md`, `opportunities.md`, `predictions.md`, `queue.md`, `research.md`, `schedule.md`, `sync.md`, `tickers.md`, `trades.md`, `tv_context.md`, `vault.md`, `views.md`, `watchlist.md`, `alerts.md`, `admin.md` |
+| Touching a specific `app/<module>/` | [.claude/modules/](.claude/modules/README.md) | One file per app module: `accuracy.md`, `admin.md`, `analysis.md`, `boards.md`, `core.md`, `earnings.md`, `hypotheses.md`, `kronos.md`, `labels.md`, `macro.md`, `market_data.md`, `notifications.md`, `opportunities.md`, `predictions.md`, `queue.md`, `research.md`, `schedule.md`, `sync.md`, `tickers.md`, `trades.md`, `tv_context.md`, `vault.md`, `video_vision.md`, `views.md`, `watchlist.md`, `alerts.md` |
 | Cross-cutting how-to (architecture, principles, setup, deploy, testing, migrations, recipes, glossary) | [.claude/guides/](.claude/guides/README.md) | `architecture.md` (system map — start here), `principles.md`, `glossary.md`, `recipes.md`, `testing.md`, `migrations.md`, `railway-deployment.md`, `laptop-setup.md` |
 | What's queued / shipped / deferred / known-broken | [.claude/status/](.claude/status/README.md) | `roadmap.md`, `roadmap-shipped.md`, `backlog.md`, `tech_debt.md` |
 | Why we made a binding tradeoff (ADRs) | [.claude/decisions/](.claude/decisions/README.md) | Numbered ADRs `001-…` through latest |
@@ -51,6 +51,8 @@ When in doubt, [.claude/guides/architecture.md](.claude/guides/architecture.md) 
 4. `alembic upgrade head` (or rely on `create_all` in the lifespan for first boot).
 5. `uvicorn app.main:app --reload`
 6. Tests: `python -m pytest`.
+
+**Video-vision deps** (optional; Apple Silicon recommended): `brew install tesseract` for the OCR layer. The `mlx-whisper` + `mlx-vlm` Python wheels come via `requirements.txt`; they're no-op on non-Apple-Silicon (adapter falls back to torch). First L3 ingest tick auto-downloads ~1.5GB of model weights (Whisper-MLX + Qwen2-VL-2B-4bit) to `~/.cache/huggingface/`. See [.claude/modules/video_vision.md](.claude/modules/video_vision.md).
 
 For the **laptop (primary) backend** with dockerized Postgres on 5439 + peer sync to Railway, see [.claude/laptop-setup.md](.claude/guides/laptop-setup.md).
 

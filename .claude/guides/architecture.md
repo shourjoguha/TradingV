@@ -58,6 +58,7 @@ backups/          local snapshots + ROLLBACK.md (gitignored except docs)
 | `vault/` | httpx-forwarder to the vault-indexer sidecar on port 8001. Surfaces `/v1/vault/{search,folder-context,node/{path}}` so the frontend never has to hit the indexer port directly. Read-only; maps 504/502 when sidecar offline. | (thin proxy — see `tools/vault_indexer/app.py`) |
 | `admin/` | Loop registry, `app_settings` cascade, `process_status` writes, Anthropic kill-switch + monthly cap. Surfaces `/v1/admin/{loops,settings}` for the new tabbed Admin UI (Phase 4 of the cost-aware iteration). | [admin.md](../modules/admin.md) |
 | `earnings/` | Rolling earnings calendar (roster ∪ Street tier1+2, capped 150, 90d TTL). yfinance + NASDAQ providers; EDGAR 8-K Item 2.02 confirm. Surfaces `/v1/earnings/{upcoming, ticker}`. Backs the IR YouTube channel poller's earnings-trigger gate. | [earnings.md](../modules/earnings.md) |
+| Vault video-vision (sidecar) | Three-stage extraction in `tools/vault_indexer/ingest/`: scene-detect frames → Tesseract OCR → optional Qwen2-VL MLX captions → structured chart references (chart_type, timeframe, tickers). Per-channel toggles in `_channel.yaml` (`vision.enabled` / `semantic_captions` / `chart_extraction.enabled`). Auto-enriches channel `_index.md` with rolling chart-reference table consumed by `/folder-context`. | [video_vision.md](../modules/video_vision.md) |
 
 ## Daily forecast pipeline (cross-module flow)
 
