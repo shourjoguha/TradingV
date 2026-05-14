@@ -91,6 +91,16 @@ tools/the_street/                 ← read-side CLI for The Street snapshots
   operator ticks → indexer renames `.md.draft` → `.md` and strips the
   `draft: true` flag.
 
+- **Optional video-vision layer (L1 → L3)** — when `vision.enabled: true`
+  on a channel YAML, scene-change frames are extracted, OCR'd, optionally
+  VLM-captioned (Qwen2-VL via MLX), and structured into chart references
+  (chart_type, timeframe, tickers, topics) via the
+  `vision.chart_extraction.enabled` flag. Per-video frontmatter gains a
+  `chart_references` list; channel `_index.md` gets a sentinel-bounded
+  rolling "Recent chart references" table. Domain-agnostic — toggled
+  per-channel. See [video_vision.md](video_vision.md) for the full
+  three-stage extraction architecture.
+
 See [ADR-014](../decisions/014-vault-indexer.md) for the full decision
 record.
 
