@@ -37,12 +37,15 @@ def download_audio(url: str, out_dir: Path) -> Path:
 def transcribe(audio_path: Path, model_name: str = "small") -> tuple[str, str]:
     """Return ``(title-hint, transcript)``. title-hint left empty — operator's
     ``--title`` flag (or ``f"{author}-{week}"`` fallback) drives the filename.
-    """
-    import whisper  # lazy: heavy import
 
-    model = whisper.load_model(model_name)
-    result = model.transcribe(str(audio_path))
-    return "", result.get("text", "").strip()
+    Routes through ``whisper_adapter`` so Apple Silicon gets MLX speedup
+    automatically; torch fallback preserved for other platforms or when
+    ``FORCE_TORCH_WHISPER=1``.
+    """
+    from . import whisper_adapter
+
+    text = whisper_adapter.transcribe(audio_path, model=model_name)
+    return "", text
 
 
 def main() -> int:

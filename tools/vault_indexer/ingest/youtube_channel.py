@@ -191,14 +191,13 @@ def whisper_transcribe(url: str, *, work_dir: Path, model: str = "small") -> Opt
     audio_files = [p for p in work_dir.glob("audio.*") if p.is_file()]
     if not audio_files:
         return None
-    try:
-        import whisper                                # lazy: heavy import
-        m = whisper.load_model(model)
-        result = m.transcribe(str(audio_files[0]))
-        return (result.get("text") or "").strip()
-    except Exception as e:                            # noqa: BLE001
-        logger.warning("whisper transcription failed for %s: %s", url, e)
-        return None
+    # Adapter routes to MLX on Apple Silicon (3-5× speedup) or torch
+    # everywhere else. Returns "" on failure → we surface as None to
+    # preserve the existing contract ("no transcript → skip draft").
+    from . import whisper_adapter
+
+    text = whisper_adapter.transcribe(audio_files[0], model=model)
+    return text if text else None
 
 
 # ---------------------------------------------------------------------------

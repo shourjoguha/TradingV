@@ -377,19 +377,54 @@ def _format_timestamp(seconds: float) -> str:
 
 
 def render_visual_notes_table(
-    rows: list[tuple[float, str]], *, truncated: bool = False
+    rows: list[tuple[float, str]],
+    *,
+    truncated: bool = False,
+    captions: Optional[list[tuple[float, str]]] = None,
 ) -> str:
-    """Render the ``## Visual notes`` section. Empty input → empty string."""
-    filled = [(ts, text) for ts, text in rows if text]
-    if not filled:
+    """Render the ``## Visual notes`` section. Empty input → empty string.
+
+    When ``captions`` is supplied, the table renders 3 columns
+    (Time / Visual / On-screen text) — keyed by timestamp. A row is kept
+    if EITHER the OCR text OR the caption is non-empty.
+
+    When ``captions`` is None, the table is the legacy 2-column shape
+    (Time / On-screen text) — byte-identical to pre-L3 output for
+    channels that have ``semantic_captions: false``.
+    """
+    if captions is None:
+        # Legacy 2-column path — preserved exactly.
+        filled = [(ts, text) for ts, text in rows if text]
+        if not filled:
+            return ""
+        lines = [_VISUAL_NOTES_HEADING, ""]
+        lines.append("| Time | On-screen text |")
+        lines.append("|---|---|")
+        for ts, text in filled:
+            safe = text.replace("|", "\\|")
+            lines.append(f"| {_format_timestamp(ts)} | {safe} |")
+        if truncated:
+            lines.append("")
+            lines.append("_Note: frame count exceeded budget; lower-score frames dropped._")
+        lines.append("")
+        return "\n".join(lines)
+
+    # 3-column path — align by timestamp.
+    caption_by_ts: dict[float, str] = {ts: cap for ts, cap in captions}
+    filled3: list[tuple[float, str, str]] = []
+    for ts, ocr in rows:
+        cap = caption_by_ts.get(ts, "")
+        if ocr or cap:
+            filled3.append((ts, cap, ocr))
+    if not filled3:
         return ""
     lines = [_VISUAL_NOTES_HEADING, ""]
-    lines.append("| Time | On-screen text |")
-    lines.append("|---|---|")
-    for ts, text in filled:
-        # Escape pipes in cell text to keep table structure intact.
-        safe = text.replace("|", "\\|")
-        lines.append(f"| {_format_timestamp(ts)} | {safe} |")
+    lines.append("| Time | Visual | On-screen text |")
+    lines.append("|---|---|---|")
+    for ts, cap, ocr in filled3:
+        safe_cap = cap.replace("|", "\\|")
+        safe_ocr = ocr.replace("|", "\\|")
+        lines.append(f"| {_format_timestamp(ts)} | {safe_cap} | {safe_ocr} |")
     if truncated:
         lines.append("")
         lines.append("_Note: frame count exceeded budget; lower-score frames dropped._")
@@ -461,16 +496,47 @@ def process_video(
         if not frames:
             return VisionResult(diagnostics={**diag, "reason": "no_scene_frames"})
         rows: list[tuple[float, str]] = []
+        captions: list[tuple[float, str]] = []
+        use_captions = bool(cfg.semantic_captions)
+        # Lazy import keeps mlx_vlm out of the import graph when L3 is off.
+        vlm = None
+        if use_captions:
+            try:
+                from . import vlm_adapter as _vlm
+                if _vlm.available():
+                    vlm = _vlm
+                else:
+                    use_captions = False
+            except ImportError:
+                use_captions = False
         for c in frames:
             text = ocr_frame(c.frame_path, lang=cfg.ocr_lang)
             rows.append((c.timestamp_seconds, text))
-        markdown = render_visual_notes_table(rows, truncated=truncated)
-        kept = sum(1 for _, t in rows if t)
+            if use_captions and vlm is not None:
+                cap = vlm.caption_frame(c.frame_path)
+                captions.append((c.timestamp_seconds, cap))
+        markdown = render_visual_notes_table(
+            rows,
+            truncated=truncated,
+            captions=captions if use_captions else None,
+        )
+        kept_ocr = sum(1 for _, t in rows if t)
+        kept_caps = sum(1 for _, t in captions if t)
+        kept = sum(
+            1 for i in range(len(rows))
+            if rows[i][1] or (use_captions and captions and captions[i][1])
+        )
         return VisionResult(
             markdown=markdown,
             frame_count=kept,
             truncated_to_budget=truncated,
-            diagnostics={**diag, "raw_frames": len(frames), "kept_ocr_rows": kept},
+            diagnostics={
+                **diag,
+                "raw_frames": len(frames),
+                "kept_ocr_rows": kept_ocr,
+                "kept_caption_rows": kept_caps,
+                "captions_enabled": use_captions,
+            },
         )
 
     if work_dir is not None:
@@ -514,6 +580,10 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="Tesseract language pack (e.g. 'eng', 'eng+fra').",
     )
     ap.add_argument(
+        "--semantic-captions", action="store_true",
+        help="L3: enable Moondream2 VLM captions via MLX (Apple Silicon only).",
+    )
+    ap.add_argument(
         "--dry-run", action="store_true",
         help="Print the visual-notes markdown to stdout; do not write any vault file.",
     )
@@ -540,6 +610,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         min_gap_seconds=args.min_gap_seconds,
         ssim_threshold=None if args.ssim_threshold < 0 else args.ssim_threshold,
         ocr_lang=args.ocr_lang,
+        semantic_captions=bool(args.semantic_captions),
     )
     result = process_video(args.url, cfg=cfg)
 

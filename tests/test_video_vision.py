@@ -279,3 +279,129 @@ def test_process_video_full_path_renders_markdown(tmp_path: Path) -> None:
     assert "DXY weekly" in result.markdown
     assert "0:42" in result.markdown
     assert "2:14" in result.markdown
+    # Without semantic_captions: 2-column table
+    assert "| Time | On-screen text |" in result.markdown
+    assert "| Time | Visual |" not in result.markdown
+    assert result.diagnostics.get("captions_enabled") is False
+
+
+# ---------------------------------------------------------------------------
+# L3 — 3-column table + VLM wiring
+# ---------------------------------------------------------------------------
+
+
+def test_render_visual_notes_3col_with_captions() -> None:
+    md = v.render_visual_notes_table(
+        [(42.0, "BTC 40000"), (134.0, "DXY weekly")],
+        captions=[(42.0, "candlestick chart"), (134.0, "line chart")],
+    )
+    assert "| Time | Visual | On-screen text |" in md
+    assert "candlestick chart" in md
+    assert "BTC 40000" in md
+
+
+def test_render_visual_notes_3col_keeps_caption_only_rows() -> None:
+    """A row with caption but blank OCR should still render (caption alone is signal)."""
+    md = v.render_visual_notes_table(
+        [(42.0, "")],
+        captions=[(42.0, "candlestick chart")],
+    )
+    assert "candlestick chart" in md
+    assert "| 0:42 |" in md
+
+
+def test_render_visual_notes_3col_drops_double_empty() -> None:
+    """Row with both OCR and caption empty must NOT render."""
+    md = v.render_visual_notes_table(
+        [(42.0, ""), (50.0, "BTC")],
+        captions=[(42.0, ""), (50.0, "")],
+    )
+    # 0:42 row dropped (both empty); 0:50 kept (OCR present)
+    assert "0:42" not in md
+    assert "BTC" in md
+
+
+def test_render_visual_notes_2col_byte_identical_when_captions_none() -> None:
+    """Regression: callers passing captions=None must get the L2 2-col output."""
+    md_a = v.render_visual_notes_table([(42.0, "BTC 40000")])
+    md_b = v.render_visual_notes_table([(42.0, "BTC 40000")], captions=None)
+    assert md_a == md_b
+    assert "| Time | On-screen text |" in md_a
+    assert "Visual |" not in md_a
+
+
+def test_process_video_semantic_captions_disabled_no_vlm_call(tmp_path: Path) -> None:
+    """L3 off → vlm_adapter never invoked. Regression coverage for L2 channels."""
+    cfg = VisionConfig(enabled=True, frame_budget=10, semantic_captions=False)
+    fake_video = tmp_path / "video.mp4"
+    fake_video.touch()
+    fake_frames = [
+        SceneCandidate(timestamp_seconds=42.0, scene_score=0.5, frame_path=tmp_path / "f1.png"),
+    ]
+    from tools.vault_indexer.ingest import vlm_adapter as _vlm
+    with patch.object(v, "_download_video", return_value=fake_video), patch.object(
+        v, "extract_scene_frames", return_value=(fake_frames, False)
+    ), patch.object(v, "ocr_frame", return_value="BTC"), patch.object(
+        _vlm, "caption_frame"
+    ) as vlm_mock:
+        result = v.process_video("https://x/v?v=abc", cfg=cfg, work_dir=tmp_path)
+    vlm_mock.assert_not_called()
+    assert "Visual |" not in result.markdown
+    assert result.diagnostics.get("captions_enabled") is False
+
+
+def test_process_video_semantic_captions_enabled_calls_vlm(tmp_path: Path) -> None:
+    """L3 on → vlm_adapter.caption_frame invoked per frame; 3-col table output."""
+    cfg = VisionConfig(enabled=True, frame_budget=10, semantic_captions=True)
+    fake_video = tmp_path / "video.mp4"
+    fake_video.touch()
+    fake_frames = [
+        SceneCandidate(timestamp_seconds=42.0, scene_score=0.5, frame_path=tmp_path / "f1.png"),
+        SceneCandidate(timestamp_seconds=134.0, scene_score=0.6, frame_path=tmp_path / "f2.png"),
+    ]
+    caps = iter(["Candlestick chart of BTC", "Line chart of DXY"])
+    ocrs = iter(["BTC 40000", "DXY"])
+    from tools.vault_indexer.ingest import vlm_adapter as _vlm
+    with patch.object(v, "_download_video", return_value=fake_video), patch.object(
+        v, "extract_scene_frames", return_value=(fake_frames, False)
+    ), patch.object(v, "ocr_frame", side_effect=lambda *a, **kw: next(ocrs)), patch.object(
+        _vlm, "available", return_value=True
+    ), patch.object(_vlm, "caption_frame", side_effect=lambda *a, **kw: next(caps)):
+        result = v.process_video("https://x/v?v=abc", cfg=cfg, work_dir=tmp_path)
+    assert "| Time | Visual | On-screen text |" in result.markdown
+    assert "Candlestick chart of BTC" in result.markdown
+    assert "Line chart of DXY" in result.markdown
+    assert "BTC 40000" in result.markdown
+    assert result.diagnostics.get("captions_enabled") is True
+    assert result.diagnostics.get("kept_caption_rows") == 2
+
+
+def test_process_video_captions_enabled_but_vlm_unavailable_falls_back_to_l2(tmp_path: Path) -> None:
+    """semantic_captions: true but mlx-vlm not available → silently degrade to L2."""
+    cfg = VisionConfig(enabled=True, frame_budget=10, semantic_captions=True)
+    fake_video = tmp_path / "video.mp4"
+    fake_video.touch()
+    fake_frames = [
+        SceneCandidate(timestamp_seconds=42.0, scene_score=0.5, frame_path=tmp_path / "f1.png"),
+    ]
+    from tools.vault_indexer.ingest import vlm_adapter as _vlm
+    with patch.object(v, "_download_video", return_value=fake_video), patch.object(
+        v, "extract_scene_frames", return_value=(fake_frames, False)
+    ), patch.object(v, "ocr_frame", return_value="BTC"), patch.object(
+        _vlm, "available", return_value=False
+    ), patch.object(_vlm, "caption_frame") as vlm_mock:
+        result = v.process_video("https://x/v?v=abc", cfg=cfg, work_dir=tmp_path)
+    vlm_mock.assert_not_called()
+    # Falls back to 2-col table
+    assert "Visual |" not in result.markdown
+    assert result.diagnostics.get("captions_enabled") is False
+
+
+def test_vision_config_semantic_captions_default_false() -> None:
+    cfg = VisionConfig.from_mapping({"enabled": True})
+    assert cfg.semantic_captions is False
+
+
+def test_vision_config_semantic_captions_yaml_flag() -> None:
+    cfg = VisionConfig.from_mapping({"enabled": True, "semantic_captions": True})
+    assert cfg.semantic_captions is True

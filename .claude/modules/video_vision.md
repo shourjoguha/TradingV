@@ -98,11 +98,40 @@ Every external boundary returns `""` or empty `VisionResult` on error rather tha
 
 `render_visual_notes_table([])` returns `""` — no orphan `## Visual notes` heading when nothing usable comes through.
 
-## Upgrade path to L3 (Moondream2)
+## L3 — semantic captions via MLX Qwen2-VL (Apple Silicon)
 
-`vision.semantic_captions: true` is reserved for a future L3 path where each frame also gets a 1-line semantic caption from a local Moondream2 VLM (~2GB model weights, ~2s/frame on M3 CPU). Not implemented in L2 baseline. Triggers to revisit:
-- L2 (OCR alone) produces too much noise on a key channel
-- Operator wants chart-pattern reasoning ("descending wedge", "double top") that OCR can't surface
+Enable per channel with `vision.semantic_captions: true`. Adds a "Visual" column to the visual-notes table with a one-line VLM-generated caption per frame. Independent of OCR — captions and OCR are two signals that combine in a 3-column table.
+
+**Model:** `mlx-community/Qwen2-VL-2B-Instruct-4bit` via `mlx-vlm`. ~1GB disk (cached at `~/.cache/huggingface/` on first run). MLX-accelerated on M1/M2/M3/M4. Originally planned as Moondream2 — `mlx-vlm` 0.5.x doesn't ship moondream2 weights yet, and Qwen2-VL gives similar size at competitive chart-reading quality.
+
+**Performance on M3:**
+- Model load (one-time per process): ~10-15s
+- Per-frame inference: ~1-2s
+- 50-frame video: ~60-100s captioning added on top of L2
+
+**Caption answers operator's "what kind of chart, what timeframe" question:**
+- "candlestick chart type, displaying a timeframe of 4H (4-hour)"
+- "The chart type is a line chart, and the timeframe..."
+- "Fear & Greed Index gauge"
+- "bull and a bear statue ... bear market"
+
+**Failure modes:** all return empty caption gracefully:
+- MLX unavailable (non-Apple-Silicon, mlx-vlm not installed) → empty caption, table falls back to 2-column
+- Model load fails (network down, repo renamed) → poisoned cache, all subsequent frames empty caption
+- Single-frame inference error → empty caption, other frames continue
+
+**Kill switches:**
+- Per-channel: `vision.semantic_captions: false` → no VLM calls, table back to 2-column
+- Global: `DISABLE_MLX_VLM=1` env var → adapter pretends MLX unavailable
+- Code: uninstall `mlx-vlm` from venv
+
+## Whisper backend (MLX/torch adapter)
+
+Whisper transcription goes through `tools/vault_indexer/ingest/whisper_adapter.py` which routes to MLX on Apple Silicon (3-5× speedup vs torch CPU) or falls back to openai-whisper. Same audio bytes in, same text out — single touchpoint for the platform check.
+
+**Override:** `FORCE_TORCH_WHISPER=1` env var → use torch path even on M3 (debugging).
+
+**Models:** `mlx-community/whisper-{tiny,base,small,medium,large-v3-mlx}`. Default `small` matches the existing operator preference.
 
 ## Files
 

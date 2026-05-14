@@ -27,6 +27,15 @@ openai-whisper
 # binary too. See .claude/modules/video_vision.md.
 pytesseract
 
+# MLX acceleration for ASR + VLM on Apple Silicon (M1/M2/M3/M4). On Linux,
+# pip install of these may fail; the adapters (`whisper_adapter.py` and
+# `vlm_adapter.py`) detect Apple Silicon and fall back to torch / no-op
+# gracefully when MLX is unavailable.
+#   - mlx-whisper: 3-5× faster transcription on M3 vs openai-whisper CPU
+#   - mlx-vlm: Qwen2-VL-2B for L3 semantic captions (~1GB model on first run)
+mlx-whisper
+mlx-vlm
+
 # Kronos runtime (always installed; KRONOS_ENABLED toggles use, not install).
 torch>=2.0.0
 huggingface_hub==0.33.1
