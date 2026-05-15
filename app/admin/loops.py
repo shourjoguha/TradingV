@@ -176,6 +176,19 @@ LOOPS: dict[str, LoopMeta] = {
         cost_sensitive=False,
         default_enabled=True,
     ),
+    "ticker_review_digest": LoopMeta(
+        loop_id="ticker_review_digest",
+        title="Ticker review weekly digest",
+        description=(
+            "Daily tick — emits the Sunday markdown rollup to "
+            "<vault>/Topics/_ticker-review-queue.md when weekday==Sun."
+        ),
+        default_cadence_seconds=DAY,
+        supports_abort=True,
+        confirm_modal_required=False,
+        cost_sensitive=False,
+        default_enabled=True,
+    ),
     "earnings_calendar": LoopMeta(
         loop_id="earnings_calendar",
         title="Earnings calendar refresh",

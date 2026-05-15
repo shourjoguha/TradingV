@@ -809,3 +809,39 @@ export interface VaultNodeResponse {
   published_at?: string | null
   tags?: string[]
 }
+
+// ---------------------------------------------------------------------------
+// Ticker review queue (Phase D)
+// ---------------------------------------------------------------------------
+
+export type TickerReviewStatus =
+  | 'pending'
+  | 'added_to_roster'
+  | 'added_to_board'
+  | 'dismissed'
+
+export type TickerReviewAction = 'add_to_roster' | 'add_to_board' | 'dismiss'
+
+export interface TickerReviewRead {
+  id: number
+  ticker: string
+  first_seen_at: string
+  last_seen_at: string
+  times_seen: number
+  channels: string[]
+  recent_video_ids: string[]
+  recent_caption_snippets: string[]
+  status: TickerReviewStatus
+  resolved_at?: string | null
+  resolved_target?: string | null
+  previously_dismissed_at?: string | null
+}
+
+export interface TickerReviewList {
+  items: TickerReviewRead[]
+}
+
+export interface ResolveTickerReviewRequest {
+  action: TickerReviewAction
+  board_id?: string
+}

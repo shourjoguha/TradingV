@@ -33,6 +33,7 @@ from app.boards import models as _board_models  # noqa: F401
 from app.tv_context import models as _tv_context_models  # noqa: F401
 from app.admin import models as _admin_models  # noqa: F401
 from app.earnings import models as _earnings_models  # noqa: F401
+from app.ticker_review import models as _ticker_review_models  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -149,6 +150,8 @@ async def lifespan(_app: FastAPI):
         earnings_calendar_stop = asyncio.Event()
         retention_task = None
         retention_stop = asyncio.Event()
+        ticker_review_digest_task = None
+        ticker_review_digest_stop = asyncio.Event()
         accuracy_stop = asyncio.Event()
         drift_stop = asyncio.Event()
         digest_stop = asyncio.Event()
@@ -502,6 +505,66 @@ async def lifespan(_app: FastAPI):
 
             retention_task = asyncio.create_task(_retention_loop(), name="retention")
 
+            # Ticker review weekly digest — daily tick, only emits the
+            # Sunday markdown rollup. DB is canonical; markdown is a
+            # derived snapshot for Obsidian search.
+            import os as _os
+            from pathlib import Path as _Path
+            from zoneinfo import ZoneInfo as _ZoneInfo
+            from app.ticker_review import service as _tr_svc_loop
+
+            _vault_path = _os.environ.get(
+                "VAULT_PATH",
+                str(_Path.home() / "Documents" / "knowledge-vault"),
+            )
+            _NY_TZ_LOOP = _ZoneInfo("America/New_York")
+
+            async def _ticker_review_digest_loop() -> None:
+                # Warmup so first tick doesn't collide with retention.
+                try:
+                    await asyncio.wait_for(
+                        ticker_review_digest_stop.wait(), timeout=15 * 60
+                    )
+                    if ticker_review_digest_stop.is_set():
+                        return
+                except asyncio.TimeoutError:
+                    pass
+                while True:
+                    try:
+                        from app.admin import lifespan as _admin_lifespan4
+                        import datetime as _dt_loop
+                        now_ny = _dt_loop.datetime.now(_NY_TZ_LOOP)
+                        if now_ny.weekday() == 6:  # Sunday
+                            async with _admin_lifespan4.tick_status(
+                                "ticker_review_digest"
+                            ):
+                                path = await _tr_svc_loop.write_weekly_digest(
+                                    _vault_path
+                                )
+                                if path:
+                                    logger.info(
+                                        "ticker-review digest written: %s", path
+                                    )
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning(
+                            "ticker_review_digest tick failed: %s", e
+                        )
+                    try:
+                        await asyncio.wait_for(
+                            ticker_review_digest_stop.wait(),
+                            timeout=24 * 60 * 60,
+                        )
+                        if ticker_review_digest_stop.is_set():
+                            return
+                    except asyncio.TimeoutError:
+                        continue
+
+            ticker_review_digest_task = asyncio.create_task(
+                _ticker_review_digest_loop(), name="ticker-review-digest"
+            )
+
         # ---- Admin runtime registration --------------------------------
         # Registers a live handle per loop so /v1/admin/loops/{id}/{fire,abort}
         # can find them. Manual fire callables call the underlying single-tick
@@ -644,6 +707,25 @@ async def lifespan(_app: FastAPI):
                 fire_now=_fire_retention,
             )
 
+            from app.ticker_review import service as _tr_svc_admin
+
+            async def _fire_ticker_review_digest() -> None:
+                async with _admin_lifespan.tick_status("ticker_review_digest"):
+                    import os as _os_fire
+                    from pathlib import Path as _Path_fire
+                    vp = _os_fire.environ.get(
+                        "VAULT_PATH",
+                        str(_Path_fire.home() / "Documents" / "knowledge-vault"),
+                    )
+                    await _tr_svc_admin.write_weekly_digest(vp)
+
+            _admin_lifespan.register_handle(
+                "ticker_review_digest",
+                stop_event=ticker_review_digest_stop,
+                task=ticker_review_digest_task,
+                fire_now=_fire_ticker_review_digest,
+            )
+
         # Drift check: warn if any registered handle is missing from the
         # static loops registry. Doesn't block startup; surfaces in logs.
         drift = await _admin_lifespan.assert_registry_drift()
@@ -673,6 +755,7 @@ async def lifespan(_app: FastAPI):
             (edgar_ingest_stop, edgar_ingest_task),
             (earnings_calendar_stop, earnings_calendar_task),
             (retention_stop, retention_task),
+            (ticker_review_digest_stop, ticker_review_digest_task),
         ):
             stop_evt.set()
             if task is not None:

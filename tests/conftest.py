@@ -40,6 +40,7 @@ from app.research import models as _research_models  # noqa: F401, E402
 from app.tv_context import models as _tv_context_models  # noqa: F401, E402
 from app.admin import models as _admin_models  # noqa: F401, E402
 from app.earnings import models as _earnings_models  # noqa: F401, E402
+from app.ticker_review import models as _ticker_review_models  # noqa: F401, E402
 
 
 @pytest_asyncio.fixture

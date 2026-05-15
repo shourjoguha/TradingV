@@ -493,13 +493,33 @@ def ingest_one(
         )
 
         # Unknown tickers (Stage 1 emitted but not in operator's whitelist).
-        # Phase D wires these to the ticker_review queue; for Commit 1 we
-        # just log them. Operator can scan logs to see what's accumulating.
+        # Phase D — push each to the ticker_review queue. Snippet derived
+        # from the first chart_ref whose tickers contain the symbol. Failure
+        # is best-effort: a queue write must never block a vault draft.
         if unknown_tickers:
-            logger.info(
-                "ticker-review pending: video=%s tickers=%s",
-                entry.video_id, unknown_tickers,
-            )
+            try:
+                from app.ticker_review import service as _tr_svc
+
+                channel_slug = (
+                    cfg.get("author") or rel_dir or "unknown"
+                ).strip() or "unknown"
+                for tkr in unknown_tickers:
+                    snippet = ""
+                    for ref in chart_refs or []:
+                        if tkr in (ref.get("tickers") or []):
+                            snippet = (ref.get("caption") or "").strip()
+                            break
+                    _tr_svc.enqueue_or_bump_sync(
+                        ticker=tkr,
+                        video_id=entry.video_id,
+                        channel=channel_slug,
+                        snippet=snippet,
+                    )
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    "ticker-review enqueue batch failed for video=%s: %s",
+                    entry.video_id, e,
+                )
         draft_path = write_draft(
             vault_root=vault_root,
             rel_dir=rel_dir,

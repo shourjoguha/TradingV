@@ -56,6 +56,9 @@ import type {
   VaultSearchResponse,
   VaultFolderContextResponse,
   VaultNodeResponse,
+  TickerReviewList,
+  TickerReviewRead,
+  ResolveTickerReviewRequest,
 } from '../lib/types'
 import { toast } from 'sonner'
 
@@ -1233,6 +1236,56 @@ export function useDismissResearchQuery() {
     },
     onError: (err: any) =>
       toast.error(`Dismiss failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Ticker review queue (Phase D) — Today strip + resolve mutation
+// ---------------------------------------------------------------------------
+
+export function useTickerReviewQueue(params?: { status?: string; limit?: number }) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['ticker-review-queue', backendId, params],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (params?.status) s.set('status', params.status)
+      if (params?.limit) s.set('limit', String(params.limit))
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<TickerReviewList>(`/v1/ticker-review/queue${qs}`, {
+        backendId,
+      })
+    },
+    staleTime: 30_000,
+  })
+}
+
+export function useResolveTickerReview() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: number
+      body: ResolveTickerReviewRequest
+    }) =>
+      apiFetch<TickerReviewRead>(`/v1/ticker-review/${id}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        backendId,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticker-review-queue', backendId] })
+      qc.invalidateQueries({ queryKey: ['watchlist', backendId] })
+      qc.invalidateQueries({ queryKey: ['boards', backendId] })
+      toast.success('Ticker review updated')
+    },
+    onError: (err: any) =>
+      toast.error(
+        `Resolve failed: ${err?.detail || err?.message || 'unknown error'}`,
+      ),
   })
 }
 

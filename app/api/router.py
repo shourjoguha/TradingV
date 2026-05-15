@@ -24,6 +24,7 @@ from app.the_street.routes import router as the_street_router
 from app.vault.routes import router as vault_router
 from app.admin.routes import router as admin_router
 from app.earnings.routes import router as earnings_router
+from app.ticker_review.routes import router as ticker_review_router
 
 api_router = APIRouter()
 # Legacy (unversioned) — keep for existing TradingView webhook URL.
@@ -55,4 +56,5 @@ v1_router.include_router(the_street_router)
 v1_router.include_router(vault_router)
 v1_router.include_router(admin_router)
 v1_router.include_router(earnings_router)
+v1_router.include_router(ticker_review_router)
 api_router.include_router(v1_router)

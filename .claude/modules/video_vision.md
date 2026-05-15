@@ -189,9 +189,15 @@ Stage 3 is critical — Qwen2-VL frequently outputs JSON-fenced-as-YAML with sub
 - `tools/vault_indexer/ingest/video_vision.py` — orchestrator
 - `tools/vault_indexer/ingest/youtube_channel.py` — render_draft + vignette wiring
 
-### Deferred to Commit 2 (next session)
+### Unknown-ticker review queue (Phase D — Commit 2 shipped 2026-05-14)
 
-- **Ticker review queue** — Stage 1 emits tickers NOT in the whitelist; currently logged-only (`unknown_tickers` field on VisionResult). Phase D wires them to a new `app/ticker_review/` module with DB queue + Today UI strip + Sunday Obsidian digest. Plan: `.claude/plans/ok-now-we-have-distributed-anchor.md` "Phase D" section.
+Stage 1's `VisionResult.unknown_tickers` (symbols not in `roster ∪ boards ∪ The Street`) feed the laptop-only `ticker_review_queue` table via `app.ticker_review.service.enqueue_or_bump_sync`. `youtube_channel.ingest_one` derives a caption snippet from the matching `chart_ref` and pushes one row per unknown ticker per video. Best-effort: enqueue failures never block the draft.
+
+Operator surfaces:
+- **Today strip** (`TickerReviewStrip.tsx`) — pending rows with `times_seen >= 2`, action buttons chain to watchlist / boards.
+- **Sunday markdown digest** — lifespan loop `ticker_review_digest` writes `<vault>/Topics/_ticker-review-queue.md` weekly.
+
+Full schema + decisions in [`ticker_review.md`](ticker_review.md).
 
 ## L3 — semantic captions via MLX Qwen2-VL (Apple Silicon)
 

@@ -32,6 +32,7 @@ gaps. Read one of these when you're touching that module's code.
 | `app/labels/` | [labels.md](labels.md) | free-form ticker metadata |
 | `app/admin/` | [admin.md](admin.md) | loop registry, `app_settings`, `process_status`, kill-switch |
 | `app/earnings/` | [earnings.md](earnings.md) | `earnings_calendar`, IR-channel trigger gate |
+| `app/ticker_review/` | [ticker_review.md](ticker_review.md) | `ticker_review_queue`, unknown-ticker review surface from Stage 1 video-vision |
 | Vault (Obsidian + indexer) | [vault.md](vault.md) | knowledge layer + `tools/vault_indexer/` sidecar |
 | `tools/vault_indexer/ingest/video_vision.py` | [video_vision.md](video_vision.md) | scene-detect + OCR + Qwen2-VL captions + structured chart-reference extraction (3-stage chain) |
 

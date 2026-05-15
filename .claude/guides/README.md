@@ -16,6 +16,7 @@ infra, or process.
 | [migrations.md](migrations.md) | Alembic conventions, when to write a migration, the `create_all` race, downgrade paths. |
 | [railway-deployment.md](railway-deployment.md) | Railway entry points, env vars, Tailscale tunnel, Postgres backup. |
 | [laptop-setup.md](laptop-setup.md) | Dev environment on the M3 MacBook (the primary backend). |
+| [research-from-claude-desktop.md](research-from-claude-desktop.md) | Drive the app's read-side surface + vault from Claude Desktop (Max subscription). Endpoint catalogue + workflow recipes + guardrails. Read when the operator wants to research without burning API credits. |
 
 ## When you need an ADR vs a guide
 

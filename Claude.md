@@ -15,6 +15,7 @@ Personal trading-decision-support system for **one operator**. FastAPI backend r
 | Frontend only       | [frontend/README.md](.claude/frontend/README.md)                                                                                               |
 | Adding a UI control | [frontend/ui-components.md § Compositions](.claude/frontend/ui-components.md) — pick the canonical pattern (page tab vs filter chip) BEFORE rolling new buttons |
 | Defining a term     | [glossary.md](.claude/guides/glossary.md)                                                                                                             |
+| Driving app from Claude Desktop | [research-from-claude-desktop.md](.claude/guides/research-from-claude-desktop.md) — endpoint catalogue + workflow recipes for subscription-billed research sessions from Claude Desktop |
 
 ## Entry points
 
@@ -29,7 +30,7 @@ The docs are grouped into themed folders. **Always read the folder README first*
 
 | Concern | Folder | What's inside (see folder README for the full index) |
 | :--- | :--- | :--- |
-| Touching a specific `app/<module>/` | [.claude/modules/](.claude/modules/README.md) | One file per app module: `accuracy.md`, `admin.md`, `analysis.md`, `boards.md`, `core.md`, `earnings.md`, `hypotheses.md`, `kronos.md`, `labels.md`, `macro.md`, `market_data.md`, `notifications.md`, `opportunities.md`, `predictions.md`, `queue.md`, `research.md`, `schedule.md`, `sync.md`, `tickers.md`, `trades.md`, `tv_context.md`, `vault.md`, `video_vision.md`, `views.md`, `watchlist.md`, `alerts.md` |
+| Touching a specific `app/<module>/` | [.claude/modules/](.claude/modules/README.md) | One file per app module: `accuracy.md`, `admin.md`, `analysis.md`, `boards.md`, `core.md`, `earnings.md`, `hypotheses.md`, `kronos.md`, `labels.md`, `macro.md`, `market_data.md`, `notifications.md`, `opportunities.md`, `predictions.md`, `queue.md`, `research.md`, `schedule.md`, `sync.md`, `tickers.md`, `trades.md`, `ticker_review.md`, `tv_context.md`, `vault.md`, `video_vision.md`, `views.md`, `watchlist.md`, `alerts.md` |
 | Cross-cutting how-to (architecture, principles, setup, deploy, testing, migrations, recipes, glossary) | [.claude/guides/](.claude/guides/README.md) | `architecture.md` (system map — start here), `principles.md`, `glossary.md`, `recipes.md`, `testing.md`, `migrations.md`, `railway-deployment.md`, `laptop-setup.md` |
 | What's queued / shipped / deferred / known-broken | [.claude/status/](.claude/status/README.md) | `roadmap.md`, `roadmap-shipped.md`, `backlog.md`, `tech_debt.md` |
 | Why we made a binding tradeoff (ADRs) | [.claude/decisions/](.claude/decisions/README.md) | Numbered ADRs `001-…` through latest |

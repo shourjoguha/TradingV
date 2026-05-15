@@ -62,7 +62,7 @@ class QueueEntry:
     line_idx: int
     raw: str
     url: str
-    author: str
+    author: Optional[str]
     horizon: int
     model: str
     title: Optional[str]
@@ -114,8 +114,6 @@ def _parse_queue(text: str, *, default_horizon: int, default_model: str) -> list
         url = url_match.group(0).rstrip("|").strip()
         kv = _parse_kv(rest)
         author = kv.get("author")
-        if not author:
-            continue
         horizon = int(kv["horizon"]) if kv.get("horizon", "").isdigit() else default_horizon
         model = kv.get("model", default_model)
         attempts = int(kv["attempts"]) if kv.get("attempts", "").isdigit() else 0
@@ -123,7 +121,7 @@ def _parse_queue(text: str, *, default_horizon: int, default_model: str) -> list
             line_idx=i,
             raw=line,
             url=url,
-            author=slug(author),
+            author=slug(author) if author else None,
             horizon=horizon,
             model=model,
             title=kv.get("title"),
@@ -131,6 +129,31 @@ def _parse_queue(text: str, *, default_horizon: int, default_model: str) -> list
             attempts=attempts,
         ))
     return entries
+
+
+def _probe_youtube_uploader(url: str, timeout: int = 15) -> Optional[str]:
+    """Probe yt-dlp for the uploader/channel slug without downloading.
+
+    Returns the first non-empty value from ``uploader_id``, ``uploader``,
+    ``channel`` — slugified — or None if probe fails.
+    """
+    cmd = [
+        "yt-dlp", "--skip-download", "--no-warnings",
+        "--print", "%(uploader_id)s|%(uploader)s|%(channel)s",
+        url,
+    ]
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout, check=True,
+        )
+    except Exception:                                          # noqa: BLE001
+        return None
+    line = (result.stdout or "").strip().splitlines()[0] if result.stdout else ""
+    for field in line.split("|"):
+        field = field.strip()
+        if field and field.upper() != "NA":
+            return slug(field)
+    return None
 
 
 def _url_kind(url: str) -> str:
@@ -174,13 +197,15 @@ def _defuddle_extract(url: str, timeout: int = 60) -> dict:
 def _ingest_video(entry: QueueEntry, *, vault_root: Path, rel_dir_prefix: str) -> str:
     """Video pipeline: yt-dlp + Whisper. Returns relative output path."""
     published = entry.published or datetime.date.today().isoformat()
-    title = entry.title or f"{entry.author}-{iso_week()}"
+    # Auto-probe author from yt-dlp if not supplied. Falls back to _unsorted.
+    author = entry.author or _probe_youtube_uploader(entry.url) or "_unsorted"
+    title = entry.title or f"{author}-{iso_week()}"
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         audio = download_audio(entry.url, tmp_path)
         _, body = transcribe(audio, entry.model)
     week = iso_week(datetime.date.fromisoformat(published))
-    rel_dir = f"{rel_dir_prefix.rstrip('/')}/{entry.author}"
+    rel_dir = f"{rel_dir_prefix.rstrip('/')}/{author}"
     filename = f"{week}-{slug(title)}.md"
     target = write_note(
         vault_root=vault_root,
@@ -190,7 +215,7 @@ def _ingest_video(entry: QueueEntry, *, vault_root: Path, rel_dir_prefix: str) -
         metadata={
             "kind": "video",
             "title": title,
-            "author": entry.author,
+            "author": author,
             "source_url": entry.url,
             "published_at": published,
             "horizon_months": entry.horizon,
@@ -214,8 +239,10 @@ def _ingest_article(entry: QueueEntry, *, vault_root: Path, rel_dir_prefix: str)
     if not md_body.strip():
         raise RuntimeError("defuddle returned empty content (paywall? login wall?)")
 
+    # Author: operator slug > defuddle-detected > _unsorted.
+    author = entry.author or (slug(parsed.get("author")) if parsed.get("author") else None) or "_unsorted"
     # Title: queue-line override > defuddle title > generic.
-    title = entry.title or parsed.get("title") or f"{entry.author}-{iso_week()}"
+    title = entry.title or parsed.get("title") or f"{author}-{iso_week()}"
     # Published: queue-line > defuddle (ISO date) > today.
     pub_raw = entry.published or parsed.get("published") or datetime.date.today().isoformat()
     try:
@@ -225,7 +252,7 @@ def _ingest_article(entry: QueueEntry, *, vault_root: Path, rel_dir_prefix: str)
         published = datetime.date.today().isoformat()
 
     week = iso_week(datetime.date.fromisoformat(published))
-    rel_dir = f"{rel_dir_prefix.rstrip('/')}/{entry.author}"
+    rel_dir = f"{rel_dir_prefix.rstrip('/')}/{author}"
     filename = f"{week}-{slug(title)}.md"
     target = write_note(
         vault_root=vault_root,
@@ -235,7 +262,7 @@ def _ingest_article(entry: QueueEntry, *, vault_root: Path, rel_dir_prefix: str)
         metadata={
             "kind": "article",
             "title": title,
-            "author": entry.author,                             # operator-chosen slug
+            "author": author,                                   # operator-chosen or fallback slug
             "source_author": parsed.get("author"),              # defuddle-detected
             "source_site": parsed.get("site") or parsed.get("domain"),
             "source_url": entry.url,
@@ -278,19 +305,23 @@ def _rewrite_queue(
     failure_comments: Optional[dict[int, str]] = None,
     removals: Optional[set[int]] = None,
     quarantine_appends: Optional[list[str]] = None,
+    done_appends: Optional[list[str]] = None,
 ) -> None:
     """Atomically rewrite the queue file.
 
     - ``updates``: line_idx → new content (in-place line replacement).
     - ``failure_comments``: line_idx → reason; appended after line as HTML comment.
-    - ``removals``: line indices to drop entirely (used when promoting to quarantine).
+    - ``removals``: line indices to drop entirely (used when promoting to quarantine or done).
     - ``quarantine_appends``: lines to insert under the ``## Quarantined`` section
       (created if missing, before the ``## Done`` section if present).
+    - ``done_appends``: lines to insert under the ``## Done`` section
+      (created if missing, appended at end).
     """
     updates = updates or {}
     failure_comments = failure_comments or {}
     removals = removals or set()
     quarantine_appends = quarantine_appends or []
+    done_appends = done_appends or []
 
     out: list[str] = []
     for i, line in enumerate(original_lines):
@@ -305,6 +336,8 @@ def _rewrite_queue(
 
     if quarantine_appends:
         out = _insert_into_quarantine_section(out, quarantine_appends)
+    if done_appends:
+        out = _insert_into_done_section(out, done_appends)
 
     new_text = "\n".join(out)
     if not new_text.endswith("\n"):
@@ -346,6 +379,34 @@ def _insert_into_quarantine_section(lines: list[str], to_append: list[str]) -> l
     new_section = ["", "## Quarantined", "", *to_append, ""]
     if done_idx is not None:
         return lines[:done_idx] + new_section + lines[done_idx:]
+    return [*lines, *new_section]
+
+
+def _insert_into_done_section(lines: list[str], to_append: list[str]) -> list[str]:
+    """Place ``to_append`` under ``## Done``. Create the section if missing.
+
+    Strategy:
+      1. If ``## Done`` heading exists → insert lines immediately after the
+         heading (and any blank line that follows it).
+      2. Else → append a new ``## Done`` section at end of file.
+    """
+    done_idx = None
+    for i, line in enumerate(lines):
+        m = _HEADING_RE.match(line)
+        if not m:
+            continue
+        if _section_for_heading(m.group(1)) == _SECTION_DONE:
+            done_idx = i
+            break
+
+    if done_idx is not None:
+        insert_at = done_idx + 1
+        if insert_at < len(lines) and not lines[insert_at].strip():
+            insert_at += 1
+        return lines[:insert_at] + to_append + lines[insert_at:]
+
+    # Section doesn't exist — create it at end of file.
+    new_section = ["", "## Done", "", *to_append, ""]
     return [*lines, *new_section]
 
 
@@ -420,6 +481,7 @@ def main() -> int:
         failure_comments: dict[int, str] = {}
         removals: set[int] = set()
         quarantine_appends: list[str] = []
+        done_appends: list[str] = []
         ingested: list[str] = []
 
         for entry in entries:
@@ -429,7 +491,9 @@ def main() -> int:
                     rel_dir_video=args.rel_dir_video,
                     rel_dir_article=args.rel_dir_article,
                 )
-                updates[entry.line_idx] = (
+                # Move successful line out of ## Queue and into ## Done.
+                removals.add(entry.line_idx)
+                done_appends.append(
                     f"- [x] {entry.url} ✓ {_now_iso()} → {rel}"
                 )
                 ingested.append(rel)
@@ -440,8 +504,9 @@ def main() -> int:
                 if new_attempts >= args.max_attempts:
                     # Quarantine: drop the original line, append to quarantine section.
                     removals.add(entry.line_idx)
+                    author_field = f" | author={entry.author}" if entry.author else ""
                     consolidated = (
-                        f"- [ ] {entry.url} | author={entry.author} | "
+                        f"- [ ] {entry.url}{author_field} | "
                         f"quarantined_at={_now_iso()} | "
                         f"attempts={new_attempts} | "
                         f'last_error="{msg[:120]}"'
@@ -464,13 +529,14 @@ def main() -> int:
                         file=sys.stderr,
                     )
 
-        if updates or failure_comments or removals or quarantine_appends:
+        if updates or failure_comments or removals or quarantine_appends or done_appends:
             _rewrite_queue(
                 queue_path, original_lines,
                 updates=updates,
                 failure_comments=failure_comments,
                 removals=removals,
                 quarantine_appends=quarantine_appends,
+                done_appends=done_appends,
             )
 
         if ingested and args.reload_url:

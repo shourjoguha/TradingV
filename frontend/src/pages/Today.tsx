@@ -9,6 +9,7 @@ import { MarketMoodCard } from '../components/today/MarketMoodCard'
 import { TVContextStrip } from '../components/today/TVContextStrip'
 import { WatchlistDelta } from '../components/today/WatchlistDelta'
 import { PendingReviewPanel } from '../components/today/PendingReviewPanel'
+import { TickerReviewStrip } from '../components/today/TickerReviewStrip'
 
 /**
  * Today — single-screen morning catch-up, demo-inspired 2×2 narrative grid.
@@ -60,6 +61,8 @@ export function Today() {
         <ResearchCuriousCard />
         <MarketMoodCard />
       </div>
+
+      <TickerReviewStrip />
 
       <TVContextStrip />
 
