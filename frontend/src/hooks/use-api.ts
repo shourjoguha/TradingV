@@ -1398,6 +1398,50 @@ export function useIngestTVEvent() {
   })
 }
 
+export interface ScreenshotTickerCandidate {
+  ticker: string
+  source: 'whitelist' | 'stoplist-passed'
+  position: 'leading' | 'anywhere'
+}
+
+export interface ScreenshotTickerExtractResult {
+  candidates: ScreenshotTickerCandidate[]
+  ocr_used: boolean
+}
+
+/**
+ * OCR the screenshot to suggest ticker candidates BEFORE the operator
+ * submits the ingest form. No DB write; pure read-side aid.
+ *
+ * Frontend convention: only auto-prefill when `candidates[0].source ===
+ * 'whitelist'` (operator's known universe — high confidence). Show
+ * `stoplist-passed` candidates as chips below the field instead.
+ */
+export function useExtractScreenshotTicker() {
+  const { backendId } = useBackend()
+  return useMutation({
+    mutationFn: async (input: { file: File | Blob }) => {
+      const fd = new FormData()
+      fd.append('file', input.file, 'chart.png')
+      const cfg = (await import('../lib/backend-store')).getBackendConfig(backendId)
+      const res = await fetch(
+        `${cfg.baseUrl}/v1/tv-context/screenshot/extract-ticker`,
+        {
+          method: 'POST',
+          headers: { 'X-API-Key': cfg.apiKey },
+          body: fd,
+        },
+      )
+      if (!res.ok) {
+        // Soft-fail — extraction is non-blocking. Caller treats empty
+        // response as "no auto-fill", which is the same UX as today.
+        return { candidates: [], ocr_used: false } as ScreenshotTickerExtractResult
+      }
+      return (await res.json()) as ScreenshotTickerExtractResult
+    },
+  })
+}
+
 export function useIngestTVScreenshot() {
   const { backendId } = useBackend()
   const qc = useQueryClient()
@@ -1605,5 +1649,228 @@ export function useStreetDigest(
       ),
     enabled: enabled && !!snapshotDate && !!ticker,
     staleTime: 5 * 60_000,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// rx (prescription) layer — finance recs (v1.x.1-a)
+//
+// Lovable surfaces fitness + nutrition; TradingV is the exclusive surface
+// for finance recs per D-045 (storage-routing lock). All reads filter
+// `domain='finance'` server-side; defense-in-depth on the CHECK constraint.
+// ---------------------------------------------------------------------------
+
+export interface RxRecListItem {
+  id: string
+  short_id: string
+  created_at: string
+  age_days: number
+  drift_score: number | null
+  confidence: number | null
+  status: 'open' | 'snoozed' | 'acted' | 'dismissed'
+  tldr_short: string | null
+  acted_disposition: string | null
+  subjective_fit_1_5: number | null
+  snoozed_until: string | null
+  snooze_count: number
+  auto_revived: boolean
+  forced_decision: boolean
+  aging: boolean
+}
+
+export interface RxRecRead extends Omit<RxRecListItem, 'short_id' | 'age_days' | 'tldr_short' | 'auto_revived' | 'aging'> {
+  owner_user_id: string
+  domain: string
+  tldr: string | null
+  body_md: string | null
+  rx_md_path: string | null
+  facts_json: unknown
+  source_refs: unknown
+  signals_fired: unknown
+  drift_breakdown: unknown
+  confidence_breakdown: unknown
+  acted_at: string | null
+  next_session_id: string | null
+  outcome_note: string | null
+  // forced_decision is inherited (kept from RxRecListItem) — server-computed.
+}
+
+export interface RxRecList {
+  items: RxRecListItem[]
+  count: number
+}
+
+export type RxDispositionAction =
+  | 'acted_as_prescribed'
+  | 'acted_modified'
+  | 'skipped'
+  | 'dismissed'
+
+export interface RxDispositionPayload {
+  disposition: RxDispositionAction
+  subjective_fit_1_5?: number | null
+  outcome_note?: string | null
+}
+
+export function useRxRecs(params?: { window_days?: number; limit?: number }) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['rx-recs', backendId, params],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (params?.window_days) s.set('window_days', String(params.window_days))
+      if (params?.limit) s.set('limit', String(params.limit))
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<RxRecList>(`/v1/rx/recs${qs}`, { backendId })
+    },
+    staleTime: 30_000,
+  })
+}
+
+export function useRxRec(id: string | null | undefined) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['rx-rec', backendId, id],
+    queryFn: () => apiFetch<RxRecRead>(`/v1/rx/recs/${id}`, { backendId }),
+    enabled: !!id,
+    staleTime: 30_000,
+  })
+}
+
+export function useDispositionRec() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: RxDispositionPayload }) =>
+      apiFetch<RxRecRead>(`/v1/rx/recs/${id}/disposition`, {
+        method: 'POST',
+        body,
+        backendId,
+      }),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['rx-recs', backendId] })
+      qc.invalidateQueries({ queryKey: ['rx-rec', backendId, id] })
+      toast.success('Rec dispositioned — next /rx-finance run will sync Lakshmi markdown.')
+    },
+    onError: (err: any) =>
+      toast.error(`Disposition failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+export function useSnoozeRec() {
+  const { backendId } = useBackend()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, days }: { id: string; days: number }) =>
+      apiFetch<RxRecRead>(`/v1/rx/recs/${id}/snooze`, {
+        method: 'POST',
+        body: { days },
+        backendId,
+      }),
+    onSuccess: (data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['rx-recs', backendId] })
+      qc.invalidateQueries({ queryKey: ['rx-rec', backendId, id] })
+      if ((data.snooze_count ?? 0) >= 2) {
+        toast.warning(`Snoozed (count=${data.snooze_count}). Forced-decision threshold reached.`)
+      } else {
+        toast.success(`Snoozed until ${new Date(data.snoozed_until!).toLocaleString()}`)
+      }
+    },
+    onError: (err: any) =>
+      toast.error(`Snooze failed: ${err?.detail || err?.message || 'unknown error'}`),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// rx v1.x.1-b — hypothesis health, positions, rec links
+// ---------------------------------------------------------------------------
+
+export interface HypothesisHealthItem {
+  id: string
+  slug: string
+  title: string
+  status: string
+  claim_type: string
+  age_days: number
+  days_to_expiry: number
+  related_recs_count: number
+}
+
+export interface PositionItem {
+  ticker: string
+  qty: number
+  avg_price: number | null
+  current_price: number | null
+  current_value: number
+  pct_portfolio: number
+  cost_basis: number
+  unrealized_pnl: number
+  unrealized_pnl_pct: number | null
+  risk_flag_single: boolean
+  risk_flag_sector: boolean
+  has_rec_link: boolean
+  trade_ids: string[]
+}
+
+export interface PositionsResponse {
+  items: PositionItem[]
+  portfolio_total_value: number
+  portfolio_unrealized_pnl: number
+  count: number
+}
+
+export interface RxLinks {
+  hypotheses: { id: string; slug: string; title: string; status: string }[]
+  trades: {
+    id: string
+    ticker: string
+    side: string
+    qty: number
+    entry_price: number
+    entry_at: string
+    realized_pnl: number | null
+  }[]
+}
+
+export function useHypothesisHealth(params?: { limit?: number }) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['hypothesis-health', backendId, params],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (params?.limit) s.set('limit', String(params.limit))
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<{ items: HypothesisHealthItem[]; count: number }>(
+        `/v1/hypotheses/health/list${qs}`,
+        { backendId },
+      )
+    },
+    staleTime: 60_000,
+  })
+}
+
+export function useTradePositions(params?: { limit?: number }) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['trade-positions', backendId, params],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (params?.limit) s.set('limit', String(params.limit))
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<PositionsResponse>(`/v1/trades/positions${qs}`, {
+        backendId,
+      })
+    },
+    staleTime: 30_000,
+  })
+}
+
+export function useRxLinks(id: string | null | undefined) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['rx-links', backendId, id],
+    queryFn: () => apiFetch<RxLinks>(`/v1/rx/recs/${id}/links`, { backendId }),
+    enabled: !!id,
+    staleTime: 30_000,
   })
 }

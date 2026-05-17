@@ -13,7 +13,12 @@ import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Textarea } from '../ui/textarea'
 import { Switch } from '../ui/switch'
-import { useIngestTVScreenshot } from '../../hooks/use-api'
+import {
+  useExtractScreenshotTicker,
+  useIngestTVScreenshot,
+  type ScreenshotTickerCandidate,
+} from '../../hooks/use-api'
+import { Sparkles } from 'lucide-react'
 
 interface ScreenshotUploadModalProps {
   open: boolean
@@ -35,8 +40,11 @@ export function ScreenshotUploadModal({
   const [visionEnabled, setVisionEnabled] = useState(true)
   const [file, setFile] = useState<File | Blob | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [autoFilledTicker, setAutoFilledTicker] = useState<string | null>(null)
+  const [hintCandidates, setHintCandidates] = useState<ScreenshotTickerCandidate[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const ingest = useIngestTVScreenshot()
+  const extractTicker = useExtractScreenshotTicker()
 
   useEffect(() => {
     if (open && defaultTicker) setTicker(defaultTicker)
@@ -54,6 +62,29 @@ export function ScreenshotUploadModal({
 
   const handleFile = (f: File | Blob | null) => {
     setFile(f)
+    setAutoFilledTicker(null)
+    setHintCandidates([])
+    if (!f) return
+    // Best-effort OCR ticker extraction. Only prefill when the top
+    // candidate is in the operator's whitelist (roster ∪ boards ∪
+    // The Street). Out-of-universe candidates become chip hints.
+    extractTicker
+      .mutateAsync({ file: f })
+      .then((result) => {
+        if (!result.ocr_used || result.candidates.length === 0) return
+        const whitelistHit = result.candidates.find((c) => c.source === 'whitelist')
+        if (whitelistHit && (defaultTicker == null || defaultTicker === '')) {
+          setTicker(whitelistHit.ticker)
+          setAutoFilledTicker(whitelistHit.ticker)
+        }
+        const hints = result.candidates
+          .filter((c) => c.source === 'stoplist-passed')
+          .slice(0, 4)
+        setHintCandidates(hints)
+      })
+      .catch(() => {
+        // Soft-fail: keep current ticker state, no hints.
+      })
   }
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -74,6 +105,8 @@ export function ScreenshotUploadModal({
   const reset = () => {
     setFile(null)
     setNote('')
+    setAutoFilledTicker(null)
+    setHintCandidates([])
   }
 
   const onSubmit = async () => {
@@ -111,14 +144,44 @@ export function ScreenshotUploadModal({
           onClick={(e) => (e.currentTarget as HTMLDivElement).focus()}
         >
           <div>
-            <Label htmlFor="ticker">Ticker</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="ticker">Ticker</Label>
+              {autoFilledTicker && autoFilledTicker === ticker.toUpperCase() && (
+                <span className="inline-flex items-center gap-1 text-[10px] text-violet">
+                  <Sparkles className="h-3 w-3" />
+                  auto-detected from chart
+                </span>
+              )}
+            </div>
             <Input
               id="ticker"
               value={ticker}
-              onChange={(e) => setTicker(e.target.value)}
+              onChange={(e) => {
+                setTicker(e.target.value)
+                if (autoFilledTicker && e.target.value.toUpperCase() !== autoFilledTicker) {
+                  setAutoFilledTicker(null)
+                }
+              }}
               placeholder="AAPL"
               className="mt-1"
             />
+            {hintCandidates.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground">
+                  Also seen in chart:
+                </span>
+                {hintCandidates.map((c) => (
+                  <button
+                    key={c.ticker}
+                    type="button"
+                    onClick={() => setTicker(c.ticker)}
+                    className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-mono hover:bg-accent transition-colors"
+                  >
+                    {c.ticker}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div

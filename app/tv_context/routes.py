@@ -103,6 +103,31 @@ async def post_event(body: EventIngest, _api_key: str = Depends(verify_api_key))
         return IngestResult(item=_to_out(item))
 
 
+@router.post("/screenshot/extract-ticker")
+async def post_screenshot_extract_ticker(
+    file: UploadFile = File(...),
+    _api_key: str = Depends(verify_api_key),
+):
+    """OCR the image, return ticker candidates ranked by:
+      1. Whitelist hits (roster ∪ boards ∪ Street tier-1/2)
+      2. Position (top-left chart-header preferred)
+      3. First-appearance order
+
+    Operator-confirmation pattern: frontend prefills the ticker field
+    with `candidates[0].ticker` (when present); operator can edit
+    before submitting the actual screenshot ingest. This endpoint
+    NEVER writes to the DB or vault — just a typing-reduction aid.
+
+    Returns ``{"candidates": [...], "ocr_used": bool}``.
+    """
+    from app.tv_context import ticker_extract as _te
+
+    image_bytes = await file.read()
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="empty file")
+    return _te.extract_candidates(image_bytes)
+
+
 @router.post("/screenshot", response_model=IngestResult)
 async def post_screenshot(
     file: UploadFile = File(...),
