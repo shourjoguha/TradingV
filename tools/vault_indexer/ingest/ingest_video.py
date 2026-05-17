@@ -24,6 +24,7 @@ def download_audio(url: str, out_dir: Path) -> Path:
     cmd = [
         "yt-dlp", "-x", "--audio-format", "mp3",
         "--audio-quality", "5",
+        "--no-playlist",
         "-o", str(out),
         url,
     ]

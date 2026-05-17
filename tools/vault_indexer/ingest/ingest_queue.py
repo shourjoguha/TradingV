@@ -131,15 +131,24 @@ def _parse_queue(text: str, *, default_horizon: int, default_model: str) -> list
     return entries
 
 
-def _probe_youtube_uploader(url: str, timeout: int = 15) -> Optional[str]:
-    """Probe yt-dlp for the uploader/channel slug without downloading.
+def _video_id_from_url(url: str) -> Optional[str]:
+    """Extract YouTube video ID from a URL's ``v=`` query param."""
+    try:
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+        return qs.get("v", [None])[0]
+    except Exception:                                          # noqa: BLE001
+        return None
 
-    Returns the first non-empty value from ``uploader_id``, ``uploader``,
-    ``channel`` — slugified — or None if probe fails.
+
+def _probe_youtube_metadata(url: str, timeout: int = 15) -> tuple[Optional[str], Optional[str]]:
+    """Probe yt-dlp for uploader slug + video title without downloading.
+
+    Returns ``(author_slug, title)`` — either may be None if probe fails.
+    Uses ``--no-playlist`` so playlist URLs don't expand.
     """
     cmd = [
-        "yt-dlp", "--skip-download", "--no-warnings",
-        "--print", "%(uploader_id)s|%(uploader)s|%(channel)s",
+        "yt-dlp", "--skip-download", "--no-warnings", "--no-playlist",
+        "--print", "%(uploader_id)s|%(uploader)s|%(channel)s|%(title)s",
         url,
     ]
     try:
@@ -147,13 +156,21 @@ def _probe_youtube_uploader(url: str, timeout: int = 15) -> Optional[str]:
             cmd, capture_output=True, text=True, timeout=timeout, check=True,
         )
     except Exception:                                          # noqa: BLE001
-        return None
+        return None, None
     line = (result.stdout or "").strip().splitlines()[0] if result.stdout else ""
-    for field in line.split("|"):
+    parts = line.split("|")
+    author: Optional[str] = None
+    for field in parts[:3]:
         field = field.strip()
         if field and field.upper() != "NA":
-            return slug(field)
-    return None
+            author = slug(field)
+            break
+    title: Optional[str] = None
+    if len(parts) >= 4:
+        raw_title = "|".join(parts[3:]).strip()   # rejoin in case title contains '|'
+        if raw_title and raw_title.upper() != "NA":
+            title = raw_title
+    return author, title
 
 
 def _url_kind(url: str) -> str:
@@ -197,13 +214,23 @@ def _defuddle_extract(url: str, timeout: int = 60) -> dict:
 def _ingest_video(entry: QueueEntry, *, vault_root: Path, rel_dir_prefix: str) -> str:
     """Video pipeline: yt-dlp + Whisper. Returns relative output path."""
     published = entry.published or datetime.date.today().isoformat()
-    # Auto-probe author from yt-dlp if not supplied. Falls back to _unsorted.
-    author = entry.author or _probe_youtube_uploader(entry.url) or "_unsorted"
-    title = entry.title or f"{author}-{iso_week()}"
+    # Probe metadata from yt-dlp when author or title not explicitly supplied.
+    probed_author: Optional[str] = None
+    probed_title: Optional[str] = None
+    if not entry.author or not entry.title:
+        probed_author, probed_title = _probe_youtube_metadata(entry.url)
+    author = entry.author or probed_author or "_unsorted"
+    # Title priority: explicit > yt-dlp video title > video ID > generic fallback.
+    title = entry.title or probed_title or _video_id_from_url(entry.url) or f"{author}-{iso_week()}"
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         audio = download_audio(entry.url, tmp_path)
         _, body = transcribe(audio, entry.model)
+    if not body or not body.strip():
+        raise RuntimeError(
+            "whisper returned empty transcript (model load or inference failure — "
+            "check stderr for HuggingFace 401 / model repo / disk-space)"
+        )
     week = iso_week(datetime.date.fromisoformat(published))
     rel_dir = f"{rel_dir_prefix.rstrip('/')}/{author}"
     filename = f"{week}-{slug(title)}.md"

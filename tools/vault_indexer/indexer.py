@@ -67,6 +67,7 @@ def index_one(con, node: VaultNode, *, force: bool = False) -> bool:
                 body_hash=node.body_hash,
                 body_md=node.body_md,
                 last_indexed_at=_now_iso(),
+                evergreen=node.evergreen,
             )
         return False
 
@@ -99,6 +100,7 @@ def index_one(con, node: VaultNode, *, force: bool = False) -> bool:
             body_hash=node.body_hash,
             body_md=node.body_md,
             last_indexed_at=_now_iso(),
+            evergreen=node.evergreen,
         )
         _cache.replace_chunks(
             cur,

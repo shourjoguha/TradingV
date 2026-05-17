@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 # to the MLX repos. Pinning here keeps the operator one-line away from
 # rolling back if a community repo goes away.
 _MLX_REPO_BY_MODEL: dict[str, str] = {
-    "tiny": "mlx-community/whisper-tiny",
-    "base": "mlx-community/whisper-base",
-    "small": "mlx-community/whisper-small",
-    "medium": "mlx-community/whisper-medium",
+    "tiny": "mlx-community/whisper-tiny-mlx",
+    "base": "mlx-community/whisper-base-mlx",
+    "small": "mlx-community/whisper-small-mlx",
+    "medium": "mlx-community/whisper-medium-mlx",
     "large": "mlx-community/whisper-large-v3-mlx",
     "large-v3": "mlx-community/whisper-large-v3-mlx",
 }

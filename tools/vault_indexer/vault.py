@@ -44,6 +44,9 @@ class VaultNode:
     tags: list[str] = field(default_factory=list)
     body_md: str = ""
     body_hash: str = ""
+    evergreen: Optional[bool] = None    # frontmatter `evergreen: true|false`,
+                                        # or None → resolved via path-glob default
+                                        # at parse-time (see parse_file).
 
     def is_timely(self) -> bool:
         return is_timely(self.rel_path)
@@ -78,6 +81,16 @@ def parse_file(path: Path, vault_root: Path) -> VaultNode:
     elif horizon is False or horizon == "null":
         horizon = None  # explicit override → timeless even if in a timely folder
 
+    # Evergreen: tri-state. Frontmatter override wins. Otherwise resolve via
+    # the domain's path-glob defaults (e.g. finance Books/** → evergreen,
+    # fitness/nutrition: all → evergreen). Resolved at parse-time so the value
+    # is stable when the row hits cache.upsert_node.
+    fm_evergreen = meta.get("evergreen")
+    if isinstance(fm_evergreen, bool):
+        evergreen: Optional[bool] = fm_evergreen
+    else:
+        evergreen = CONFIG.is_evergreen_path(rel)
+
     body_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()[:16]
     return VaultNode(
         rel_path=rel,
@@ -92,6 +105,7 @@ def parse_file(path: Path, vault_root: Path) -> VaultNode:
         tags=list(meta.get("tags") or []),
         body_md=body,
         body_hash=body_hash,
+        evergreen=evergreen,
     )
 
 
