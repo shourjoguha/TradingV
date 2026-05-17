@@ -40,6 +40,15 @@ class Trade(Base):
         ForeignKey("opportunities.id", ondelete="SET NULL"),
         nullable=True,
     )
+    # rx v1.x.1-a: nullable FK to recommendations(id). Populated by the
+    # trade-capture form when the operator marks a trade as prompted by a
+    # specific rec. Powers the `position_thesis_match` signal in Phase B.
+    # ON DELETE SET NULL so trades survive a rec purge.
+    related_rec_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("recommendations.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     ticker: Mapped[str] = mapped_column(String(50), nullable=False)
     side: Mapped[str] = mapped_column(String(8), nullable=False)  # 'buy' | 'sell'
     qty: Mapped[float] = mapped_column(Float(), nullable=False)

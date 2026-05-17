@@ -22,6 +22,9 @@ class TradeCreate(BaseModel):
     opportunity_id: Optional[str] = None
     fees: float = 0.0
     notes_md: Optional[str] = None
+    # rx v1.x.1-b: optional link to the recommendation that prompted the
+    # trade. Powers the position_thesis_match signal in /rx-finance.
+    related_rec_id: Optional[str] = None
 
 
 class TradeUpdate(BaseModel):
@@ -71,3 +74,19 @@ async def update(
 async def pnl_by_rule(_api_key: str = Depends(verify_api_key)) -> dict[str, Any]:
     """Per-opportunity-rule P&L attribution. Closes the feedback loop."""
     return {"rules": await service.pnl_by_rule()}
+
+
+@router.get("/positions")
+async def list_positions(
+    limit: int = 200,
+    _api_key: str = Depends(verify_api_key),
+) -> dict[str, Any]:
+    """Per-ticker position aggregation (rx v1.x.1-b).
+
+    Returns open positions w/ qty, avg_price, current_value, %portfolio,
+    plus risk flags. current_value uses latest daily OHLCV close; falls
+    back to entry_price when no quote is cached.
+    """
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=400, detail="limit must be in [1,500]")
+    return await service.list_positions(limit=limit)
