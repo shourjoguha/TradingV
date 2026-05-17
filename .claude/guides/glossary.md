@@ -38,7 +38,9 @@ Terms used across docs and code. One line each.
 ## Macro Workbench
 
 - **regime** — A multi-month/multi-quarter market state that biases ratios and asset returns systematically (e.g. risk-on, debasement, recession). The workbench's job is to surface which regime the data is currently in.
-- **ratio (macro)** — `numerator/denominator` of two `macro_series` symbols, computed at query time. Twelve canonical ratios cover the v1 spec (e.g. `GC=F/SPY`, `RSP/SPY`, `HYG/LQD`).
+- **ratio (macro)** — `numerator/denominator` of two `macro_series` symbols, computed at query time. Twelve+ canonical ratios cover the v1 spec (e.g. `GC=F/SPY`, `RSP/SPY`, `HYG/LQD`).
+- **yield curve panel** (added 2026-05-17) — 6th regime panel surfacing US Treasury curve shape + recession-signal spreads. Rows: `WGS2YR` (2Y), `WGS10YR` (10Y), `WGS30YR` (30Y — operator-tracked "all-important 5%" level), `T10Y2Y` (2s10s spread), `T10Y3M` (NY Fed model input). Sourced from vault-audit of `Videos/{click-capital, fx-evolution-daily}` where curve shape is repeatedly flagged. See `.claude/decisions/macro-yields-rework-2026-05-17/`.
+- **MOVE index** — ICE BofA bond-market volatility index (`^MOVE` on yfinance). Bond-market equivalent of VIX. Surfaced beside VIX in the Stress panel since 2026-05-17. Below 80 = calm; 80-120 normal; >180 crisis. Operator-flagged as leading indicator (fx-evolution-daily-w19).
 - **hypothesis** — Operator-authored thesis about a regime/asset move, with TTL, invalidators, and confirming/violating status. Markdown drafts under `.claude/hypotheses/draft/` until M-2 ships the DB-backed object.
 - **claim_type** — `absolute` | `relative` | `absolute_with_relative_signal`. The third covers the common pattern where the bet is on absolute returns but the early-warning signal is a relative ratio.
 - **precondition (hypothesis)** — Existence dependency: if precondition `violated`, dependent auto-cancels. Different from `parent_id` (sizing dependency, no cascade).
@@ -74,6 +76,16 @@ Terms used across docs and code. One line each.
 
 - **fallback_offset_hours** — How long after the daily run-time Railway waits before firing its own (when `RAILWAY_FALLBACK_ENABLED=true`).
 - **deferred_429** — Historical schedule status; unreachable under the queue (kept in DB for back-compat).
+
+## TV Context + decision-engine enrichment (2026-05-17)
+
+- **tv_context_items** — Polymorphic table holding webhook / note / idea / event / screenshot inputs. Per-kind retention. Decay-weighted into rec attention scores; linked to hypotheses for invalidator triggers.
+- **HypothesisTVContextLink** — Pointer table (hypothesis_id × tv_context_item_id) with `stance` column (`supports` / `challenges` / `context`). Operator-stamped at screenshot ingest time.
+- **ticker_review_queue** — Unknown-ticker review surface. Fed by Stage 1 video-vision AND TV-context ingest (Phase 1 parity, shipped 2026-05-17). Resolve via Today strip → adds to roster / board.
+- **attention_score** — Float on `recommendations`. Σ across all tickers in rec text of `kind_weight × exp(-ln2 × age_d / 7)` for TV-context items in trailing 14d. MAX across tickers, not sum. Stamped at rec creation; null on legacy rows.
+- **attention_breakdown** — JSON on `recommendations`. `{ticker: {kind: count, score: float}}`. Powers the violet 👁️ "Operator attention" badge on `/motion/recs/:id`.
+- **tv_context_count_since** — Invalidator DSL op. `args: {days, min_count}`. Fires when ≥ min_count `HypothesisTVContextLink` rows exist in trailing window.
+- **tv_context_stance_count_since** — Stance-filtered version. `args: {days, stance, min_count}`. Operator-facing "evidence against" = `stance="challenges"`.
 
 ## Backends + deployment
 

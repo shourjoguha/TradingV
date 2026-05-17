@@ -83,6 +83,25 @@ LIMIT 50;
 
 `channels` and `recent_caption_snippets` are JSON arrays — when summarising, render the most-recent-last entries.
 
+**Note (2026-05-17):** the queue is now ALSO fed by TV-context note/idea/screenshot/event ingest (any unknown ticker the operator manually adds → enqueued). `channels` will show values like `tv_context_note` / `tv_context_screenshot` alongside the YouTube channel slugs.
+
+### rx-finance recs ranked by operator attention
+
+```sql
+-- Recs touching tickers the operator has been actively studying via
+-- TV-context (screenshots/notes weighted highest, decayed 7d half-life).
+SELECT id, status, drift_score, attention_score,
+       attention_breakdown, tldr
+FROM recommendations
+WHERE domain = 'finance'
+  AND status IN ('open', 'snoozed')
+  AND attention_score > 0
+ORDER BY attention_score DESC, created_at DESC
+LIMIT 20;
+```
+
+`attention_breakdown` is a JSON map `{ticker: {kind: count, score: float}}` — useful when explaining WHY a rec ranked above its drift_score peers.
+
 ### P&L attribution per opportunity rule
 
 ```sql

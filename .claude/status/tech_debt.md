@@ -50,6 +50,8 @@ Things we know about, deferred on purpose, with the trigger to revisit. Differen
 
 **Trigger to revisit:** operator complains they're attaching context after-the-fact instead of being prompted, OR the daily tick logs a hypothesis going stale that a context-gate would have caught.
 
+**Partial mitigation (2026-05-17):** Phase 3 of `tv-context-decision-engine-enrichment` shipped `tv_context_count_since` + `tv_context_stance_count_since` invalidator DSL ops. Operators can author per-hypothesis invalidators reading `HypothesisTVContextLink` directly — no `Hypothesis.tickers` column needed for the link-based path. The original auto-flag-on-empty-context concern still applies for hypotheses that lack an invalidator op; deferred as before.
+
 > **Review cadence:** monthly. Walk every entry — has its trigger fired? If yes, schedule the cleanup. Once this file crosses ~10 active entries, archive RESOLVED ones to `.claude/tech_debt-archive.md` to keep the active list scannable. Update the entry the moment a phase ships and intentionally leaves cruft behind — a stale tech_debt list is worse than none.
 
 ---

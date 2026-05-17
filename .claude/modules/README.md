@@ -24,15 +24,16 @@ gaps. Read one of these when you're touching that module's code.
 | `app/trades/` | [trades.md](trades.md) | manual trade journal, P&L attribution |
 | `app/macro/` | [macro.md](macro.md) | `macro_series`, yfinance + FRED ingestion, ratios |
 | `app/boards/` | [boards.md](boards.md) | "Watchlists" UI, casual ticker lists |
-| `app/hypotheses/` | [hypotheses.md](hypotheses.md) | `hypothesis` + `hypothesis_evaluation`, invalidator DSL |
+| `app/hypotheses/` | [hypotheses.md](hypotheses.md) | `hypothesis` + `hypothesis_evaluation`, invalidator DSL (incl. `tv_context_count_since` / `tv_context_stance_count_since` reading `HypothesisTVContextLink`) |
 | `app/views/` | [views.md](views.md) | markdown view registry |
 | `app/research/` | [research.md](research.md) | `research_queries`, stress-test answers |
-| `app/tv_context/` | [tv_context.md](tv_context.md) | `tv_context_items`, screenshots, vision summaries |
+| `app/tv_context/` | [tv_context.md](tv_context.md) | `tv_context_items`, screenshots, vision summaries; fans out unknown tickers to `ticker_review_queue` + drives rec `attention_score` + hypothesis invalidator DSL |
 | `app/notifications/` | [notifications.md](notifications.md) | Telegram notifier, drift alerts, daily digest |
 | `app/labels/` | [labels.md](labels.md) | free-form ticker metadata |
 | `app/admin/` | [admin.md](admin.md) | loop registry, `app_settings`, `process_status`, kill-switch |
 | `app/earnings/` | [earnings.md](earnings.md) | `earnings_calendar`, IR-channel trigger gate |
-| `app/ticker_review/` | [ticker_review.md](ticker_review.md) | `ticker_review_queue`, unknown-ticker review surface from Stage 1 video-vision |
+| `app/ticker_review/` | [ticker_review.md](ticker_review.md) | `ticker_review_queue`, unknown-ticker review surface from Stage 1 video-vision **AND TV-context note/idea/screenshot/event ingest** |
+| `app/rx/` | [rx.md](rx.md) | `recommendations`, finance-only prescription layer (D-045 storage lock); ingest from laptop `/rx-finance` slash command; **`attention_score` + `attention_breakdown` stamped at create via `tv_context_signal.compute_attention_for_rec`** |
 | Vault (Obsidian + indexer) | [vault.md](vault.md) | knowledge layer + `tools/vault_indexer/` sidecar |
 | `tools/vault_indexer/ingest/video_vision.py` | [video_vision.md](video_vision.md) | scene-detect + OCR + Qwen2-VL captions + structured chart-reference extraction (3-stage chain) |
 
