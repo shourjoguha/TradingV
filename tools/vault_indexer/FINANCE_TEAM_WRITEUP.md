@@ -4,6 +4,8 @@
 **Purpose**: explain what changed in `tools/vault_indexer/`, why it changed, and how to diagnose and recover if the finance app exhibits unexpected behavior.
 **Companion document**: [`MULTI_DOMAIN_BRIEFING.md`](./MULTI_DOMAIN_BRIEFING.md) — full technical reference.
 
+> **Update (2026-05-16, Phase E.5):** the finance cache file was renamed from `cache.db` to `cache-finance.db` for symmetry with `cache-fitness.db` / `cache-nutrition.db`. Behaviour is unchanged — the rename is cosmetic. Statements below that say `cache.db` are historical and refer to the legacy filename; substitute `cache-finance.db` for any present-day operational command. A boot-time coherence check in `config.py` now warns if `DOMAIN` and `INDEXER_DB_PATH` disagree about which domain the operator intends to configure. Full retro in [`.claude/status/roadmap-shipped.md`](../../.claude/status/roadmap-shipped.md) ("Vault-indexer retrieval speedup + domain-config symmetry — Phase E").
+
 ---
 
 ## TL;DR
@@ -18,7 +20,7 @@ DOMAIN=finance
 
 The indexer reads `<vault_path>/_domains.yaml` (the domain registry) and derives the scope filter automatically. Adding a new domain (e.g. nutrition, wellness, …) is a one-line edit to that yaml — finance gets the new EXCLUDE prefix automatically with no env update on the finance side.
 
-Everything else in the indexer's behavior, schema, API, and outputs is unchanged. All code edits are additive with defaults that preserve legacy behavior. Existing finance launches that don't set `DOMAIN` will keep working but **will leak** fitness/nutrition content into `cache.db`. The env is the safety boundary.
+Everything else in the indexer's behavior, schema, API, and outputs is unchanged. All code edits are additive with defaults that preserve legacy behavior. Existing finance launches that don't set `DOMAIN` will keep working but **will leak** fitness/nutrition content into the finance cache (legacy `cache.db`, now `cache-finance.db`). The env is the safety boundary.
 
 **Escape hatch**: explicit `EXCLUDE_FOLDERS=...` (the pre-registry pattern) still works and overrides the registry. Useful for ad-hoc CLI invocations or emergency operation when the registry is corrupt.
 
@@ -166,7 +168,8 @@ export DOMAIN=finance
 echo "$DOMAIN"
 
 # 3. Drop the polluted cache. It's rebuildable in <10 minutes.
-rm ~/Documents/knowledge-vault/.indexer/cache.db
+#    (Post Phase E.5: the file is `cache-finance.db`. Drop WAL + SHM too.)
+rm ~/Documents/knowledge-vault/.indexer/cache-finance.db*
 
 # 4. Restart. The cache rebuilds clean.
 cd "/Users/shourjosmac/Documents/Claude/TradingView "
@@ -249,8 +252,11 @@ This change introduced no schema changes. If you see a schema mismatch, it's fro
 
 ```bash
 curl -sS http://127.0.0.1:8001/health
-# Expected: {"status":"ok","vault":".../knowledge-vault","db":".../cache.db",...}
-# `db` field MUST end with `cache.db`, not `cache-fitness.db`.
+# Expected: {"status":"ok","vault":".../knowledge-vault","db":".../cache-finance.db",...}
+# (Pre-2026-05-16: the file was named `cache.db`. The Phase E.5 rename gave
+#  each domain a `cache-<domain>.db` filename for symmetry. If your install
+#  still has the legacy `cache.db` name, it's not broken — just renamed
+#  manually with `mv` after stopping the launchd agent. See §Migration below.)
 ```
 
 ### §2 — Probe-based isolation test (positive control)
@@ -342,7 +348,7 @@ If you need finance to ignore the registry (e.g. emergency operation): set `EXCL
 | Stop finance | `launchctl unload <plist>` or `kill $(lsof -ti:8001)` |
 | Restart finance with env | `DOMAIN=finance venv/bin/python -m uvicorn tools.vault_indexer.app:app --port 8001 --host 127.0.0.1` |
 | Load finance launchd plist | `launchctl load ~/Library/LaunchAgents/com.shourjo.kb-finance-indexer.plist` |
-| Drop polluted cache | `rm ~/Documents/knowledge-vault/.indexer/cache.db` (rebuildable in <10 min) |
+| Drop polluted cache | `rm ~/Documents/knowledge-vault/.indexer/cache-finance.db*` (matches `.db` + `.db-wal` + `.db-shm`; rebuildable in <10 min) |
 | Force fresh scan | `curl -sS -X POST http://127.0.0.1:8001/reload` |
 | Verify env in current process | `lsof -nP -p $(lsof -ti:8001) | head` then check the env via `ps eww <PID>` |
 | Test scope filter | See §3 above |
@@ -385,7 +391,8 @@ If you need finance to ignore the registry (e.g. emergency operation): set `EXCL
   Videos/fitness/, Topics/fitness/, Newsletters/fitness/, Books/fitness/
                                  NEW       (fitness folders, empty)
   _taxonomy-fitness.md           NEW
-  .indexer/cache-fitness.db      NEW       (fitness cache; finance still uses cache.db)
+  .indexer/cache-fitness.db      NEW       (fitness cache)
+  .indexer/cache-finance.db      RENAMED   (was `cache.db` pre-Phase-E.5; same content)
 
 ~/Library/LaunchAgents/
   com.shourjo.kb-finance-indexer.plist   NEW  DOMAIN=finance baked in (not loaded yet)

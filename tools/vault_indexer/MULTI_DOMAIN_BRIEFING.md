@@ -134,11 +134,13 @@ These four `*/fitness/` folders **must never be scanned by the finance indexer**
 
 ### SQLite caches
 
-`.indexer/cache.db` (existing, ~7 MB) — **finance only**. Owned by the indexer running on port 8001.
+`.indexer/cache-finance.db` — **finance only**. Owned by the indexer running on port 8001. (Was `cache.db` in legacy single-domain installs; renamed for symmetry — see Phase E.5 retro in `.claude/status/roadmap-shipped.md`.)
 
-`.indexer/cache-fitness.db` (new) — **fitness only**. Owned by the indexer running on port 8002.
+`.indexer/cache-fitness.db` — **fitness only**. Owned by the indexer running on port 8002.
 
-The two caches are physically separate files. Even if a path filter ever broke, the worst case is bad data inside one cache; cross-pollination is structurally impossible because each service writes only to its own DB path.
+`.indexer/cache-nutrition.db` — **nutrition only**. Owned by the indexer running on port 8003.
+
+The three caches are physically separate files. Even if a path filter ever broke, the worst case is bad data inside one cache; cross-pollination is structurally impossible because each service writes only to its own DB path.
 
 ---
 
@@ -146,12 +148,13 @@ The two caches are physically separate files. Even if a path filter ever broke, 
 
 | Port | Service | Process owner | Cache | Taxonomy | Review queue |
 |---|---|---|---|---|---|
-| 8001 | finance vault-indexer (TradingView reads from this) | `DOMAIN=finance` | `cache.db` | `_taxonomy.md` | `_review-queue.md` |
+| 8001 | finance vault-indexer (TradingView reads from this) | `DOMAIN=finance` + `INDEXER_DB_PATH=.indexer/cache-finance.db` | `cache-finance.db` | `_taxonomy.md` | `_review-queue.md` |
 | 8002 | fitness vault-indexer | `DOMAIN=fitness` + `INDEXER_DB_PATH=.indexer/cache-fitness.db` | `cache-fitness.db` | `_taxonomy-fitness.md` | `_review-queue-fitness.md` |
+| 8003 | nutrition vault-indexer | `DOMAIN=nutrition` + `INDEXER_DB_PATH=.indexer/cache-nutrition.db` | `cache-nutrition.db` | `_taxonomy-nutrition.md` | `_review-queue-nutrition.md` |
 
-Note: `INDEXER_DB_PATH` must still be per-instance because the cache file path is independent of the registry. Everything else (taxonomy file, review file, horizon, auto-tag, scope filter) derives from yaml.
+Note: `INDEXER_DB_PATH` is per-instance because the cache file path is independent of the registry. Everything else (taxonomy file, review file, horizon, auto-tag, scope filter) derives from yaml. A boot-time coherence check warns if `DOMAIN` and `INDEXER_DB_PATH` disagree on which domain you're configuring (see `config.py`).
 
-**Don't bind port 8002 from anything finance-related.** It's the fitness service's port. Finance lives on 8001.
+**Don't bind a port from a different domain.** Finance = 8001, fitness = 8002, nutrition = 8003.
 
 ---
 
@@ -159,9 +162,33 @@ Note: `INDEXER_DB_PATH` must still be per-instance because the cache file path i
 
 ### Finance launch — your responsibility
 
-The finance service launchd plist is at `~/Library/LaunchAgents/com.shourjo.kb-finance-indexer.plist`. Its `EnvironmentVariables` block sets `DOMAIN=finance`, which causes the indexer to read `<vault>/_domains.yaml` and derive the EXCLUDE list automatically. Any other launcher (shell, CI, ad-hoc curl test against a fresh process) must also set `DOMAIN=finance` — or, for back-compat, the explicit `EXCLUDE_FOLDERS=…` list.
+The finance service launchd plist is at `~/Library/LaunchAgents/com.shourjo.kb-finance-indexer.plist`. Its `EnvironmentVariables` block sets:
+- `DOMAIN=finance` — the indexer reads `<vault>/_domains.yaml` and derives the EXCLUDE list automatically
+- `INDEXER_DB_PATH=<vault>/.indexer/cache-finance.db` — explicit per-instance cache
 
-A finance launchd plist already exists at `~/Library/LaunchAgents/com.shourjo.kb-finance-indexer.plist` with `DOMAIN=finance` baked into its EnvironmentVariables. Symmetric to the fitness plist. Loading it (`launchctl load ...`) is the recommended persistent setup.
+Any other launcher (shell, CI, ad-hoc curl test against a fresh process) must set the same two vars. The escape hatches (`EXCLUDE_FOLDERS=…`, explicit alternate `INDEXER_DB_PATH`) remain for ad-hoc operation; the coherence-check warning in `config.py` will surface when DOMAIN and DB filename disagree.
+
+### Adding a new domain — recipe
+
+End-to-end steps when you want a fourth indexer (e.g. `macro`):
+
+1. **Vault content.** Place markdown under `<vault>/<Class>/macro/...` (e.g. `Books/macro/...`, `Videos/macro/...`).
+2. **Registry.** Append to `<vault>/_domains.yaml`:
+   ```yaml
+   macro:
+     classes: [Books, Newsletters, Videos, Topics]
+     taxonomy_file: _taxonomy-macro.md
+     review_file: _review-queue-macro.md
+     default_horizon_months: 12
+     auto_tag_enabled: false
+   ```
+   Finance auto-derives the new EXCLUDE prefix (since it's `legacy: true`); no other yaml edits required.
+3. **Vocabulary stubs.** `touch <vault>/_taxonomy-macro.md <vault>/_review-queue-macro.md` (empty markdown is fine; indexer regenerates the review queue on first `/reload`).
+4. **launchd plist.** Copy `com.shourjo.kb-fitness-indexer.plist` → `com.shourjo.kb-macro-indexer.plist`, change Label, port (8004), and `EnvironmentVariables`: `DOMAIN=macro`, `INDEXER_DB_PATH=<vault>/.indexer/cache-macro.db`.
+5. **kb-mcp source.** Edit `~/.config/kb-mcp/sources.yaml` to add `macro: http://127.0.0.1:8004` under the `knowledge_vault` source's `endpoints` block.
+6. **Load + verify.** `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.shourjo.kb-macro-indexer.plist`; `curl http://127.0.0.1:8004/health`; restart Claude Desktop so kb-mcp picks up the new endpoint.
+7. **Ingest.** `curl -X POST http://127.0.0.1:8004/reload` (or wait for the daily reload-sweep agent if it covers your endpoint).
+8. **Verify isolation.** `sqlite3 <vault>/.indexer/cache-macro.db "SELECT COUNT(*) FROM vault_node WHERE path NOT LIKE 'Books/macro/%' AND path NOT LIKE 'Videos/macro/%' AND path NOT LIKE 'Newsletters/macro/%' AND path NOT LIKE 'Topics/macro/%';"` should return `0`. The `test_vault_indexer_domain_isolation.py` integration test exercises this same guarantee in CI.
 
 ### launchd plists — loaded and active
 
@@ -288,7 +315,7 @@ If you ever need the registry change to affect a running finance service without
 **Recovery**:
 1. Stop the finance service.
 2. Set `DOMAIN=finance`. Verify `<vault>/_domains.yaml` parses correctly (`yaml.safe_load`).
-3. Drop `cache.db` (the cache is rebuildable in <10 min): `rm ~/Documents/knowledge-vault/.indexer/cache.db`
+3. Drop the finance cache (rebuildable in <10 min): `rm ~/Documents/knowledge-vault/.indexer/cache-finance.db*` (matches `.db`, `.db-wal`, `.db-shm`).
 4. Restart the finance service.
 5. POST `/reload`.
 6. Re-run the verification recipe above.
@@ -345,8 +372,9 @@ Each service rewrites only its own scope. If you want a rename to apply across b
   _review-queue-fitness.md       will be auto-generated on first :8002 /reload
   _taxonomy.md                   UNCHANGED
   _review-queue.md               UNCHANGED
-  .indexer/cache.db              UNCHANGED (finance only)
-  .indexer/cache-fitness.db      NEW (fitness only)
+  .indexer/cache-finance.db      finance only (renamed from cache.db in Phase E.5)
+  .indexer/cache-fitness.db      fitness only
+  .indexer/cache-nutrition.db    nutrition only
 
 ~/Library/LaunchAgents/
   com.shourjo.kb-finance-indexer.plist   NEW (DOMAIN=finance baked in; not yet loaded)
