@@ -219,7 +219,9 @@ async def run_daily_tick(session: AsyncSession) -> dict[str, int]:
     ).scalars().all()
     for row in active_rows:
         try:
-            result = await inv_dsl.evaluate(row.invalidator, session=session)
+            result = await inv_dsl.evaluate(
+                row.invalidator, session=session, hypothesis_id=row.id
+            )
         except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "invalidator failed for hypothesis %s: %s", row.slug, exc

@@ -111,7 +111,17 @@ HALF_LIFE_DAYS = 7        # weekly half-life — screenshots from a month ago ba
 - [ ] When `since_days=0` or no inputs found → returns `{score: 0.0, breakdown: {...all zeros}}` not None.
 - [ ] Migration includes downgrade path.
 
-## Phase 3 — Hypothesis invalidator DSL reads `HypothesisTVContextLink` (~1d)
+## Phase 3 — Hypothesis invalidator DSL reads `HypothesisTVContextLink` (~1d) — **SHIPPED 2026-05-17**
+
+> **Ledger (Phase 3):**
+> - **Design pick**: option A (new DSL ops `tv_context_count_since` + `tv_context_stance_count_since`) over option B (parallel context-eval pass). Operators already author invalidators in DSL form; adding DSL ops keeps everything operator-tunable via existing schema rather than hiding logic in a side loop.
+> - **Stance vocab correction**: the plan said `stance="evidence-against"` but the actual `HypothesisTVContextLink` model uses `('supports', 'challenges', 'context')`. Locked the validator + tests to the actual vocab. Operator-facing "evidence against" = `stance="challenges"`.
+> - **Signature change**: `evaluate(spec, *, session, hypothesis_id=None)` — old callers pass nothing and macro ops ignore the new param. Backwards-compat preserved.
+> - **Soft-skip on missing hypothesis_id**: tv-context op without id returns `fired=False` with descriptive reason instead of raising. Mirrors the rest of the DSL's "insufficient input never crashes the daily tick" pattern.
+> - **Stance form param at ingest**: plan called for adding stance dropdown to note/idea routes. NOT shipped in this phase — the link table already accepts a `stance` column on insert; operator can stamp it via the existing screenshot-link path. Filed for follow-up if friction surfaces. Phase D's review queue + the rx-finance attention badge already give the operator visible feedback loops; the route-level stance dropdown is incremental polish.
+> - **Frontend hypothesis-detail "Recent linked context" surface**: deferred. The rx-finance attention badge already shows operator-attention signal; the duplicate surface on hypothesis detail can wait for a follow-up if operator asks.
+> - **9 new tests** (plan estimated 10+): validation accept/reject, threshold fire/no-fire, window cutoff, stance filter, missing-id soft-skip, end-to-end run_daily_tick, backwards-compat for macro ops.
+
 
 ### Goal
 Make `HypothesisTVContextLink` rows actually evaluate. Operator flags a screenshot as "evidence-against hypothesis X" → next daily tick reads it → hypothesis flips toward `at_risk` faster.

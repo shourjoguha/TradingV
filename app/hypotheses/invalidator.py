@@ -39,9 +39,20 @@ VALID_OPS = (
     "series_below_threshold",
     "series_change_pct",
     "manual",
+    # tv-context-decision-engine-enrichment Phase 3: read
+    # `HypothesisTVContextLink` rows in a trailing window. The DSL is
+    # flat (no AND/OR composition) so operators get one op per
+    # invalidator — pick stance-filtered when stance discipline matters.
+    "tv_context_count_since",
+    "tv_context_stance_count_since",
 )
 
 VALID_DIRECTIONS = ("up", "down")
+
+# Mirrors `app.tv_context.models.VALID_STANCES`. Duplicated to avoid
+# circular import at module load — TV-context module imports nothing
+# from hypotheses, and validators should be cheap.
+VALID_STANCES = ("supports", "challenges", "context")
 
 
 @dataclass
@@ -92,6 +103,15 @@ def validate_spec(spec: Any) -> None:
     elif op == "manual":
         # No args required.
         pass
+    elif op == "tv_context_count_since":
+        _require_pos_int(args, "days")
+        _require_pos_int(args, "min_count")
+    elif op == "tv_context_stance_count_since":
+        _require_pos_int(args, "days")
+        _require_pos_int(args, "min_count")
+        stance = args.get("stance")
+        if stance not in VALID_STANCES:
+            raise ValueError(f"stance must be one of {VALID_STANCES}")
 
 
 def _require_str(args: dict, key: str) -> None:
@@ -116,11 +136,21 @@ def _require_pos_int(args: dict, key: str) -> None:
 # Evaluation
 # ----------------------------------------------------------------------
 
-async def evaluate(spec: dict, *, session: AsyncSession) -> InvalidatorResult:
+async def evaluate(
+    spec: dict,
+    *,
+    session: AsyncSession,
+    hypothesis_id: Optional[str] = None,
+) -> InvalidatorResult:
     """Evaluate a validated DSL spec against current macro data.
 
     Validation is the caller's responsibility (Pydantic does it at the
     route layer). This function trusts the shape.
+
+    ``hypothesis_id`` is required for tv-context ops (Phase 3) and
+    ignored by macro-data ops. Callers (`run_daily_tick`) pass the
+    hypothesis row's id; one-off tests can leave it None when the spec
+    is a macro op.
     """
     op = spec["op"]
     args = spec.get("args", {})
@@ -138,7 +168,82 @@ async def evaluate(spec: dict, *, session: AsyncSession) -> InvalidatorResult:
             observed={},
             reason="manual op — never auto-fires",
         )
+    if op == "tv_context_count_since":
+        return await _eval_tv_context_count(
+            session, args, hypothesis_id=hypothesis_id, stance=None
+        )
+    if op == "tv_context_stance_count_since":
+        return await _eval_tv_context_count(
+            session,
+            args,
+            hypothesis_id=hypothesis_id,
+            stance=args["stance"],
+        )
     raise ValueError(f"unknown op at evaluate(): {op!r}")
+
+
+async def _eval_tv_context_count(
+    session: AsyncSession,
+    args: dict,
+    *,
+    hypothesis_id: Optional[str],
+    stance: Optional[str],
+) -> InvalidatorResult:
+    """Count `HypothesisTVContextLink` rows in the trailing window,
+    optionally stance-filtered. Fires when count >= min_count.
+
+    When ``hypothesis_id`` is None the op can't evaluate — return a soft
+    no-fire (mirrors the rest of the DSL: insufficient input never
+    crashes the daily tick).
+    """
+    days = int(args["days"])
+    min_count = int(args["min_count"])
+    if not hypothesis_id:
+        return InvalidatorResult(
+            fired=False,
+            observed={"reason": "no hypothesis_id provided"},
+            reason="tv_context op missing hypothesis_id",
+        )
+    # Lazy import — tv_context module shouldn't be at module-load time
+    # (decouple invalidator from tv_context for circular-import safety).
+    from app.tv_context.models import (
+        HypothesisTVContextLink,
+        STATUS_ACTIVE,
+        TVContextItem,
+    )
+
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+        days=days
+    )
+    stmt = (
+        select(HypothesisTVContextLink, TVContextItem)
+        .join(
+            TVContextItem,
+            TVContextItem.id == HypothesisTVContextLink.tv_context_item_id,
+        )
+        .where(HypothesisTVContextLink.hypothesis_id == hypothesis_id)
+        .where(TVContextItem.captured_at >= cutoff)
+        .where(TVContextItem.status == STATUS_ACTIVE)
+    )
+    if stance is not None:
+        stmt = stmt.where(HypothesisTVContextLink.stance == stance)
+    rows = (await session.execute(stmt)).all()
+    count = len(rows)
+    fired = count >= min_count
+    reason_stance = f" stance={stance!r}" if stance else ""
+    return InvalidatorResult(
+        fired=fired,
+        observed={
+            "count": count,
+            "min_count": min_count,
+            "window_days": days,
+            "stance": stance,
+        },
+        reason=(
+            f"tv_context linked items{reason_stance} "
+            f"{count}/{min_count} in last {days}d"
+        ),
+    )
 
 
 async def _eval_ratio_below_sma(

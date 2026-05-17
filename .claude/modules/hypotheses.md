@@ -51,6 +51,10 @@ the shape. See [app/hypotheses/invalidator.py](../../app/hypotheses/invalidator.
 | `series_below_threshold` | `symbol, threshold, days_below` | Mirror; `<` strict. |
 | `series_change_pct` | `symbol, window_months, threshold_pct, direction (up\|down)` | `(latest − first) / first × 100` crosses threshold in `direction`. |
 | `manual` | `{}` | Never auto-fires. Operator dismisses via `POST /cancel`. |
+| `tv_context_count_since` | `days, min_count` | Fires when ≥ `min_count` `HypothesisTVContextLink` rows exist for this hypothesis in the trailing `days` window (active `tv_context_items` only). |
+| `tv_context_stance_count_since` | `days, stance, min_count` | Same as above, filtered to a specific stance (`supports` / `challenges` / `context`). Operator flags a screenshot as 'challenges' on a hypothesis → 2+ in 14d → status auto-flips to invalidated. |
+
+> TV-context ops need a `hypothesis_id` to query `HypothesisTVContextLink`. `run_daily_tick` passes it; one-off `evaluate(spec, session=session)` without an id returns a soft no-fire (the rest of the DSL never crashes on insufficient input).
 
 Each evaluation returns `InvalidatorResult { fired, observed, reason }`.
 `observed` is the raw values inspected — persisted to

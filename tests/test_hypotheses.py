@@ -455,6 +455,213 @@ def test_view_registry_fails_on_bad_frontmatter(tmp_path):
         parser.load_registry(tmp_path)
 
 
+# ---------------------------------------------------------------------------
+# Phase 3 (tv-context-decision-engine-enrichment): TV-context DSL ops.
+#
+# `tv_context_count_since(days, min_count)` — fires when ≥min_count
+# items are linked to the hypothesis in the trailing window.
+# `tv_context_stance_count_since(days, stance, min_count)` — same but
+# filtered to a specific stance ('supports' | 'challenges' | 'context').
+# ---------------------------------------------------------------------------
+
+
+async def _seed_hypothesis_with_invalidator(spec: dict) -> str:
+    """Insert a hypothesis directly via ORM (bypasses route validation
+    to let tests freely flip the spec under test). Returns the id."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    async with _db.SessionLocal() as session:
+        h = Hypothesis(
+            slug=f"tvctx-{now.timestamp():.4f}",
+            title="tv-context invalidator test",
+            claim_type="regime",
+            axis="x",
+            primary_metric="m",
+            tracking_signal="m",
+            invalidator=spec,
+            ttl_months=6,
+            expires_at=now + datetime.timedelta(days=180),
+            status=STATUS_ACTIVE,
+        )
+        session.add(h)
+        await session.commit()
+        return h.id
+
+
+async def _link_tv_context(
+    hypothesis_id: str,
+    ticker: str,
+    *,
+    stance: str = "context",
+    body: str = "linked note",
+    captured_at: datetime.datetime | None = None,
+) -> None:
+    """Ingest a note + HypothesisTVContextLink row in one shot."""
+    from app.tv_context import service as tvc
+    from app.tv_context.models import HypothesisTVContextLink, TVContextItem
+
+    async with _db.SessionLocal() as session:
+        item = await tvc.ingest_note(session=session, ticker=ticker, body=body)
+        if captured_at is not None:
+            item.captured_at = captured_at
+        session.add(
+            HypothesisTVContextLink(
+                hypothesis_id=hypothesis_id,
+                tv_context_item_id=item.id,
+                stance=stance,
+            )
+        )
+        await session.commit()
+
+
+def test_validate_spec_accepts_tv_context_ops():
+    inv_dsl.validate_spec(
+        {"op": "tv_context_count_since", "args": {"days": 14, "min_count": 2}}
+    )
+    inv_dsl.validate_spec(
+        {
+            "op": "tv_context_stance_count_since",
+            "args": {"days": 14, "stance": "challenges", "min_count": 2},
+        }
+    )
+
+
+def test_validate_spec_rejects_tv_context_bad_args():
+    with pytest.raises(ValueError):
+        inv_dsl.validate_spec(
+            {"op": "tv_context_count_since", "args": {"min_count": 2}}
+        )
+    with pytest.raises(ValueError):
+        inv_dsl.validate_spec(
+            {
+                "op": "tv_context_count_since",
+                "args": {"days": -1, "min_count": 2},
+            }
+        )
+    with pytest.raises(ValueError):
+        inv_dsl.validate_spec(
+            {
+                "op": "tv_context_stance_count_since",
+                "args": {"days": 14, "stance": "bogus", "min_count": 2},
+            }
+        )
+
+
+@pytest.mark.asyncio
+async def test_tv_context_count_fires_at_threshold(client):
+    """≥ min_count linked items in the window → fired=True."""
+    spec = {"op": "tv_context_count_since", "args": {"days": 14, "min_count": 2}}
+    hid = await _seed_hypothesis_with_invalidator(spec)
+    await _link_tv_context(hid, "NVDA")
+    await _link_tv_context(hid, "META")
+    async with _db.SessionLocal() as session:
+        result = await inv_dsl.evaluate(
+            spec, session=session, hypothesis_id=hid
+        )
+    assert result.fired is True
+    assert result.observed["count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_tv_context_count_no_fire_below_threshold(client):
+    spec = {"op": "tv_context_count_since", "args": {"days": 14, "min_count": 3}}
+    hid = await _seed_hypothesis_with_invalidator(spec)
+    await _link_tv_context(hid, "NVDA")
+    async with _db.SessionLocal() as session:
+        result = await inv_dsl.evaluate(
+            spec, session=session, hypothesis_id=hid
+        )
+    assert result.fired is False
+    assert result.observed["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_tv_context_count_window_cutoff(client):
+    """Items older than `days` window should NOT count."""
+    spec = {"op": "tv_context_count_since", "args": {"days": 7, "min_count": 1}}
+    hid = await _seed_hypothesis_with_invalidator(spec)
+    old = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=30)
+    await _link_tv_context(hid, "META", captured_at=old)
+    async with _db.SessionLocal() as session:
+        result = await inv_dsl.evaluate(
+            spec, session=session, hypothesis_id=hid
+        )
+    assert result.fired is False
+
+
+@pytest.mark.asyncio
+async def test_tv_context_stance_filter_supports(client):
+    """stance='challenges' only counts challenges-tagged links."""
+    spec = {
+        "op": "tv_context_stance_count_since",
+        "args": {"days": 14, "stance": "challenges", "min_count": 1},
+    }
+    hid = await _seed_hypothesis_with_invalidator(spec)
+    # 2 'context' links — should NOT trip a 'challenges' threshold.
+    await _link_tv_context(hid, "AAPL", stance="context")
+    await _link_tv_context(hid, "NVDA", stance="context")
+    async with _db.SessionLocal() as session:
+        result = await inv_dsl.evaluate(
+            spec, session=session, hypothesis_id=hid
+        )
+    assert result.fired is False
+    # Now add a single 'challenges' link → should fire.
+    await _link_tv_context(hid, "META", stance="challenges")
+    async with _db.SessionLocal() as session:
+        result = await inv_dsl.evaluate(
+            spec, session=session, hypothesis_id=hid
+        )
+    assert result.fired is True
+    assert result.observed["stance"] == "challenges"
+    assert result.observed["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_tv_context_count_without_hypothesis_id_soft_skip(client):
+    """Calling tv-context op without hypothesis_id returns no-fire, no crash."""
+    spec = {"op": "tv_context_count_since", "args": {"days": 14, "min_count": 1}}
+    async with _db.SessionLocal() as session:
+        result = await inv_dsl.evaluate(spec, session=session)
+    assert result.fired is False
+    assert "missing hypothesis_id" in result.reason
+
+
+@pytest.mark.asyncio
+async def test_tick_tv_context_invalidator_flips_status(client):
+    """End-to-end: run_daily_tick passes hypothesis_id; TV-context fires
+    the invalidator; status flips to invalidated; evaluation row recorded."""
+    spec = {
+        "op": "tv_context_stance_count_since",
+        "args": {"days": 14, "stance": "challenges", "min_count": 2},
+    }
+    hid = await _seed_hypothesis_with_invalidator(spec)
+    await _link_tv_context(hid, "NVDA", stance="challenges")
+    await _link_tv_context(hid, "META", stance="challenges")
+
+    async with _db.SessionLocal() as session:
+        stats = await hyp_service.run_daily_tick(session)
+        await session.commit()
+    assert stats["invalidated"] >= 1
+    async with _db.SessionLocal() as session:
+        row = await session.get(Hypothesis, hid)
+        assert row.status == STATUS_INVALIDATED
+
+
+@pytest.mark.asyncio
+async def test_existing_macro_ops_unaffected_by_signature_change(client):
+    """Adding `hypothesis_id` param must not break existing macro ops."""
+    today = datetime.date.today()
+    pts = [(today - datetime.timedelta(days=i), 130.0) for i in range(0, 5)]
+    await _seed_series("DXY", pts)
+    spec = {
+        "op": "series_above_threshold",
+        "args": {"symbol": "DXY", "threshold": 110.0, "days_above": 3},
+    }
+    async with _db.SessionLocal() as session:
+        # Call without hypothesis_id — must still work.
+        result = await inv_dsl.evaluate(spec, session=session)
+    assert result.fired is True
+
+
 @pytest.mark.asyncio
 async def test_views_route_returns_registry(client):
     from app.views import parser
