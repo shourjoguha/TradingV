@@ -1660,6 +1660,17 @@ export function useStreetDigest(
 // `domain='finance'` server-side; defense-in-depth on the CHECK constraint.
 // ---------------------------------------------------------------------------
 
+export interface RxAttentionPerTicker {
+  // Counts per TV-context kind for the matched ticker.
+  screenshot?: number
+  note?: number
+  idea?: number
+  event?: number
+  webhook?: number
+  // Per-ticker contribution; the rec-level `attention_score` is MAX across tickers.
+  score?: number
+}
+
 export interface RxRecListItem {
   id: string
   short_id: string
@@ -1676,6 +1687,10 @@ export interface RxRecListItem {
   auto_revived: boolean
   forced_decision: boolean
   aging: boolean
+  // Phase 2 (tv-context-decision-engine-enrichment): operator-attention
+  // axis stamped at rec creation. Null on legacy rows pre-migration.
+  attention_score: number | null
+  attention_breakdown: Record<string, RxAttentionPerTicker> | null
 }
 
 export interface RxRecRead extends Omit<RxRecListItem, 'short_id' | 'age_days' | 'tldr_short' | 'auto_revived' | 'aging'> {

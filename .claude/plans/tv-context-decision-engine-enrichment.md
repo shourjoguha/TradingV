@@ -56,7 +56,16 @@ Match the video pipeline: when an operator submits a TV context input with a tic
 - [ ] Imports lazy (don't load `ticker_review` until first ingest call — keeps cold-start fast).
 - [ ] Snippet truncated to 200 chars (avoid bloating queue rows with screenshot vision-summary markdown).
 
-## Phase 2 — rx-finance reads TV context (~4h)
+## Phase 2 — rx-finance reads TV context (~4h) — **SHIPPED 2026-05-17**
+
+> **Ledger (Phase 2):**
+> - **Design pick**: option B (explicit `attention_score` + `attention_breakdown` columns) over option A (composite-score modulation). Decision-engine changes that aren't visible are anti-product; the badge teaches the operator *why* this rec ranked higher than another.
+> - **Aggregation rule**: top-level `score = MAX across tickers`, NOT sum. A rec mentioning NVDA (3 screenshots) + META (no signal) should NOT be diluted by the absent META signal. Plan was silent on this — locked in implementation.
+> - **Persistence cadence**: stamped at rec creation. Stale if operator ingests a screenshot AFTER rec creation. Accepted because (a) recs are short-lived (60d default window), (b) per-list-read recompute would N+1 across every list call. Future: opt-in `?refresh_attention=true` on the detail endpoint.
+> - **Surprise**: rec has NO `ticker` column. A single rec can reference multiple tickers via prose. Solution: re-used the existing `_TICKER_NOISE_DENYLIST` regex from `links_for_rec` to extract them. Same denylist source-of-truth as the cross-references panel.
+> - **Best-effort contract**: a compute failure must NEVER block rec creation. `service.create` wraps in `try/except + log`; row commits with null attention fields. Frontend treats null as "no signal" + hides the badge.
+> - **Next-phase implication**: Phase 3 has explicit `HypothesisTVContextLink` rows so no prose-extraction needed — direct FK reads.
+
 
 ### Goal
 Make TV Context inputs visibly shift `rx-finance` recommendations. Operator screenshots an NVDA chart, the next `/rx-finance` invocation surfaces NVDA-relevant recs higher.
