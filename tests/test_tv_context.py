@@ -897,6 +897,199 @@ async def test_research_ask_force_skip_overrides_gate(client, monkeypatch):
     assert body["status"] != "needs_context"
 
 
+# ---------------------------------------------------------------------------
+# Phase 1 (tv-context-decision-engine-enrichment): ticker_review parity
+#
+# When an operator submits a TV-context input with an unknown ticker
+# (NOT in roster ∪ boards ∪ The Street), the ingest fans out a best-effort
+# enqueue to ticker_review_queue. Mirrors the video pipeline parity.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_note_ingest_enqueues_unknown_ticker(client, monkeypatch):
+    from app.core.config import SETTINGS
+    from app.tv_context import service as svc
+
+    monkeypatch.setattr(SETTINGS, "TV_CTX_TICKER_REVIEW_ENABLED", True)
+
+    calls: list[dict] = []
+
+    async def _fake_whitelist():
+        return {"NVDA", "AAPL"}  # known universe
+
+    async def _fake_enqueue(**kwargs):
+        calls.append(kwargs)
+        return None
+
+    monkeypatch.setattr(
+        "tools.vault_indexer.ingest.chart_extractor.load_ticker_whitelist",
+        _fake_whitelist,
+    )
+    monkeypatch.setattr(
+        "app.ticker_review.service.enqueue_or_bump", _fake_enqueue
+    )
+
+    async with core_db.SessionLocal() as session:
+        await svc.ingest_note(session=session, ticker="PLTR", body="wedge break")
+        await session.commit()
+
+    assert len(calls) == 1
+    assert calls[0]["ticker"] == "PLTR"
+    assert calls[0]["channel"] == "tv_context_note"
+    assert "wedge break" in calls[0]["snippet"]
+
+
+@pytest.mark.asyncio
+async def test_known_ticker_does_not_enqueue(client, monkeypatch):
+    """Tickers already in the operator's universe should NOT be enqueued."""
+    from app.core.config import SETTINGS
+    from app.tv_context import service as svc
+
+    monkeypatch.setattr(SETTINGS, "TV_CTX_TICKER_REVIEW_ENABLED", True)
+
+    calls: list[dict] = []
+
+    async def _fake_whitelist():
+        return {"NVDA"}
+
+    async def _fake_enqueue(**kwargs):
+        calls.append(kwargs)
+
+    monkeypatch.setattr(
+        "tools.vault_indexer.ingest.chart_extractor.load_ticker_whitelist",
+        _fake_whitelist,
+    )
+    monkeypatch.setattr(
+        "app.ticker_review.service.enqueue_or_bump", _fake_enqueue
+    )
+
+    async with core_db.SessionLocal() as session:
+        await svc.ingest_note(session=session, ticker="NVDA", body="ok")
+        await session.commit()
+
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_idea_screenshot_event_each_enqueue(client, monkeypatch):
+    """Idea / screenshot / event paths all fan out for unknown tickers."""
+    from app.core.config import SETTINGS
+    from app.tv_context import service as svc
+
+    monkeypatch.setattr(SETTINGS, "TV_CTX_TICKER_REVIEW_ENABLED", True)
+
+    calls: list[dict] = []
+
+    async def _fake_whitelist():
+        return set()
+
+    async def _fake_enqueue(**kwargs):
+        calls.append(kwargs)
+
+    monkeypatch.setattr(
+        "tools.vault_indexer.ingest.chart_extractor.load_ticker_whitelist",
+        _fake_whitelist,
+    )
+    monkeypatch.setattr(
+        "app.ticker_review.service.enqueue_or_bump", _fake_enqueue
+    )
+
+    async with core_db.SessionLocal() as session:
+        await svc.ingest_idea(
+            session=session,
+            ticker="ASTS",
+            url="https://example.com/idea",
+            summary="space stocks breakout",
+        )
+        await svc.ingest_screenshot_row(
+            session=session,
+            ticker="SMR",
+            vault_path="/tmp/sidecar.md",
+            payload={"note": "small modular reactor chart"},
+        )
+        await svc.ingest_event(
+            session=session,
+            ticker="RKLB",
+            label="launch milestone",
+            event_date=datetime.date.today() + datetime.timedelta(days=2),
+            body="vehicle return",
+        )
+        await session.commit()
+
+    channels = sorted(c["channel"] for c in calls)
+    assert channels == [
+        "tv_context_event",
+        "tv_context_idea",
+        "tv_context_screenshot",
+    ]
+    tickers = sorted(c["ticker"] for c in calls)
+    assert tickers == ["ASTS", "RKLB", "SMR"]
+
+
+@pytest.mark.asyncio
+async def test_enqueue_failure_does_not_bubble(client, monkeypatch):
+    """A queue write must NEVER block / fail the host ingest."""
+    from app.core.config import SETTINGS
+    from app.tv_context import service as svc
+
+    monkeypatch.setattr(SETTINGS, "TV_CTX_TICKER_REVIEW_ENABLED", True)
+
+    async def _boom_whitelist():
+        raise RuntimeError("simulated outage")
+
+    monkeypatch.setattr(
+        "tools.vault_indexer.ingest.chart_extractor.load_ticker_whitelist",
+        _boom_whitelist,
+    )
+
+    async with core_db.SessionLocal() as session:
+        item = await svc.ingest_note(
+            session=session, ticker="ZZZZ", body="ingest should still work"
+        )
+        await session.commit()
+
+    assert item.kind == KIND_NOTE
+    assert item.payload["body"] == "ingest should still work"
+
+
+@pytest.mark.asyncio
+async def test_webhook_does_not_enqueue_review(client, monkeypatch):
+    """Webhook payloads are rule-driven; ticker is pre-filtered by the
+    operator's alert config. Bulk-enqueue risk is too high."""
+    from app.core.config import SETTINGS
+    from app.tv_context import service as svc
+
+    monkeypatch.setattr(SETTINGS, "TV_CTX_TICKER_REVIEW_ENABLED", True)
+
+    calls: list[dict] = []
+
+    async def _fake_whitelist():
+        return set()
+
+    async def _fake_enqueue(**kwargs):
+        calls.append(kwargs)
+
+    monkeypatch.setattr(
+        "tools.vault_indexer.ingest.chart_extractor.load_ticker_whitelist",
+        _fake_whitelist,
+    )
+    monkeypatch.setattr(
+        "app.ticker_review.service.enqueue_or_bump", _fake_enqueue
+    )
+
+    async with core_db.SessionLocal() as session:
+        await svc.ingest_webhook(
+            session=session,
+            ticker="UNKN",
+            alert_type="custom",
+            payload_json={"value": 1},
+        )
+        await session.commit()
+
+    assert calls == []
+
+
 @pytest.mark.asyncio
 async def test_outbox_kinds_enqueued_when_peer_configured(client, monkeypatch):
     """When PEER_API_URL is set, ingesting a note enqueues a kind=tv_context_note row."""

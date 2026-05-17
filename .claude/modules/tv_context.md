@@ -127,6 +127,33 @@ on both backends (matches Research page UX). **Backend routes stay mounted
 on Railway** so peer outbox replication via `/v1/tv-context/import` keeps
 working — only the UI surface is gated.
 
+## Decision-engine enrichment (2026-05-17 — Phase 1)
+
+When an operator submits a `note` / `idea` / `screenshot` / `event` with
+a ticker NOT in their universe (`roster ∪ boards ∪ The Street tier-1/2`),
+the ingest path fans out a **best-effort enqueue** to
+`ticker_review_queue` via `_maybe_enqueue_review()`. Mirrors the video
+pipeline parity — operator sees the same Today review strip regardless
+of whether the unknown ticker came from a YouTube transcript or a
+manual chart screenshot.
+
+- **Webhook ingest is NOT enqueued.** Webhook payloads are rule-driven;
+  operator's alert config already pre-filters the ticker, so
+  bulk-enqueueing would burn the Today strip with false positives.
+- **Whitelist source**:
+  `tools.vault_indexer.ingest.chart_extractor.load_ticker_whitelist()`
+  (async).
+- **Kill switch**: `SETTINGS.TV_CTX_TICKER_REVIEW_ENABLED` (default
+  True in production). Tests flip default OFF via `tests/conftest.py`
+  env var because SQLite's serial write lock deadlocks the inner queue
+  commit against the outer ingest transaction; Postgres has no
+  equivalent issue.
+- **Best-effort contract**: helper wraps `await load_ticker_whitelist()`
+  + `await enqueue_or_bump()` in `try/except + log` — a queue failure
+  must never block the host ingest.
+- **Snippet sources**: note → body; idea → summary or url; screenshot →
+  caption or vision summary; event → `"{label}: {body}"` (200-char cap).
+
 ## Known gaps
 
 - **Auto-flag on hypothesis tick**: a hypothesis with

@@ -66,14 +66,25 @@ class Settings(BaseSettings):
     TV_CTX_SCREENSHOT_VISION_DEFAULT: bool = True
     TV_CTX_VISION_MODEL: str = "claude-sonnet-4-6"
     TV_CTX_VISION_MAX_WIDTH_PX: int = 1024
-    # tv_context expire-sweep interval (seconds). Laptop runs hourly;
+    # Ticker-review parity: when an operator submits a TV-context input
+    # with a ticker NOT in the operator's universe (roster ∪ boards ∪
+    # The Street), enqueue it to ticker_review_queue. Default ON in prod.
+    # Tests disable to keep ingest path side-effect-free at the SQLite
+    # serial-write lock boundary.
+    TV_CTX_TICKER_REVIEW_ENABLED: bool = True
+    # tv_context expire-sweep interval (seconds). Laptop runs every 12h;
     # Railway runs daily by default to reduce serverless wake-ups.
-    TV_CTX_EXPIRE_INTERVAL_SECONDS: int = 3600
+    # (Reduced 2026-05-16 from hourly per operator request — Railway shut.)
+    TV_CTX_EXPIRE_INTERVAL_SECONDS: int = 43200
     # Outbox drain cadence (seconds). Replaces per-analysis-job drain to
     # batch sync pushes — one wake-up every N seconds instead of one per
     # completed job. Laptop-only loop; Railway never drains (it's a
     # passive replica, has nothing to push).
+    # Honoured only when SYNC_ENABLED=true AND peer credentials are set.
     SYNC_DRAIN_INTERVAL_SECONDS: int = 300
+    # Master kill-switch for laptop→peer sync. Default False since Railway
+    # is shut as of 2026-05-16; set True (+ peer creds) to re-enable.
+    SYNC_ENABLED: bool = False
 
     # Video channel auto-ingest (per `_channel.yaml`). Off by default so
     # existing vaults aren't surprised on next deploy; flip to true when
@@ -81,7 +92,8 @@ class Settings(BaseSettings):
     # start polling. Laptop-only — vault lives on the operator's disk.
     VIDEO_INGEST_ENABLED: bool = False
     VIDEO_INGEST_WARMUP_SECONDS: int = 3600                  # 1 hr post-boot
-    VIDEO_INGEST_SLEEP_SECONDS: int = 3600                   # check hourly; per-channel cadence respected via _channel.yaml.last_polled_at
+    # Daily — operator request 2026-05-16; per-channel cadence still respected via _channel.yaml.last_polled_at
+    VIDEO_INGEST_SLEEP_SECONDS: int = 86400
 
     # SEC EDGAR auto-ingest. Polls every roster ticker for new 8-K / 10-Q /
     # 10-K filings on the configured cadence. Off by default; opt-in once
@@ -89,9 +101,24 @@ class Settings(BaseSettings):
     # via `if not is_railway` gate.
     EDGAR_INGEST_ENABLED: bool = False
     EDGAR_INGEST_WARMUP_SECONDS: int = 3600                  # 1 hr post-boot
-    EDGAR_INGEST_SLEEP_SECONDS: int = 21600                  # 6 hrs — filings rarely appear faster
+    # Weekly — operator request 2026-05-16; reduced from 6h since filings cluster around earnings windows and weekly cadence catches them while costing less.
+    EDGAR_INGEST_SLEEP_SECONDS: int = 604800
     EDGAR_INGEST_FORM_TYPES: str = "8-K,10-Q,10-K"           # comma-separated
     EDGAR_INGEST_MAX_PER_FORM: int = 3                       # cap per ticker per tick
+
+    # rx (prescription) layer — finance recs only. Per D-045
+    # (Sho's Playgroun/rx-meta/DECISIONS-LOG.md), TradingV is the
+    # exclusive host for finance recs. Lovable/Supabase handles fitness +
+    # nutrition.
+    # - RX_OPERATOR_UUID: stamped on every rec row server-side. Default
+    #   matches Lovable's single-tenant operator so any future RLS-style
+    #   filtering stays consistent across both backends.
+    # - RX_INGEST_TOKEN: shared secret for POST /v1/rx/recs from the
+    #   laptop's `/rx-finance` slash command. NEVER log this value.
+    #   Empty default disables ingest (returns 503) so a missing env var
+    #   fails loud instead of accepting unauthenticated writes.
+    RX_OPERATOR_UUID: str = "9312c7a0-d09c-4663-8f67-5dfddfdb6249"
+    RX_INGEST_TOKEN: str = ""
 
 
 SETTINGS = Settings()

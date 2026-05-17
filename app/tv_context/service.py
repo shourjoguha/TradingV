@@ -60,6 +60,83 @@ def _dedupe_key(ticker: str | None, alert_type: str, payload: dict[str, Any]) ->
 
 
 # ---------------------------------------------------------------------------
+# Ticker-review parity (Phase 1 — tv-context-decision-engine-enrichment)
+#
+# Mirrors the video-pipeline pattern: when an operator submits a TV-context
+# input with a ticker NOT in the operator's universe (roster ∪ boards ∪
+# The Street tier-1/2), enqueue it to `ticker_review_queue` so it surfaces on
+# Today's review strip. Webhook ingest is intentionally skipped (the alert
+# rule already pre-filters the ticker — false-positive risk).
+#
+# Best-effort: a queue write must NEVER block / fail the host ingest.
+# ---------------------------------------------------------------------------
+
+
+async def _maybe_enqueue_review(
+    *,
+    ticker: str | None,
+    kind: str,
+    snippet: str | None,
+) -> None:
+    """Enqueue unknown ticker to review queue. Best-effort, never raises.
+
+    Lazy imports keep cold-start fast and let tests stub the call site by
+    patching ``app.tv_context.service._enqueue_review_sync``.
+    """
+    if not ticker:
+        return
+    if not getattr(SETTINGS, "TV_CTX_TICKER_REVIEW_ENABLED", True):
+        return
+    sym = ticker.strip().upper()
+    if not sym:
+        return
+    try:
+        from tools.vault_indexer.ingest.chart_extractor import (
+            load_ticker_whitelist,
+        )
+        from app.ticker_review import service as _tr_svc
+
+        whitelist = await load_ticker_whitelist()
+        if sym in whitelist:
+            return
+        await _tr_svc.enqueue_or_bump(
+            ticker=sym,
+            video_id="",
+            channel=f"tv_context_{kind}",
+            snippet=(snippet or "").strip()[:200],
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "tv_context: ticker_review enqueue failed for %s/%s: %s",
+            ticker,
+            kind,
+            exc,
+        )
+
+
+def _review_snippet_from_payload(kind: str, payload: dict[str, Any]) -> str:
+    """Build a short snippet for the review-queue entry (cap 200 chars)."""
+    if not payload:
+        return ""
+    if kind == KIND_NOTE:
+        return (payload.get("body") or "")
+    if kind == KIND_IDEA:
+        return payload.get("summary") or payload.get("url") or ""
+    if kind == KIND_SCREENSHOT:
+        # Prefer operator caption; fall back to vision summary.
+        cap = payload.get("note") or payload.get("caption") or ""
+        if cap:
+            return cap
+        vision = payload.get("vision") or {}
+        return vision.get("summary_md") or ""
+    if kind == KIND_EVENT:
+        label = payload.get("label") or ""
+        body = payload.get("body") or ""
+        return f"{label}: {body}" if body else label
+    return ""
+
+
+# ---------------------------------------------------------------------------
 # Ingest
 # ---------------------------------------------------------------------------
 
@@ -172,6 +249,9 @@ async def ingest_note(
     session.add(item)
     await session.flush()
     await _enqueue_outbox(KIND_NOTE, item)
+    await _maybe_enqueue_review(
+        ticker=ticker, kind=KIND_NOTE, snippet=body,
+    )
     return item
 
 
@@ -199,6 +279,11 @@ async def ingest_idea(
     session.add(item)
     await session.flush()
     await _enqueue_outbox(KIND_IDEA, item)
+    await _maybe_enqueue_review(
+        ticker=ticker,
+        kind=KIND_IDEA,
+        snippet=summary or url,
+    )
     return item
 
 
@@ -238,6 +323,11 @@ async def ingest_event(
     session.add(item)
     await session.flush()
     await _enqueue_outbox(KIND_EVENT, item)
+    await _maybe_enqueue_review(
+        ticker=ticker,
+        kind=KIND_EVENT,
+        snippet=f"{label}: {body}" if body else label,
+    )
     return item
 
 
@@ -271,6 +361,11 @@ async def ingest_screenshot_row(
     await session.flush()
     # Screenshots intentionally NOT replicated via outbox (vault path
     # differs per machine; binary file lives outside DB).
+    await _maybe_enqueue_review(
+        ticker=ticker,
+        kind=KIND_SCREENSHOT,
+        snippet=_review_snippet_from_payload(KIND_SCREENSHOT, payload),
+    )
     return item
 
 

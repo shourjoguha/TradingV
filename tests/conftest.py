@@ -7,6 +7,11 @@ os.environ.setdefault("API_KEY", "test-key")
 # background loops, no warmup waits colliding with assertions, faster
 # suite.
 os.environ.setdefault("DISABLE_LIFESPAN_BACKGROUND_TASKS", "1")
+# Phase 1 (tv-context-decision-engine-enrichment): ticker_review enqueue
+# opens its own SessionLocal which deadlocks against the test SQLite
+# write lock when called mid-ingest. Tests that exercise the parity flow
+# opt back in by setting SETTINGS.TV_CTX_TICKER_REVIEW_ENABLED at runtime.
+os.environ.setdefault("TV_CTX_TICKER_REVIEW_ENABLED", "false")
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -41,6 +46,7 @@ from app.tv_context import models as _tv_context_models  # noqa: F401, E402
 from app.admin import models as _admin_models  # noqa: F401, E402
 from app.earnings import models as _earnings_models  # noqa: F401, E402
 from app.ticker_review import models as _ticker_review_models  # noqa: F401, E402
+from app.rx import models as _rx_models  # noqa: F401, E402
 
 
 @pytest_asyncio.fixture
