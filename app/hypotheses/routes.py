@@ -13,6 +13,8 @@ from app.hypotheses.schemas import (
     EvaluationRead,
     HypothesisCancel,
     HypothesisCreate,
+    HypothesisHealthItem,
+    HypothesisHealthList,
     HypothesisListResponse,
     HypothesisPatch,
     HypothesisRead,
@@ -158,3 +160,20 @@ async def force_tick(_api_key: str = Depends(verify_api_key)) -> dict:
         stats = await service.run_daily_tick(session)
         await session.commit()
         return stats
+
+
+@router.get("/health/list", response_model=HypothesisHealthList)
+async def list_hypothesis_health(
+    limit: int = 200,
+    _api_key: str = Depends(verify_api_key),
+) -> HypothesisHealthList:
+    """Operator-friendly health view for the rx finance panel (v1.x.1-b).
+
+    Returns each hypothesis with age, days-to-expiry, and a count of
+    finance recs (last 30d) whose tldr|body_md mentions the title.
+    """
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=400, detail="limit must be in [1,500]")
+    rows = await service.list_health(limit=limit)
+    items = [HypothesisHealthItem(**r) for r in rows]
+    return HypothesisHealthList(items=items, count=len(items))

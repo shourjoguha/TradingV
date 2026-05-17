@@ -106,3 +106,28 @@ def _ensure_status(v: str) -> str:
     if v not in ALL_STATUSES:
         raise ValueError(f"status must be one of {ALL_STATUSES}")
     return v
+
+
+# ---------------------------------------------------------------------------
+# Health view (rx v1.x.1-b) — operator-friendly summary for the rx finance
+# panel. Lightweight projection over Hypothesis + recommendations.
+# ---------------------------------------------------------------------------
+
+class HypothesisHealthItem(BaseModel):
+    id: str
+    slug: str
+    title: str
+    status: str
+    claim_type: str
+    age_days: int
+    days_to_expiry: int
+    # Heuristic: count of finance recs in the last 30 days whose
+    # tldr|body_md contains the hypothesis title (case-insensitive
+    # substring). Pre-Phase-I this is the only link signal we have;
+    # explicit hypothesis_id FK on recommendations is future work.
+    related_recs_count: int
+
+
+class HypothesisHealthList(BaseModel):
+    items: list[HypothesisHealthItem]
+    count: int

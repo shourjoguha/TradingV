@@ -34,6 +34,7 @@ from app.tv_context import models as _tv_context_models  # noqa: F401
 from app.admin import models as _admin_models  # noqa: F401
 from app.earnings import models as _earnings_models  # noqa: F401
 from app.ticker_review import models as _ticker_review_models  # noqa: F401
+from app.rx import models as _rx_models  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -80,6 +81,17 @@ async def lifespan(_app: FastAPI):
             yield
             return
 
+        # rx config visibility — surface the operator UUID + ingest-token
+        # state at boot so a misconfigured deploy is immediately visible
+        # in the log. UUID is not sensitive (just identifies the operator
+        # in single-tenant Lovable). Token state is reported as
+        # configured/unset only — never the value.
+        logger.info(
+            "rx config: RX_OPERATOR_UUID=%s, ingest=%s",
+            SETTINGS.RX_OPERATOR_UUID,
+            "configured" if SETTINGS.RX_INGEST_TOKEN else "DISABLED",
+        )
+
         # Best-effort drain of outbox rows left pending from prior process.
 
         from app.sync import service as _sync_service
@@ -90,7 +102,11 @@ async def lifespan(_app: FastAPI):
         # gratuitous wake of the peer.
         is_railway = SETTINGS.INSTANCE_NAME == "railway"
 
-        if not is_railway and _sync_service.peer_configured():
+        if (
+            not is_railway
+            and SETTINGS.SYNC_ENABLED
+            and _sync_service.peer_configured()
+        ):
             asyncio.create_task(_sync_service.drain_outbox())
 
         # Periodic outbox purge — keeps completed rows from growing
@@ -105,7 +121,11 @@ async def lifespan(_app: FastAPI):
         # tracks wake-up count.
         sync_drain_task = None
         sync_drain_stop = asyncio.Event()
-        if not is_railway and _sync_service.peer_configured():
+        if (
+            not is_railway
+            and SETTINGS.SYNC_ENABLED
+            and _sync_service.peer_configured()
+        ):
             async def _sync_drain_loop() -> None:
                 interval = SETTINGS.SYNC_DRAIN_INTERVAL_SECONDS
                 while True:
@@ -237,7 +257,10 @@ async def lifespan(_app: FastAPI):
                     except Exception as e:  # noqa: BLE001
                         logger.warning("opportunities tick failed: %s", e)
                     try:
-                        await asyncio.wait_for(opps_stop.wait(), timeout=60 * 60)
+                        # Daily — opps rule engine over predictions; runs once
+                        # per day after accuracy + drift have new actuals.
+                        # Reduced 2026-05-16 from hourly per operator request.
+                        await asyncio.wait_for(opps_stop.wait(), timeout=24 * 60 * 60)
                         if opps_stop.is_set():
                             return
                     except asyncio.TimeoutError:

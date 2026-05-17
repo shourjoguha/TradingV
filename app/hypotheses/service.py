@@ -319,3 +319,87 @@ async def summary(session: AsyncSession) -> dict[str, int]:
     ).scalars().all()
     out["at_risk"] = len(at_risk)
     return out
+
+
+# ---------------------------------------------------------------------------
+# Health view (rx v1.x.1-b)
+# ---------------------------------------------------------------------------
+
+async def list_health(*, limit: int = 200) -> list[dict]:
+    """List hypotheses with rec-link counts for the rx finance panel.
+
+    Returns: list of dicts ready for HypothesisHealthItem.
+
+    Limitations:
+      * No explicit FK from recommendations → hypothesis. We use a
+        case-insensitive substring match on (tldr || body_md) vs the
+        hypothesis title. False positives possible on common substrings;
+        false negatives possible when the rec uses a different framing.
+      * Only counts recs created in the last 30d (operator's working
+        window — older recs aren't actionable).
+    """
+    import datetime as _dt
+    from sqlalchemy import select, func
+
+    from app.core import db as _db
+    from app.hypotheses.models import Hypothesis
+    from app.rx.models import Recommendation
+
+    now = _dt.datetime.now(_dt.timezone.utc)
+    recent_cutoff = now - _dt.timedelta(days=30)
+
+    async with _db.SessionLocal() as session:
+        hyps = list(
+            await session.scalars(
+                select(Hypothesis)
+                .order_by(Hypothesis.expires_at)
+                .limit(limit)
+            )
+        )
+        # Pre-fetch recent finance recs once; substring-match in Python.
+        # Pulling tldr+body_md for ~N<200 rows is cheap and avoids a per-
+        # hypothesis correlated subquery that's awkward to express
+        # cross-DB (Postgres ILIKE vs SQLite LIKE+NOCASE).
+        recs = list(
+            await session.scalars(
+                select(Recommendation).where(
+                    Recommendation.domain == "finance",
+                    Recommendation.created_at >= recent_cutoff,
+                )
+            )
+        )
+
+    rec_text: list[str] = []
+    for rec in recs:
+        parts = []
+        if rec.tldr:
+            parts.append(rec.tldr.lower())
+        if rec.body_md:
+            parts.append(rec.body_md.lower())
+        rec_text.append(" ".join(parts))
+
+    out: list[dict] = []
+    for h in hyps:
+        created_at = h.created_at
+        if created_at and created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=_dt.timezone.utc)
+        expires_at = h.expires_at
+        if expires_at and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=_dt.timezone.utc)
+        age_days = max(0, (now - created_at).days) if created_at else 0
+        days_to_expiry = int((expires_at - now).days) if expires_at else 0
+        needle = (h.title or "").lower()
+        related = 0
+        if needle and len(needle) >= 3:
+            related = sum(1 for t in rec_text if needle in t)
+        out.append({
+            "id": h.id,
+            "slug": h.slug,
+            "title": h.title,
+            "status": h.status,
+            "claim_type": h.claim_type,
+            "age_days": age_days,
+            "days_to_expiry": days_to_expiry,
+            "related_recs_count": related,
+        })
+    return out
