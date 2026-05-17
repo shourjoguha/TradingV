@@ -40,6 +40,7 @@ yfinance:
   - symbol: "USDJPY=X"
   # Stagflation / inflation regime — Phase 1.5
   - symbol: "^VIX"            # equity-stress fear gauge (daily close)
+  - symbol: "^MOVE"           # ICE BofA MOVE — bond-market vol; operator-flagged leading indicator (fx-evolution-daily-w19)
   - symbol: "DBC"             # broad-commodity ETF (vs SPY for commodity-vs-equity)
   # Hypothesis-specific (LatAm, BTC + MSTR, SaaS)
   - symbol: "ILF"
@@ -65,3 +66,9 @@ fred:
   - id: "PPIACO"              # producer price index, all commodities
   - id: "CPIAUCSL"            # consumer price index, all urban
   - id: "MORTGAGE30US"        # 30Y fixed-rate mortgage avg (vs WGS10YR for spread)
+  # Yield-curve panel (added 2026-05-17 per fx-evolution-daily + click-capital
+  # vault audit — operator's mental model from video transcripts is
+  # explicitly yields-driven). All-FRED, additive only.
+  - id: "WGS30YR"             # 30Y Treasury constant maturity ("all-important 5%" per operator)
+  - id: "T10Y2Y"              # 10Y - 2Y spread; canonical recession leading indicator
+  - id: "T10Y3M"              # 10Y - 3M spread; NY Fed recession-probability model input

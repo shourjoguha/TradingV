@@ -62,7 +62,8 @@ export const REGIME_PANELS: RegimePanel[] = [
       { id: 'hyg-lqd', label: 'HY / IG credit',   numerator: 'HYG', denominator: 'LQD',   term: 'r_hyg_lqd' },
       { id: 'tlt-spy', label: 'Bonds / Equities', numerator: 'TLT', denominator: 'SPY',   term: 'r_tlt_spy' },
       { id: 'dxy',     label: 'US Dollar (DXY)',  symbol: 'DX-Y.NYB',                     term: 'r_dxy' },
-      { id: 'vix',     label: 'VIX (fear gauge)', symbol: '^VIX',                         term: 'r_vix' },
+      { id: 'vix',     label: 'VIX (equity vol)', symbol: '^VIX',                         term: 'r_vix' },
+      { id: 'move',    label: 'MOVE (bond vol)',  symbol: '^MOVE',                        term: 'r_move' },
     ],
   },
   {
@@ -74,6 +75,22 @@ export const REGIME_PANELS: RegimePanel[] = [
       { id: 't5yie',   label: '5Y breakevens',      symbol: 'T5YIE',   source: 'fred',                   term: 'r_t5yie' },
       { id: 'ppi-cpi', label: 'PPI / CPI',          numerator: 'PPIACO', denominator: 'CPIAUCSL',        term: 'r_ppi_cpi' },
       { id: 'dbc-spy', label: 'Commodities / SPY',  numerator: 'DBC', denominator: 'SPY',                term: 'r_dbc_spy' },
+    ],
+  },
+  {
+    // Added 2026-05-17 per vault-audit of fx-evolution-daily + click-capital
+    // transcripts. Operator's video diet repeatedly references curve shape +
+    // long-end yields as leading regime signals. Five rows: three single-rate
+    // series (2y/10y/30y) + two spreads (recession indicators).
+    title: 'Yield curve',
+    blurb: 'US Treasury curve shape + recession-signal spreads. 30Y "all-important 5%" + 2s10s + 10y-3m (NY Fed model).',
+    term: 'yield_curve_axis',
+    rows: [
+      { id: 'wgs2y',     label: '2Y Treasury',     symbol: 'WGS2YR',  source: 'fred', term: 'r_wgs2y' },
+      { id: 'wgs10y-yc', label: '10Y Treasury',    symbol: 'WGS10YR', source: 'fred', term: 'r_wgs10y' },
+      { id: 'wgs30y',    label: '30Y Treasury',    symbol: 'WGS30YR', source: 'fred', term: 'r_wgs30y' },
+      { id: 't10y2y',    label: '10Y − 2Y spread', symbol: 'T10Y2Y',  source: 'fred', term: 'r_t10y2y' },
+      { id: 't10y3m',    label: '10Y − 3M spread', symbol: 'T10Y3M',  source: 'fred', term: 'r_t10y3m' },
     ],
   },
 ]

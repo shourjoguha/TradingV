@@ -293,6 +293,58 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     },
   },
 
+  // --- Yield curve panel rows (added 2026-05-17 from vault audit) ---
+  yield_curve_axis: {
+    short: 'US Treasury curve shape',
+    long: 'Three rates (2y / 10y / 30y) plus two recession-indicator spreads (2s10s and 10y-3m). Vault transcripts from fx-evolution-daily + click-capital reference the 30Y "all-important 5%" level + curve shape repeatedly as leading regime signal — this panel surfaces the data directly.',
+  },
+  r_wgs2y: {
+    short: '2Y Treasury yield',
+    long: 'Short-end of the curve. Most sensitive to Fed expectations — rises before hikes, falls before cuts.',
+    directional: {
+      up: 'Market pricing in tighter Fed — bearish bonds, bearish duration-sensitive equities (long-bond proxies, REITs, utilities).',
+      down: 'Market pricing in cuts — bullish duration, bullish growth equities. Often leads risk-on re-rating.',
+      threshold: 'Above 4.5% = restrictive territory. Below 2% = near zero-bound. Watch the gap vs Fed Funds.',
+    },
+  },
+  // r_wgs10y already defined under Liquidity panel above — yield-curve panel reuses that term key.
+  r_wgs30y: {
+    short: '30Y Treasury yield',
+    long: 'Long-end of the curve. Pure duration signal — most exposed to inflation + fiscal-deficit fears. Operator-flagged "all-important 5%" level from fx-evolution-daily-2026-w19.',
+    directional: {
+      up: 'Long-end selling — fiscal-stress regime, inflation reflation, or curve steepening. Drives mortgage and ultra-long-duration repricing.',
+      down: 'Long-end bid — fear/safety flows OR growth-slowdown pricing. TLT bullish.',
+      threshold: '5% sustained = "fear of unknown" per operator video diet — historical inflation-regime echo (1980s). Above 5.5% = pressure regime where Fed/Treasury may intervene.',
+    },
+  },
+  r_t10y2y: {
+    short: '2s10s spread (recession leading indicator)',
+    long: 'Difference between 10Y and 2Y yields. Inversion (negative) historically precedes recessions by 6-24 months. Disinversion AFTER prolonged inversion = recession imminent.',
+    directional: {
+      up: 'Steepening — bull steepener (cuts coming, growth recovering) or bear steepener (long-end selling on fiscal stress). Either way, signal change.',
+      down: 'Flattening or inverting — recession signal building. Watch alongside 10Y-3M (NY Fed model) for confirmation.',
+      threshold: 'Negative = inverted. >0 after long inversion = recession typically within 6m. >+1.0 = healthy curve.',
+    },
+  },
+  r_t10y3m: {
+    short: '10Y − 3M spread (NY Fed recession model)',
+    long: 'Used by the NY Fed\'s recession probability model as the canonical curve-shape input. Inversion precedes recession with higher accuracy than 2s10s in modern data.',
+    directional: {
+      up: 'Steepening from inversion — recession imminent if just exited prolonged inversion; healthy curve otherwise.',
+      down: 'Flattening/inverting — recession probability rising in NY Fed model.',
+      threshold: 'Inversion >6 months = elevated recession risk. NY Fed publishes monthly probability based on this.',
+    },
+  },
+  r_move: {
+    short: 'MOVE — bond-market volatility',
+    long: 'ICE BofA MOVE Index — bond market\'s equivalent of VIX. Tracks implied volatility on Treasury options. Operator-flagged leading indicator: "when MOVE spikes up, it can both show us the low is in" (fx-evolution-daily-2026-w19).',
+    directional: {
+      up: 'Rising bond vol — bond market pricing in higher uncertainty. Often leads equity vol (VIX) by days. Historically precedes major regime shifts.',
+      down: 'Calm bond market — complacency or stable Fed regime.',
+      threshold: 'Below 80 = calm. 80-120 = normal. 120-180 = elevated. >180 = crisis territory (e.g. SVB Mar-2023 spike to 200).',
+    },
+  },
+
   // --- Opportunities + Trades ---
   predicted_move_pct: {
     short: 'Bullishness of a prediction',
