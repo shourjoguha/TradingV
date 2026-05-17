@@ -73,6 +73,14 @@ _GRAPH_NODE_COLUMNS = (
     ("cluster_id", "INTEGER DEFAULT NULL"),
 )
 
+# Decay-layer columns added to vault_node via idempotent migration in init().
+# - `evergreen` (NULL / 0 / 1): operator-set or path-glob-default. NULL = not yet
+#   classified (treated as non-evergreen by decay.weight_for, will be backfilled
+#   on next /reload). Used by Phase E Commit 2 ranked-grouped decay model.
+_DECAY_NODE_COLUMNS = (
+    ("evergreen", "INTEGER DEFAULT NULL"),
+)
+
 
 def _connect(db_path: Path) -> apsw.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -102,6 +110,52 @@ def _ensure_graph_columns(cur: apsw.Cursor) -> None:
             cur.execute(f"ALTER TABLE vault_node ADD COLUMN {col} {defn}")
 
 
+def _ensure_decay_columns(cur: apsw.Cursor) -> None:
+    """Idempotently add decay-layer columns to vault_node.
+
+    Parallel to :func:`_ensure_graph_columns`. Safe to run on every startup.
+    """
+    existing = {r[1] for r in cur.execute("PRAGMA table_info(vault_node)")}
+    for col, defn in _DECAY_NODE_COLUMNS:
+        if col not in existing:
+            cur.execute(f"ALTER TABLE vault_node ADD COLUMN {col} {defn}")
+
+
+def backfill_evergreen(con: apsw.Connection, classify) -> int:
+    """Set ``vault_node.evergreen`` for all rows where it is currently NULL.
+
+    ``classify`` is a callable ``(rel_path: str) -> Optional[bool]`` —
+    typically ``CONFIG.is_evergreen_path``. Returns the row count that was
+    updated.
+
+    Cheap (single table scan, one UPDATE per row), idempotent (only touches
+    NULL rows). Called from indexer boot path after schema migration so the
+    pre-Phase-E.2 corpus picks up the new evergreen classification without
+    a full re-ingest.
+    """
+    cur = con.cursor()
+    rows = list(cur.execute(
+        "SELECT path FROM vault_node WHERE evergreen IS NULL"
+    ))
+    if not rows:
+        return 0
+    updates: list[tuple[Optional[int], str]] = []
+    for (path,) in rows:
+        verdict = classify(path)
+        if verdict is None:
+            # No globs configured for this domain; leave NULL → decay treats
+            # as non-evergreen (rank applies). This is the "no opinion" state.
+            continue
+        updates.append((1 if verdict else 0, path))
+    if not updates:
+        return 0
+    cur.executemany(
+        "UPDATE vault_node SET evergreen = ? WHERE path = ?",
+        updates,
+    )
+    return len(updates)
+
+
 def init(db_path: Path, embedding_dim: int) -> apsw.Connection:
     """Create schema + the sqlite-vec virtual table sized to ``embedding_dim``."""
     con = _connect(db_path)
@@ -113,6 +167,11 @@ def init(db_path: Path, embedding_dim: int) -> apsw.Connection:
         f"chunk_id INTEGER PRIMARY KEY, embedding FLOAT[{embedding_dim}])"
     )
     _ensure_graph_columns(cur)
+    _ensure_decay_columns(cur)
+    # Phase E Commit 4: FTS5 lexical index. Created idempotently; populated
+    # via :func:`lexical.rebuild` on /reload (not here, to keep init fast).
+    from . import lexical as _lexical
+    _lexical.init_fts(con)
     return con
 
 
@@ -149,13 +208,21 @@ def upsert_node(
     body_hash: str,
     body_md: str,
     last_indexed_at: str,
+    evergreen: Optional[bool] = None,
 ) -> None:
+    """Upsert a vault_node row.
+
+    ``evergreen`` is tri-state: ``True`` (always weight=1.0 in decay), ``False``
+    (subject to per-author ranked decay), ``None`` (not yet classified — backfill
+    on next ingest will resolve via path-glob default).
+    """
+    evergreen_int = None if evergreen is None else (1 if evergreen else 0)
     cur.execute(
         """
         INSERT INTO vault_node (path, kind, title, author, published_at,
             ingested_at, horizon_months, parent_path, tags, body_hash,
-            body_md, last_indexed_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            body_md, last_indexed_at, evergreen)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(path) DO UPDATE SET
             kind=excluded.kind,
             title=excluded.title,
@@ -167,12 +234,13 @@ def upsert_node(
             tags=excluded.tags,
             body_hash=excluded.body_hash,
             body_md=excluded.body_md,
-            last_indexed_at=excluded.last_indexed_at
+            last_indexed_at=excluded.last_indexed_at,
+            evergreen=excluded.evergreen
         """,
         (
             path, kind, title, author, published_at, ingested_at,
             horizon_months, parent_path, json.dumps(tags), body_hash,
-            body_md, last_indexed_at,
+            body_md, last_indexed_at, evergreen_int,
         ),
     )
 
@@ -182,7 +250,7 @@ def replace_chunks(
     path: str,
     chunks: list[tuple[int, str, Optional[str], list[float]]],
 ) -> None:
-    """Drop all chunks for ``path``, reinsert + reindex embeddings.
+    """Drop all chunks for ``path``, reinsert + reindex embeddings + sync FTS.
 
     chunks: list of (ord, text, section, embedding_floats).
     """
@@ -211,6 +279,12 @@ def replace_chunks(
             (chunk_id, f32_blob(embedding)),
         )
 
+    # Phase E Commit 6 (2026-05-16): keep FTS in step with vault_chunk on every
+    # write so operator-added content is searchable via lexical immediately,
+    # not on next /reload sweep. Lazy import avoids circular (lexical → cache).
+    from . import lexical as _lexical
+    _lexical.sync_chunks_for_path(cur, path)
+
 
 def delete_node(cur: apsw.Cursor, path: str) -> None:
     old_ids = [
@@ -224,6 +298,9 @@ def delete_node(cur: apsw.Cursor, path: str) -> None:
         )
     cur.execute("DELETE FROM vault_node WHERE path = ?", (path,))
     cur.execute("DELETE FROM vault_edge WHERE src_path = ? OR dst_path = ?", (path, path))
+    # Sync FTS: drop the lexical rows so deleted paths can't surface in search.
+    from . import lexical as _lexical
+    _lexical.delete_path(cur, path)
 
 
 def replace_edges(cur: apsw.Cursor, src_path: str, edges: Iterable[tuple[str, str, float]]) -> None:
@@ -286,7 +363,8 @@ def edge_counts_by_kind(con: apsw.Connection) -> dict[str, int]:
 def get_node(con: apsw.Connection, path: str) -> Optional[dict]:
     rows = list(con.execute(
         "SELECT path, kind, title, author, published_at, ingested_at, "
-        "horizon_months, parent_path, tags, body_hash, body_md, last_indexed_at "
+        "horizon_months, parent_path, tags, body_hash, body_md, last_indexed_at, "
+        "evergreen "
         "FROM vault_node WHERE path = ?",
         (path,),
     ))
@@ -306,6 +384,7 @@ def get_node(con: apsw.Connection, path: str) -> Optional[dict]:
         "body_hash": r[9],
         "body_md": r[10],
         "last_indexed_at": r[11],
+        "evergreen": None if r[12] is None else bool(r[12]),
     }
 
 
@@ -351,6 +430,26 @@ def count_chunks(con: apsw.Connection, path: str) -> int:
         con.execute("SELECT COUNT(*) FROM vault_chunk WHERE path = ?", (path,))
     )
     return int(row[0][0]) if row else 0
+
+
+def get_chunk_at_ord(
+    con: apsw.Connection, path: str, ord_: int,
+) -> Optional[dict]:
+    """Return a single chunk row by (path, ord), or None if not found.
+
+    Used by search.py's pure-lexical enrichment pass: when a chunk surfaces
+    in the FTS leg but not in the vector top-K, we look up its text +
+    section on demand for display.
+    """
+    rows = list(con.execute(
+        "SELECT ord, text, section FROM vault_chunk "
+        "WHERE path = ? AND ord = ? LIMIT 1",
+        (path, int(ord_)),
+    ))
+    if not rows:
+        return None
+    r = rows[0]
+    return {"ord": r[0], "text": r[1], "section": r[2]}
 
 
 def folder_contexts_for(con: apsw.Connection, paths: list[str]) -> list[dict]:

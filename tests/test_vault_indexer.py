@@ -96,21 +96,68 @@ def test_renames_rewrite_frontmatter(tmp_vault):
     assert "old_thing → new_thing" not in tax.read_text(encoding="utf-8")
 
 
-def test_decay_weight_class_a_is_one(tmp_vault):
+def test_decay_weight_ungrouped_is_one(tmp_vault):
+    """Legacy "Class A" / ungrouped behaviour: no rank → no penalty.
+
+    Pre-Phase-E.2 the model was exponential on ``horizon_months``. The new
+    model decays only same-author groups; solo / ungrouped nodes get
+    weight = 1.0 regardless of age. Use the rank-based test below for the
+    decay-applied case.
+    """
     from vault_indexer import decay
 
     node = {"horizon_months": None, "published_at": "2024-01-01"}
     assert decay.weight_for(node) == 1.0
+    aged = {"horizon_months": 6, "published_at": "2025-05-01"}
+    # No rank passed → ungrouped → 1.0 under new model.
+    assert decay.weight_for(aged) == 1.0
 
 
-def test_decay_weight_class_b_decreases_with_age():
+def test_decay_weight_evergreen_bypasses_rank(tmp_vault):
+    """Evergreen flag short-circuits to 1.0 even with a rank assigned."""
     from vault_indexer import decay
 
-    fresh = {"horizon_months": 6, "published_at": "2026-05-01"}
-    aged = {"horizon_months": 6, "published_at": "2025-05-01"}
-    fresh_w = decay.weight_for(fresh)
-    aged_w = decay.weight_for(aged)
-    assert 0 < aged_w < fresh_w <= 1.0
+    node = {"evergreen": True, "author": "graham"}
+    assert decay.weight_for(node, rank=4) == 1.0
+
+
+def test_decay_ladder_applies_to_grouped_nodes(tmp_vault, monkeypatch):
+    """ranked_grouped mode: ladder weights applied per rank, floor at end."""
+    monkeypatch.setenv("DOMAIN", "finance")
+    monkeypatch.setenv("DECAY_MODE", "ranked_grouped")
+    monkeypatch.setenv("DECAY_LADDER", "1.0,0.6,0.45,0.35,0.25")
+    import sys
+    for m in [m for m in list(sys.modules) if m.startswith("vault_indexer")]:
+        del sys.modules[m]
+    from vault_indexer import decay
+
+    node = {"author": "damodaran", "evergreen": False}
+    assert decay.weight_for(node, rank=0) == 1.0
+    assert decay.weight_for(node, rank=1) == 0.6
+    assert decay.weight_for(node, rank=2) == 0.45
+    assert decay.weight_for(node, rank=3) == 0.35
+    assert decay.weight_for(node, rank=4) == 0.25
+    # Rank past ladder collapses to floor.
+    assert decay.weight_for(node, rank=10) == 0.25
+
+
+def test_assign_ranks_orders_by_published_at_desc(tmp_vault):
+    """assign_ranks groups by author and orders by published_at desc."""
+    from vault_indexer import decay
+
+    nodes = [
+        {"path": "a.md", "author": "damodaran", "published_at": "2026-05-01"},
+        {"path": "b.md", "author": "damodaran", "published_at": "2026-05-10"},
+        {"path": "c.md", "author": "damodaran", "published_at": "2026-04-20"},
+        {"path": "d.md", "author": "lyn-alden", "published_at": "2026-05-15"},
+        {"path": "e.md", "author": None,        "published_at": "2026-05-15"},
+    ]
+    ranks = decay.assign_ranks(nodes, group_key="author")
+    assert ranks["b.md"] == 0  # most recent damodaran
+    assert ranks["a.md"] == 1
+    assert ranks["c.md"] == 2
+    assert ranks["d.md"] == 0  # solo in lyn-alden group
+    assert "e.md" not in ranks  # no author → no group entry
 
 
 def test_review_render_and_tick_parse():

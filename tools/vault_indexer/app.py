@@ -23,6 +23,8 @@ from . import graph_compute as _graph_compute
 from . import graph_search as _graph_search
 from . import graph_state as _graph_state
 from . import indexer as _indexer
+from . import lexical as _lexical
+from . import query_parse as _qp
 from . import renames as _renames
 from . import research_hook as _research_hook
 from . import review as _review
@@ -50,10 +52,35 @@ async def lifespan(_app: FastAPI):
     if not CONFIG.vault_path.exists():
         logger.error("vault not found at %s", CONFIG.vault_path)
         raise RuntimeError(f"vault not found at {CONFIG.vault_path}")
-    _ = _con()
+    con = _con()
+    # Phase E Commit 2: backfill `evergreen` column on existing rows so the
+    # ranked-grouped decay model picks up correct classifications without a
+    # full re-ingest. Idempotent: skips rows already non-NULL.
+    try:
+        updated = _cache.backfill_evergreen(con, CONFIG.is_evergreen_path)
+        if updated:
+            logger.info("evergreen backfill: classified %d nodes", updated)
+    except Exception as e:                              # noqa: BLE001
+        logger.warning("evergreen backfill failed (non-fatal): %s", e)
+    # Phase E Commit 4: ensure FTS5 lexical index is populated. On a fresh
+    # cache or a cache that pre-dates Commit 4, the index will be empty
+    # until /reload runs; rebuild here so the first /search request has
+    # both signals available.
+    try:
+        existing_fts_rows = list(con.execute(
+            "SELECT COUNT(*) FROM vault_chunk_fts"
+        ))[0][0]
+        chunk_rows = list(con.execute(
+            "SELECT COUNT(*) FROM vault_chunk"
+        ))[0][0]
+        if chunk_rows > 0 and existing_fts_rows < chunk_rows:
+            _lexical.rebuild(con)
+    except Exception as e:                              # noqa: BLE001
+        logger.warning("FTS5 rebuild failed (non-fatal): %s", e)
     logger.info(
-        "vault-indexer up — vault=%s db=%s model=%s",
+        "vault-indexer up — vault=%s db=%s model=%s decay=%s lexical=%s",
         CONFIG.vault_path, CONFIG.db_path, CONFIG.embedding_model,
+        CONFIG.decay_mode, "on" if CONFIG.lexical_enabled else "off",
     )
     yield
 
@@ -90,9 +117,22 @@ async def reload_vault():
     suggestions = _review.gather_suggestions(_con(), vocabulary=tax.tags)
     suggestions["rename_log"] = rename_log
     _review.write(CONFIG.vault_path, _review.render(suggestions))
+    # Newly-ingested Filings/Research may have introduced tickers not in the
+    # cached lexicon. Force a refresh so the next /search request sees them.
+    _search.reset_ticker_lexicon()
+    # Phase E Commit 4: rebuild FTS5 lexical index — full_rescan may have
+    # added/changed chunks. Cost is hundreds of ms on the live finance corpus.
+    try:
+        fts_rows = _lexical.rebuild(_con())
+    except Exception as e:                              # noqa: BLE001
+        logger.warning("FTS5 rebuild failed (non-fatal): %s", e)
+        fts_rows = 0
     if CONFIG.graph_enabled:
         _graph_state.schedule(_con(), debounce_seconds=CONFIG.graph_debounce_seconds)
-    return {**stats, "renames": rename_log, "graph_scheduled": CONFIG.graph_enabled}
+    return {
+        **stats, "renames": rename_log,
+        "graph_scheduled": CONFIG.graph_enabled, "fts_indexed": fts_rows,
+    }
 
 
 @app.post("/recompute_graph")
@@ -165,11 +205,49 @@ async def search_endpoint(
     q: str = Query(..., min_length=1),
     k: int = Query(8, ge=1, le=50),
     hybrid: bool | None = Query(None, description="Override CONFIG.graph_enabled for this request. Pass false to compare hybrid vs vector ranking."),
+    excerpts: bool = Query(
+        True,
+        description=(
+            "When true (default), each result includes `excerpt_sentences` — "
+            "the 2 sentences best matching the query, computed by re-encoding "
+            "each chunk's sentences with BGE. Costs O(k * sentences_per_chunk) "
+            "BGE forwards (~1-3s per chunk). UI consumers want this; MCP/bundle "
+            "consumers already get `text` and should pass `excerpts=false` for "
+            "sub-second latency."
+        ),
+    ),
+    parse: bool = Query(
+        True,
+        description=(
+            "When true (default), the query is run through query_parse to "
+            "extract tickers / kinds / since anchors and pre-filter the KNN "
+            "pool. When no anchors detect, the filter is a no-op (legacy "
+            "behaviour). Set false to skip anchor extraction (pure vector)."
+        ),
+    ),
 ):
+    con = _con()
+    # Auto-parse the query so the response can echo back what anchors were
+    # detected. Result is also passed through to search() for the pre-filter.
+    parsed = (
+        _qp.parse(q, ticker_lexicon=_search._ticker_lexicon(con))
+        if parse else None
+    )
     return {
         "query": q,
         "k": k,
-        "results": _search.search(_con(), q, k=k, hybrid=hybrid),
+        "parsed": (
+            None if parsed is None else {
+                "tickers": parsed.tickers,
+                "kinds": parsed.kinds,
+                "since": parsed.since.isoformat() if parsed.since else None,
+                "raw_terms": parsed.raw_terms,
+                "has_anchors": parsed.has_anchors(),
+            }
+        ),
+        "results": _search.search(
+            con, q, k=k, hybrid=hybrid, excerpts=excerpts, parse=parse,
+        ),
     }
 
 
