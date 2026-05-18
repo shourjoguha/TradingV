@@ -2,6 +2,8 @@
 
 Plain-language reference for every term, ratio, color, and concept across the platform. Bookmark this page; click any heading in **On this page** to jump.
 
+![Two halves of the platform — forecast pipeline and context layer — converging at rx finance](/docs-visuals/hero-stack.svg)
+
 This doc is grouped by **what part of the platform you're looking at**, not alphabetically. Skip to **Glossary** at the bottom for an A–Z index.
 
 ---
@@ -326,6 +328,8 @@ A snoozed rec whose `snoozed_until` has passed. Bubbles back into the open queue
 
 ### Operator-attention axis (`attention_score`, `attention_breakdown`)
 Closes the feedback loop: when you screenshotted NVDA last week, the next NVDA-mentioning rec shows a visible 👁️ badge.
+
+![Five decay curves — screenshot/note/idea/event/webhook — each starting at its native kind weight and halving every 7 days](/docs-visuals/attention-decay.svg)
 
 ```
 score = Σ (kind_weight × exp(-ln2 × age_days / half_life))

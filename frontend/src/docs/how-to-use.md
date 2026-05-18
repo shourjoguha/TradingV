@@ -15,6 +15,8 @@ The two halves meet at the **rx finance** tab (Decide → Motion → Recs): one 
 
 The platform does NOT execute trades. You log them manually so it can attribute realised P&L back to the rules that suggested the signal.
 
+![Three-layer architecture — input sources feed three parallel process lanes (forecast / knowledge / context) which converge at the rx finance decision surface](/docs-visuals/architecture.svg)
+
 ---
 
 ## First-run setup

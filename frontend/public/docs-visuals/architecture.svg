@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 880" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bgArch" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e7ecf1"/>
+      <stop offset="100%" stop-color="#d1d7df"/>
+    </linearGradient>
+    <pattern id="dotsArch" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="0.8" fill="#3d4654" fill-opacity="0.06"/>
+    </pattern>
+    <filter id="boxShadow" x="-10%" y="-10%" width="120%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="2"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.2"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <circle cx="5" cy="5" r="3" fill="#3d4654" fill-opacity="0.55"/>
+    </marker>
+    <marker id="arrowViolet" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <circle cx="5" cy="5" r="3" fill="#6464ff" fill-opacity="0.7"/>
+    </marker>
+    <marker id="arrowTeal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <circle cx="5" cy="5" r="3" fill="#38b3a1" fill-opacity="0.7"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="880" fill="url(#bgArch)"/>
+  <rect width="1200" height="880" fill="url(#dotsArch)"/>
+
+  <!-- Title -->
+  <text x="60" y="48" font-size="11" fill="#6c737f" letter-spacing="2" font-weight="600">PLATFORM · ARCHITECTURE</text>
+  <text x="60" y="74" font-size="22" fill="#3d4654" font-weight="700">Three layers, one converging surface</text>
+
+  <!-- ============ LAYER 1: INPUT ============ -->
+  <text x="60" y="125" font-size="11" fill="#6c737f" letter-spacing="2" font-weight="600">1 · INPUT</text>
+  <line x1="60" y1="135" x2="1140" y2="135" stroke="#3d4654" stroke-opacity="0.12" stroke-width="1"/>
+
+  <!-- Market data box -->
+  <g>
+    <rect x="60" y="155" width="240" height="80" rx="14" fill="#fafbfc" stroke="#6464ff" stroke-opacity="0.4" stroke-width="1.5" filter="url(#boxShadow)"/>
+    <text x="80" y="183" font-size="14" fill="#3d4654" font-weight="700">Market data</text>
+    <text x="80" y="201" font-size="11" fill="#6c737f">yfinance · FRED · EDGAR</text>
+    <text x="80" y="217" font-size="11" fill="#6c737f">NASDAQ earnings · 8-K filings</text>
+  </g>
+
+  <!-- Vault box -->
+  <g>
+    <rect x="320" y="155" width="320" height="80" rx="14" fill="#fafbfc" stroke="#38b3a1" stroke-opacity="0.4" stroke-width="1.5" filter="url(#boxShadow)"/>
+    <text x="340" y="183" font-size="14" fill="#3d4654" font-weight="700">Knowledge vault</text>
+    <text x="340" y="201" font-size="11" fill="#6c737f">Operator Obsidian corpus · BGE-large embeddings</text>
+    <text x="340" y="217" font-size="11" fill="#6c737f">Books · videos · newsletters · filings · folder vignettes</text>
+  </g>
+
+  <!-- Operator input box -->
+  <g>
+    <rect x="660" y="155" width="480" height="80" rx="14" fill="#fafbfc" stroke="#d4a44a" stroke-opacity="0.4" stroke-width="1.5" filter="url(#boxShadow)"/>
+    <text x="680" y="183" font-size="14" fill="#3d4654" font-weight="700">Operator inputs</text>
+    <text x="680" y="201" font-size="11" fill="#6c737f">TV Context — notes · ideas · screenshots · events · webhooks</text>
+    <text x="680" y="217" font-size="11" fill="#6c737f">Watchlist · boards · hypothesis drafts · stance flags on links</text>
+  </g>
+
+  <!-- Layer-to-layer arrows -->
+  <line x1="180" y1="240" x2="180" y2="295" stroke="#6464ff" stroke-opacity="0.45" stroke-width="1.5" marker-end="url(#arrowViolet)"/>
+  <line x1="480" y1="240" x2="480" y2="295" stroke="#38b3a1" stroke-opacity="0.45" stroke-width="1.5" marker-end="url(#arrowTeal)"/>
+  <line x1="900" y1="240" x2="900" y2="295" stroke="#d4a44a" stroke-opacity="0.45" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ============ LAYER 2: PROCESS ============ -->
+  <text x="60" y="320" font-size="11" fill="#6c737f" letter-spacing="2" font-weight="600">2 · PROCESS</text>
+  <line x1="60" y1="330" x2="1140" y2="330" stroke="#3d4654" stroke-opacity="0.12" stroke-width="1"/>
+
+  <!-- Forecast pipeline (violet) -->
+  <g>
+    <rect x="60" y="350" width="240" height="220" rx="14" fill="#fafbfc" stroke="#6464ff" stroke-opacity="0.5" stroke-width="1.5" filter="url(#boxShadow)"/>
+    <text x="80" y="378" font-size="13" fill="#6464ff" font-weight="700" letter-spacing="1">FORECAST PIPELINE</text>
+    <line x1="80" y1="388" x2="280" y2="388" stroke="#6464ff" stroke-opacity="0.3"/>
+
+    <text x="80" y="411" font-size="12" fill="#3d4654" font-weight="600">predictions</text>
+    <text x="80" y="427" font-size="11" fill="#6c737f">Kronos daily on watchlist</text>
+
+    <text x="80" y="453" font-size="12" fill="#3d4654" font-weight="600">accuracy + drift</text>
+    <text x="80" y="469" font-size="11" fill="#6c737f">MAPE · hit-rate · ratio alerts</text>
+
+    <text x="80" y="495" font-size="12" fill="#3d4654" font-weight="600">opportunities (signals)</text>
+    <text x="80" y="511" font-size="11" fill="#6c737f">Rule engine over predictions</text>
+
+    <text x="80" y="537" font-size="12" fill="#3d4654" font-weight="600">schedule</text>
+    <text x="80" y="553" font-size="11" fill="#6c737f">Daily runner · fan-out</text>
+  </g>
+
+  <!-- Knowledge layer (teal) -->
+  <g>
+    <rect x="320" y="350" width="320" height="220" rx="14" fill="#fafbfc" stroke="#38b3a1" stroke-opacity="0.5" stroke-width="1.5" filter="url(#boxShadow)"/>
+    <text x="340" y="378" font-size="13" fill="#38b3a1" font-weight="700" letter-spacing="1">KNOWLEDGE LAYER</text>
+    <line x1="340" y1="388" x2="620" y2="388" stroke="#38b3a1" stroke-opacity="0.3"/>
+
+    <text x="340" y="411" font-size="12" fill="#3d4654" font-weight="600">vault indexer</text>
+    <text x="340" y="427" font-size="11" fill="#6c737f">Vector KNN + FTS5 lexical · RRF merge</text>
+
+    <text x="340" y="453" font-size="12" fill="#3d4654" font-weight="600">macro workbench</text>
+    <text x="340" y="469" font-size="11" fill="#6c737f">6 regime panels · yield curve · MOVE</text>
+
+    <text x="340" y="495" font-size="12" fill="#3d4654" font-weight="600">the street</text>
+    <text x="340" y="511" font-size="11" fill="#6c737f">Smart-money tier list · per-ticker timeline</text>
+
+    <text x="340" y="537" font-size="12" fill="#3d4654" font-weight="600">research (Claude)</text>
+    <text x="340" y="553" font-size="11" fill="#6c737f">Skill-driven stress-tests · approval flow</text>
+  </g>
+
+  <!-- Context layer (amber) -->
+  <g>
+    <rect x="660" y="350" width="480" height="220" rx="14" fill="#fafbfc" stroke="#d4a44a" stroke-opacity="0.5" stroke-width="1.5" filter="url(#boxShadow)"/>
+    <text x="680" y="378" font-size="13" fill="#d4a44a" font-weight="700" letter-spacing="1">CONTEXT LAYER</text>
+    <line x1="680" y1="388" x2="1120" y2="388" stroke="#d4a44a" stroke-opacity="0.3"/>
+
+    <text x="680" y="411" font-size="12" fill="#3d4654" font-weight="600">tv_context_items</text>
+    <text x="680" y="427" font-size="11" fill="#6c737f">5 kinds · per-kind retention · vision summaries</text>
+
+    <text x="680" y="453" font-size="12" fill="#3d4654" font-weight="600">hypotheses + invalidator DSL</text>
+    <text x="680" y="469" font-size="11" fill="#6c737f">7 ops · auto-flip on threshold · cascade</text>
+
+    <text x="680" y="495" font-size="12" fill="#3d4654" font-weight="600">ticker review queue</text>
+    <text x="680" y="511" font-size="11" fill="#6c737f">Unknown-ticker surface · video + TV-ctx feed</text>
+
+    <text x="680" y="537" font-size="12" fill="#3d4654" font-weight="600">earnings calendar</text>
+    <text x="680" y="553" font-size="11" fill="#6c737f">Universe-capped · IR-channel trigger gate</text>
+  </g>
+
+  <!-- Inter-process cross-links -->
+  <path d="M 300,460 C 300,460 320,460 320,460" stroke="#6c737f" stroke-opacity="0.3"/>
+  <path d="M 640,460 C 650,460 650,460 660,460" stroke="#6c737f" stroke-opacity="0.3"/>
+
+  <!-- Layer 2 → Layer 3 arrows -->
+  <line x1="180" y1="575" x2="180" y2="625" stroke="#6464ff" stroke-opacity="0.55" stroke-width="1.5" marker-end="url(#arrowViolet)"/>
+  <line x1="480" y1="575" x2="480" y2="625" stroke="#38b3a1" stroke-opacity="0.55" stroke-width="1.5" marker-end="url(#arrowTeal)"/>
+  <line x1="900" y1="575" x2="900" y2="625" stroke="#d4a44a" stroke-opacity="0.55" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ============ LAYER 3: DECIDE ============ -->
+  <text x="60" y="650" font-size="11" fill="#6c737f" letter-spacing="2" font-weight="600">3 · DECIDE</text>
+  <line x1="60" y1="660" x2="1140" y2="660" stroke="#3d4654" stroke-opacity="0.12" stroke-width="1"/>
+
+  <!-- rx finance — the convergence -->
+  <g>
+    <rect x="60" y="680" width="700" height="100" rx="16" fill="#fafbfc" stroke="#d4a44a" stroke-width="2" filter="url(#boxShadow)"/>
+    <text x="80" y="708" font-size="13" fill="#d4a44a" font-weight="700" letter-spacing="1">RX FINANCE · DECISION SURFACE</text>
+    <line x1="80" y1="718" x2="740" y2="718" stroke="#d4a44a" stroke-opacity="0.3"/>
+
+    <text x="80" y="745" font-size="12" fill="#3d4654" font-weight="600">recommendations</text>
+    <text x="80" y="761" font-size="11" fill="#6c737f">Generated daily by `/rx-finance` slash command from live DB + vault</text>
+
+    <!-- Attention badge inset -->
+    <rect x="430" y="730" width="320" height="38" rx="10" fill="#6464ff" fill-opacity="0.08" stroke="#6464ff" stroke-opacity="0.3"/>
+    <circle cx="447" cy="749" r="6" fill="#6464ff"/>
+    <text x="462" y="747" font-size="11" fill="#3d4654" font-weight="600">attention_score · attention_breakdown</text>
+    <text x="462" y="761" font-size="10" fill="#6c737f">decay-weighted TV-context across rec's tickers</text>
+  </g>
+
+  <!-- Today + Trades sidekick -->
+  <g>
+    <rect x="780" y="680" width="360" height="46" rx="14" fill="#fafbfc" stroke="#38b3a1" stroke-opacity="0.5" stroke-width="1.5" filter="url(#boxShadow)"/>
+    <text x="800" y="703" font-size="12" fill="#3d4654" font-weight="700">Today</text>
+    <text x="800" y="718" font-size="11" fill="#6c737f">Morning catch-up · 5 strips · aggregate inbox</text>
+  </g>
+  <g>
+    <rect x="780" y="734" width="360" height="46" rx="14" fill="#fafbfc" stroke="#6464ff" stroke-opacity="0.5" stroke-width="1.5" filter="url(#boxShadow)"/>
+    <text x="800" y="757" font-size="12" fill="#3d4654" font-weight="700">Trades</text>
+    <text x="800" y="772" font-size="11" fill="#6c737f">Manually logged · `related_rec_id` FK → rx finance</text>
+  </g>
+
+  <!-- Trades → feedback loop arrow -->
+  <path d="M 780,757 Q 700,820 500,800 T 200,575"
+        fill="none" stroke="#6c737f" stroke-opacity="0.3" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="500" y="830" font-size="11" fill="#6c737f" text-anchor="middle" font-style="italic">trades feed back into per-rule P&amp;L attribution</text>
+
+  <!-- Footer -->
+  <text x="60" y="868" font-size="10" fill="#6c737f">Forecast lane (violet) → Knowledge lane (teal) → Context lane (amber) → all converge at rx finance</text>
+</svg>

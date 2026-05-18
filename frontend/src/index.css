@@ -13,7 +13,9 @@
    *   #E0E5EC  →  214 23% 90%   (background, card, popover, secondary, accent, muted)
    *   #3D4852  →  213 15% 28%   (foreground / primary text)
    *   #6B7280  →  220 9%  46%   (muted-foreground)
-   *   #6C63FF  →  244 100% 70%  (primary / accent / ring)
+   *   #2E3D52  →  213 28% 25%  (primary / accent / ring) — graphite ink
+   *                              recast 2026-05-17 (replaces the previous
+   *                              vibrant primary #6C63FF / 244 100% 70%)
    */
   :root {
     --background: 214 23% 90%;
@@ -22,13 +24,13 @@
     --card-foreground: 213 15% 28%;
     --popover: 214 23% 90%;
     --popover-foreground: 213 15% 28%;
-    --primary: 244 100% 70%;
+    --primary: 213 28% 25%;
     --primary-foreground: 0 0% 100%;
     --secondary: 214 23% 90%;
     --secondary-foreground: 213 15% 28%;
     --muted: 214 23% 90%;
     --muted-foreground: 220 9% 46%;
-    --accent: 244 100% 70%;
+    --accent: 213 28% 25%;
     --accent-foreground: 0 0% 100%;
     --destructive: 6 65% 65%;
     --destructive-foreground: 0 0% 100%;
@@ -37,7 +39,7 @@
        no-op rather than 404 the token. */
     --border: 0 0% 100% / 0;
     --input: 214 23% 90%;
-    --ring: 244 100% 70%;
+    --ring: 213 28% 25%;
     /* Chart colors override (used only by shadcn chart helpers; we set
        lightweight-charts theme directly in PredictionsByTarget.tsx). */
     --chart-1: 244 100% 70%;
@@ -119,6 +121,31 @@
   margin: 1.6em 0;
   border: 0;
   border-top: 1px solid rgba(61, 72, 82, 0.12);
+}
+/* Inline visuals (SVGs + raster figures) — match the neumorphic page
+   surface w/ a soft extruded shadow + rounded corners so they read as
+   first-class content blocks rather than naked floating images. */
+.docs-article img {
+  display: block;
+  max-width: 100%;
+  margin: 1.4em auto;
+  border-radius: 14px;
+  box-shadow:
+    8px 8px 18px rgba(163, 177, 198, 0.35),
+    -8px -8px 18px rgba(255, 255, 255, 0.65);
+  background: #DDE3EA;
+}
+.docs-article figure {
+  margin: 1.4em 0;
+}
+.docs-article figure img {
+  margin: 0 auto 0.4em;
+}
+.docs-article figcaption {
+  text-align: center;
+  font-size: 0.85em;
+  color: rgba(61, 72, 82, 0.65);
+  font-style: italic;
 }
 .docs-article blockquote {
   margin: 0.6em 0;

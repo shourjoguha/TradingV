@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e3e8ee"/>
+      <stop offset="100%" stop-color="#cfd5de"/>
+    </linearGradient>
+    <pattern id="dots2" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="0.8" fill="#3d4654" fill-opacity="0.06"/>
+    </pattern>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1000" height="500" fill="url(#bg2)"/>
+  <rect width="1000" height="500" fill="url(#dots2)"/>
+
+  <!-- Title -->
+  <text x="80" y="42" font-size="11" fill="#6c737f" letter-spacing="2" font-weight="600">RX FINANCE · OPERATOR ATTENTION</text>
+  <text x="80" y="65" font-size="20" fill="#3d4654" font-weight="700">Kind weight × exponential decay (half-life 7d)</text>
+
+  <!-- Plot area frame -->
+  <line x1="80" y1="80" x2="80" y2="420" stroke="#6c737f" stroke-opacity="0.3" stroke-width="1"/>
+  <line x1="80" y1="420" x2="940" y2="420" stroke="#6c737f" stroke-opacity="0.3" stroke-width="1"/>
+
+  <!-- Y-axis labels -->
+  <g font-size="11" fill="#6c737f" text-anchor="end">
+    <text x="72" y="84">1.0</text>
+    <line x1="76" y1="80" x2="80" y2="80" stroke="#6c737f" stroke-opacity="0.5"/>
+    <text x="72" y="169">0.75</text>
+    <line x1="76" y1="165" x2="80" y2="165" stroke="#6c737f" stroke-opacity="0.5"/>
+    <text x="72" y="254">0.5</text>
+    <line x1="76" y1="250" x2="80" y2="250" stroke="#6c737f" stroke-opacity="0.5"/>
+    <text x="72" y="339">0.25</text>
+    <line x1="76" y1="335" x2="80" y2="335" stroke="#6c737f" stroke-opacity="0.5"/>
+    <text x="72" y="424">0</text>
+  </g>
+  <text x="40" y="250" font-size="11" fill="#6c737f" transform="rotate(-90 40 250)" text-anchor="middle">effective weight</text>
+
+  <!-- Half-life dashed marker at day 7 -->
+  <line x1="280.7" y1="80" x2="280.7" y2="420" stroke="#6c737f" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="280.7" y="98" font-size="11" fill="#6c737f" text-anchor="middle" font-style="italic">half-life 7d</text>
+
+  <!-- X-axis labels -->
+  <g font-size="11" fill="#6c737f" text-anchor="middle">
+    <text x="80" y="438">0</text>
+    <text x="280.7" y="438">7</text>
+    <text x="481.3" y="438">14</text>
+    <text x="682" y="438">21</text>
+    <text x="882.7" y="438">28</text>
+  </g>
+  <text x="510" y="465" font-size="11" fill="#6c737f" text-anchor="middle">days since capture</text>
+
+  <!-- Webhook curve (lightest) -->
+  <path d="M 80.0,352.0 L 94.3,355.3 L 108.7,358.4 L 123.0,361.4 L 137.3,364.2 L 151.7,366.9 L 166.0,369.5 L 180.3,371.9 L 194.7,374.2 L 209.0,376.4 L 223.3,378.6 L 237.7,380.6 L 252.0,382.5 L 266.3,384.3 L 280.7,386.0 L 295.0,387.6 L 309.3,389.2 L 323.7,390.7 L 338.0,392.1 L 352.3,393.5 L 366.7,394.7 L 381.0,396.0 L 395.3,397.1 L 409.7,398.2 L 424.0,399.3 L 438.3,400.3 L 452.7,401.2 L 467.0,402.1 L 481.3,403.0 L 495.7,403.8 L 510.0,404.6 L 524.3,405.3 L 538.7,406.1 L 553.0,406.7 L 567.3,407.4 L 581.7,408.0 L 596.0,408.6 L 610.3,409.1 L 624.7,409.6 L 639.0,410.1 L 653.3,410.6 L 667.7,411.1 L 682.0,411.5 L 696.3,411.9 L 710.7,412.3 L 725.0,412.7 L 739.3,413.0 L 753.7,413.4 L 768.0,413.7 L 782.3,414.0 L 796.7,414.3 L 811.0,414.6 L 825.3,414.8 L 839.7,415.1 L 854.0,415.3 L 868.3,415.5 L 882.7,415.8 L 897.0,416.0 L 911.3,416.2 L 925.7,416.3 L 940.0,416.5"
+        fill="none" stroke="#d97373" stroke-width="2" stroke-opacity="0.85"/>
+
+  <!-- Event curve -->
+  <path d="M 80.0,284.0 L 94.3,290.6 L 108.7,296.8 L 123.0,302.8 L 137.3,308.4 L 151.7,313.8 L 166.0,319.0 L 180.3,323.8 L 194.7,328.5 L 209.0,332.9 L 223.3,337.1 L 237.7,341.1 L 252.0,344.9 L 266.3,348.5 L 280.7,352.0 L 295.0,355.3 L 309.3,358.4 L 323.7,361.4 L 338.0,364.2 L 352.3,366.9 L 366.7,369.5 L 381.0,371.9 L 395.3,374.2 L 409.7,376.4 L 424.0,378.6 L 438.3,380.6 L 452.7,382.5 L 467.0,384.3 L 481.3,386.0 L 495.7,387.6 L 510.0,389.2 L 524.3,390.7 L 538.7,392.1 L 553.0,393.5 L 567.3,394.7 L 581.7,396.0 L 596.0,397.1 L 610.3,398.2 L 624.7,399.3 L 639.0,400.3 L 653.3,401.2 L 667.7,402.1 L 682.0,403.0 L 696.3,403.8 L 710.7,404.6 L 725.0,405.3 L 739.3,406.1 L 753.7,406.7 L 768.0,407.4 L 782.3,408.0 L 796.7,408.6 L 811.0,409.1 L 825.3,409.6 L 839.7,410.1 L 854.0,410.6 L 868.3,411.1 L 882.7,411.5 L 897.0,411.9 L 911.3,412.3 L 925.7,412.7 L 940.0,413.0"
+        fill="none" stroke="#d4a44a" stroke-width="2" stroke-opacity="0.85"/>
+
+  <!-- Idea curve -->
+  <path d="M 80.0,250.0 L 94.3,258.2 L 108.7,266.0 L 123.0,273.5 L 137.3,280.5 L 151.7,287.3 L 166.0,293.7 L 180.3,299.8 L 194.7,305.6 L 209.0,311.1 L 223.3,316.4 L 237.7,321.4 L 252.0,326.2 L 266.3,330.7 L 280.7,335.0 L 295.0,339.1 L 309.3,343.0 L 323.7,346.7 L 338.0,350.3 L 352.3,353.6 L 366.7,356.8 L 381.0,359.9 L 395.3,362.8 L 409.7,365.6 L 424.0,368.2 L 438.3,370.7 L 452.7,373.1 L 467.0,375.3 L 481.3,377.5 L 495.7,379.6 L 510.0,381.5 L 524.3,383.4 L 538.7,385.1 L 553.0,386.8 L 567.3,388.4 L 581.7,389.9 L 596.0,391.4 L 610.3,392.8 L 624.7,394.1 L 639.0,395.3 L 653.3,396.5 L 667.7,397.7 L 682.0,398.8 L 696.3,399.8 L 710.7,400.8 L 725.0,401.7 L 739.3,402.6 L 753.7,403.4 L 768.0,404.2 L 782.3,405.0 L 796.7,405.7 L 811.0,406.4 L 825.3,407.0 L 839.7,407.7 L 854.0,408.3 L 868.3,408.8 L 882.7,409.4 L 897.0,409.9 L 911.3,410.4 L 925.7,410.8 L 940.0,411.3"
+        fill="none" stroke="#9aa5b8" stroke-width="2" stroke-opacity="0.85"/>
+
+  <!-- Note curve -->
+  <path d="M 80.0,182.0 L 94.3,193.5 L 108.7,204.4 L 123.0,214.9 L 137.3,224.8 L 151.7,234.2 L 166.0,243.2 L 180.3,251.7 L 194.7,259.8 L 209.0,267.6 L 223.3,274.9 L 237.7,281.9 L 252.0,288.6 L 266.3,295.0 L 280.7,301.0 L 295.0,306.7 L 309.3,312.2 L 323.7,317.4 L 338.0,322.4 L 352.3,327.1 L 366.7,331.6 L 381.0,335.9 L 395.3,339.9 L 409.7,343.8 L 424.0,347.5 L 438.3,351.0 L 452.7,354.3 L 467.0,357.5 L 481.3,360.5 L 495.7,363.4 L 510.0,366.1 L 524.3,368.7 L 538.7,371.2 L 553.0,373.5 L 567.3,375.8 L 581.7,377.9 L 596.0,380.0 L 610.3,381.9 L 624.7,383.7 L 639.0,385.5 L 653.3,387.2 L 667.7,388.7 L 682.0,390.2 L 696.3,391.7 L 710.7,393.1 L 725.0,394.4 L 739.3,395.6 L 753.7,396.8 L 768.0,397.9 L 782.3,399.0 L 796.7,400.0 L 811.0,400.9 L 825.3,401.9 L 839.7,402.7 L 854.0,403.6 L 868.3,404.4 L 882.7,405.1 L 897.0,405.8 L 911.3,406.5 L 925.7,407.2 L 940.0,407.8"
+        fill="none" stroke="#38b3a1" stroke-width="2.5" stroke-opacity="0.9"/>
+
+  <!-- Screenshot curve (heaviest) -->
+  <path d="M 80.0,80.0 L 94.3,96.4 L 108.7,112.1 L 123.0,126.9 L 137.3,141.1 L 151.7,154.6 L 166.0,167.4 L 180.3,179.6 L 194.7,191.2 L 209.0,202.2 L 223.3,212.8 L 237.7,222.8 L 252.0,232.3 L 266.3,241.4 L 280.7,250.0 L 295.0,258.2 L 309.3,266.0 L 323.7,273.5 L 338.0,280.5 L 352.3,287.3 L 366.7,293.7 L 381.0,299.8 L 395.3,305.6 L 409.7,311.1 L 424.0,316.4 L 438.3,321.4 L 452.7,326.2 L 467.0,330.7 L 481.3,335.0 L 495.7,339.1 L 510.0,343.0 L 524.3,346.7 L 538.7,350.3 L 553.0,353.6 L 567.3,356.8 L 581.7,359.9 L 596.0,362.8 L 610.3,365.6 L 624.7,368.2 L 639.0,370.7 L 653.3,373.1 L 667.7,375.3 L 682.0,377.5 L 696.3,379.6 L 710.7,381.5 L 725.0,383.4 L 739.3,385.1 L 753.7,386.8 L 768.0,388.4 L 782.3,389.9 L 796.7,391.4 L 811.0,392.8 L 825.3,394.1 L 839.7,395.3 L 854.0,396.5 L 868.3,397.7 L 882.7,398.8 L 897.0,399.8 L 911.3,400.8 L 925.7,401.7 L 940.0,402.6"
+        fill="none" stroke="#6464ff" stroke-width="3" filter="url(#glow)"/>
+
+  <!-- Starting weight markers (at day 0) -->
+  <g>
+    <circle cx="80" cy="80" r="5" fill="#6464ff"/>
+    <circle cx="80" cy="182" r="4.5" fill="#38b3a1"/>
+    <circle cx="80" cy="250" r="4" fill="#9aa5b8"/>
+    <circle cx="80" cy="284" r="4" fill="#d4a44a"/>
+    <circle cx="80" cy="352" r="4" fill="#d97373"/>
+  </g>
+
+  <!-- Legend block (right) -->
+  <g font-size="12" fill="#3d4654">
+    <text x="745" y="115" font-size="11" fill="#6c737f" letter-spacing="2" font-weight="600">KIND WEIGHT</text>
+
+    <rect x="745" y="130" width="180" height="22" rx="6" fill="#fff" fill-opacity="0.45"/>
+    <circle cx="757" cy="141" r="5" fill="#6464ff"/>
+    <text x="769" y="145" font-weight="600">screenshot</text>
+    <text x="920" y="145" text-anchor="end" font-family="monospace" font-size="11">1.0</text>
+
+    <rect x="745" y="156" width="180" height="22" rx="6" fill="#fff" fill-opacity="0.35"/>
+    <circle cx="757" cy="167" r="5" fill="#38b3a1"/>
+    <text x="769" y="171" font-weight="600">note</text>
+    <text x="920" y="171" text-anchor="end" font-family="monospace" font-size="11">0.7</text>
+
+    <rect x="745" y="182" width="180" height="22" rx="6" fill="#fff" fill-opacity="0.25"/>
+    <circle cx="757" cy="193" r="5" fill="#9aa5b8"/>
+    <text x="769" y="197" font-weight="600">idea</text>
+    <text x="920" y="197" text-anchor="end" font-family="monospace" font-size="11">0.5</text>
+
+    <rect x="745" y="208" width="180" height="22" rx="6" fill="#fff" fill-opacity="0.18"/>
+    <circle cx="757" cy="219" r="5" fill="#d4a44a"/>
+    <text x="769" y="223" font-weight="600">event</text>
+    <text x="920" y="223" text-anchor="end" font-family="monospace" font-size="11">0.4</text>
+
+    <rect x="745" y="234" width="180" height="22" rx="6" fill="#fff" fill-opacity="0.1"/>
+    <circle cx="757" cy="245" r="5" fill="#d97373"/>
+    <text x="769" y="249" font-weight="600">webhook</text>
+    <text x="920" y="249" text-anchor="end" font-family="monospace" font-size="11">0.2</text>
+  </g>
+
+  <!-- Caption under legend -->
+  <text x="745" y="285" font-size="11" fill="#6c737f" letter-spacing="2" font-weight="600">FORMULA</text>
+  <text x="745" y="305" font-size="12" fill="#3d4654" font-family="monospace">w(t) = kind × 2^(-t/7d)</text>
+  <text x="745" y="328" font-size="11" fill="#6c737f">score = MAX across tickers</text>
+  <text x="745" y="345" font-size="11" fill="#6c737f">(not sum — heavy ticker wins)</text>
+</svg>
