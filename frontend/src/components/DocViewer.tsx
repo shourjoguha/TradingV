@@ -106,13 +106,15 @@ export function DocViewer({ source }: DocViewerProps) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-6">
-      {/* TOC — sticky on lg+, accordion on mobile */}
-      <aside className="lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+      {/* TOC — sticky on lg+, accordion on mobile. Light visual separator
+          from article: subtle right-border + `pr-4` inner padding so the
+          TOC reads as a distinct rail rather than free-floating text. */}
+      <aside className="lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:border-r lg:border-border/40 lg:pr-4">
         <details className="lg:open" open>
-          <summary className="lg:hidden cursor-pointer text-xs font-semibold uppercase tracking-wider text-muted-foreground py-2">
+          <summary className="lg:hidden cursor-pointer text-xs font-semibold text-muted-foreground py-2">
             On this page
           </summary>
-          <div className="hidden lg:block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-2">
+          <div className="hidden lg:block text-[11px] font-semibold text-muted-foreground mb-2 px-2">
             On this page
           </div>
           <ul className="space-y-0.5 text-sm">
