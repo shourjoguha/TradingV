@@ -85,7 +85,46 @@ async def create_trade(
         session.add(t)
         await session.commit()
         await session.refresh(t)
-        return _serialize(t)
+    # Fan out AFTER commit so the trade write never blocks on the
+    # secondary side-effect. Buy-only — sells often close a position
+    # so auto-adding on sell would be backwards.
+    if side == "buy":
+        await _maybe_autoadd_to_positions_board(t.ticker)
+    return _serialize(t)
+
+
+async def _maybe_autoadd_to_positions_board(ticker: str) -> None:
+    """Best-effort: add ticker to the configured positions board.
+
+    Idempotent (boards.add_ticker handles duplicate (board, ticker)
+    pairs). Never raises — missing board, missing setting, or any
+    failure logs and swallows so a flaky boards write never blocks the
+    trade response.
+    """
+    from app.core.config import SETTINGS
+
+    name = (getattr(SETTINGS, "TRADES_AUTOADD_BOARD_NAME", "") or "").strip()
+    if not name:
+        return
+    try:
+        from app.boards import service as _boards_svc
+
+        board_id = await _boards_svc.get_board_id_by_name(name)
+        if board_id is None:
+            logger.info(
+                "trades autoadd: board %r not found; skip ticker=%s",
+                name,
+                ticker,
+            )
+            return
+        await _boards_svc.add_ticker(board_id, ticker=ticker)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "trades autoadd: failed to add %s to board %r: %s",
+            ticker,
+            name,
+            exc,
+        )
 
 
 async def update_trade(

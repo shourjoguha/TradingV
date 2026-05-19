@@ -120,5 +120,14 @@ class Settings(BaseSettings):
     RX_OPERATOR_UUID: str = "9312c7a0-d09c-4663-8f67-5dfddfdb6249"
     RX_INGEST_TOKEN: str = ""
 
+    # Auto-add ticker to a board on buy-trade log. Default "positions"
+    # matches the seeded board from the 2026-05-17 positions_ledger
+    # import. Empty string disables the fan-out entirely. Buy-only
+    # (sells often close a position; auto-add on sell would be wrong).
+    # Lookup is case-insensitive against `boards.name`. Best-effort:
+    # board-missing or any failure is logged + swallowed, never blocks
+    # the trade write.
+    TRADES_AUTOADD_BOARD_NAME: str = "positions"
+
 
 SETTINGS = Settings()

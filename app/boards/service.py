@@ -56,6 +56,29 @@ async def list_boards() -> list[dict[str, Any]]:
     return [_board_summary(b, ticker_count=int(counts.get(b.id, 0))) for b in boards]
 
 
+async def get_board_id_by_name(name: str) -> Optional[str]:
+    """Case-insensitive name lookup; returns board id or None.
+
+    Cheap helper for fan-out integrations (e.g. auto-add on buy-trade
+    log). Doesn't pre-fetch tickers — caller wants the id only.
+    """
+    if not name:
+        return None
+    target = name.strip().lower()
+    if not target:
+        return None
+    async with _db.SessionLocal() as session:
+        # SQLite has no LOWER() index but boards table is tiny (<50 rows)
+        # so a full scan is fine. Postgres handles LOWER() in an index
+        # scan if one exists; either way, this is bounded.
+        row = (
+            await session.execute(
+                select(Board).where(func.lower(Board.name) == target)
+            )
+        ).scalar_one_or_none()
+        return row.id if row else None
+
+
 async def get_board(board_id: str) -> Optional[dict[str, Any]]:
     async with _db.SessionLocal() as session:
         board = await session.get(Board, board_id)
