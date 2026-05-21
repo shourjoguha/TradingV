@@ -1,5 +1,14 @@
 # Roadmap — SHIPPED archive
 
+> **Snapshot note (2026-05-22):** this archive captures phases 0-6 (≈2026-04-27)
+> and the Phase B sync work. Base `main` has since shipped many additional
+> phases (TV-context, Phase 2/3 research stress-test, Phase D ticker review
+> queue, vault-indexer multi-domain split, macro/sectors workbench, video
+> auto-ingest, Rx finance prescriptions, smart-money tier layer, Railway
+> shutdown). They are NOT mirrored here — see [`../CHANGELOG.md`](../CHANGELOG.md)
+> for the high-level delta and the base repo's `.claude/status/roadmap-shipped.md`
+> for the operator-authoritative retro stream.
+
 > Phases 0-6 of the forecasting-tool → decision-support-tool transition. **All ✅ live as of 2026-04-27.** Kept for reference: each phase's spec, exit criteria, and post-ship retrospective.
 >
 > **Active roadmap** lives at [roadmap.md](roadmap.md). For the principles that drove the sequencing, see [principles.md](principles.md). For per-decision detail (e.g. "why Telegram over email"), see [decisions/](decisions/).

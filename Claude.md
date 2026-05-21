@@ -1,8 +1,14 @@
-# TradingView Analysis Platform
+# TradingView Analysis Platform — demo branch
+
+> **This is the public demo branch (`demo`)** — a frozen JSON snapshot of the
+> live system as of `manifest.cutoff_date`. The base app lives on `main`
+> (`/Users/shourjosmac/Documents/Claude/TradingView `). Architectural docs
+> below describe the **base app** as it was when this snapshot was taken; see
+> `CHANGELOG.md` at the repo root for what base has shipped since.
 
 ## What this is (60 seconds)
 
-Personal trading-decision-support system for **one operator**. FastAPI backend runs Kronos candlestick predictions on a daily-scheduled watchlist; emits **opportunities** (rule-based BUY/SELL signals weighted by historical hit-rate); manually-logged **trades** close the loop with per-rule P\&L attribution. Bidirectional Tailscale sync between **laptop** (primary, has GPU-eligible inference) and **Railway** (always-on replica). Neumorphic React frontend on **Cloudflare Pages** at `https://tradingv-83b.pages.dev`. **Read** **[.claude/principles.md](.claude/principles.md)** **before making architectural changes** — it captures the load-bearing assumptions and trade-offs.
+Personal trading-decision-support system for **one operator**. FastAPI backend runs Kronos candlestick predictions on a daily-scheduled watchlist; emits **opportunities** (rule-based BUY/SELL signals weighted by historical hit-rate); manually-logged **trades** close the loop with per-rule P\&L attribution. Layers on TV-context (paste-screenshot vision summaries), vault-indexed research over a curated Obsidian corpus, and a formal hypothesis layer with invalidator DSL. The live system runs on the operator's **laptop** (primary, Apple-Silicon-eligible inference). A Tailscale-synced Railway always-on replica was retired 2026-05-17 (base [ADR 018](.claude/decisions/018-railway-shutdown.md)). Neumorphic React frontend on **Cloudflare Pages** at `https://tradingv-83b.pages.dev`. **Read** **[.claude/principles.md](.claude/principles.md)** **before making architectural changes** — it captures the load-bearing assumptions and trade-offs. The demo branch itself is hosted on Railway + Cloudflare Pages (separate concern from the base's retired replica) — see [`DEMO_DEPLOY.md`](DEMO_DEPLOY.md).
 
 ## Reading paths (start here based on your job)
 
@@ -19,7 +25,8 @@ Personal trading-decision-support system for **one operator**. FastAPI backend r
 
 - App: `app.main:app`
 - Local: `uvicorn app.main:app --reload` (venv activated, env set)
-- Deploy: Railway via Dockerfile + `tailscale-entrypoint.sh`. `railway.toml` declares the Dockerfile builder; the entrypoint runs Tailscale, then chains `alembic upgrade head && uvicorn ...` from the Dockerfile CMD. `Procfile` is unused on Railway. See [.claude/railway-deployment.md](.claude/railway-deployment.md).
+- Demo deploy: Railway (Dockerfile builder declared in `railway.toml`) serves the static JSON from `demo-data/`. No DB, no API key, no secrets. See [`DEMO_DEPLOY.md`](DEMO_DEPLOY.md).
+- Base deploy (historical, captured in this snapshot): Railway via Dockerfile + `tailscale-entrypoint.sh`. Retired 2026-05-17 (base [ADR 018](.claude/decisions/018-railway-shutdown.md)) — base is now laptop-only. The Dockerfile / entrypoint / `railway.toml` are kept in-repo for the demo's own deploy path.
 - **Vault-indexer (Phase 2/3 knowledge layer)**: `uvicorn tools.vault_indexer.app:app --port 8001` with `VAULT_PATH=$HOME/Documents/knowledge-vault`. Required for `/v1/research/ask` to retrieve from the operator's curated corpus. **The cache at `<vault>/.indexer/cache.db` persists across restarts** — laptop reboots don't trigger re-embedding. Full operator runbook for starting / verifying / re-ingesting lives in [`use_me_guide.md`](use_me_guide.md) §1.5.
 
 ## `.claude/` — module-specific docs
@@ -82,12 +89,11 @@ Read only what you need. Each file is < 1 screen and describes one concern: the 
 5. `uvicorn app.main:app --reload`
 6. Tests: `python -m pytest`.
 
-For the **laptop (primary) backend** with dockerized Postgres on 5439 + peer sync to Railway, see [.claude/laptop-setup.md](.claude/laptop-setup.md).
+For the **base laptop backend** with dockerized Postgres on 5439, see [.claude/laptop-setup.md](.claude/laptop-setup.md). Peer-sync to Railway is dormant since 2026-05-17 on the base side (see [ADR 018](.claude/decisions/018-railway-shutdown.md)).
 
-## Setup (Railway)
+## Demo deploy (this branch)
 
-1. New project → add Postgres plugin → deploy repo. Builder: Dockerfile (declared in `railway.toml`).
-2. Set `API_KEY` env var. `DATABASE_URL`/`PORT` are auto-injected.
-3. Alembic runs at container start (entrypoint chains `alembic upgrade head && uvicorn ...`).
-4. Optional: `TS_AUTHKEY` for Tailscale tunnel back to laptop, `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` for push alerts (both no-op when unset). Full env list in [.claude/railway-deployment.md](.claude/railway-deployment.md).
+The demo branch ships a strip-down FastAPI that serves `demo-data/*.json`.
+See [`DEMO_DEPLOY.md`](DEMO_DEPLOY.md) for the Railway + Cloudflare Pages
+configuration — no `DATABASE_URL`, no `API_KEY`, no Tailscale.
 

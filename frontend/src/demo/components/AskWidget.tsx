@@ -24,7 +24,7 @@ const CANNED_FALLBACK: CannedAnswer[] = [
     id: 'what-is-this',
     title: 'What is this app?',
     tab: 'today',
-    body: "Personal trading-decision-support system. FastAPI backend runs daily Kronos candlestick forecasts on a watchlist, emits rule-based BUY/SELL opportunities, tracks per-rule P&L from manually logged trades. This is a frozen public demo of that system as of 2026-05-09. The live system runs on the operator's laptop with bidirectional sync to a Railway replica.",
+    body: "Personal trading-decision-support system. FastAPI backend runs daily Kronos candlestick forecasts on a watchlist, emits rule-based BUY/SELL opportunities, tracks per-rule P&L from manually logged trades, and layers on TV-context vision summaries, a vault-indexed research corpus, and a formal hypothesis layer with invalidator DSL. This is a frozen public demo of that system as of 2026-05-09. The live system runs locally on the operator's laptop — a Railway always-on replica was retired 2026-05-17 (ADR 018) once the laptop became the canonical runtime.",
   },
   {
     id: 'how-accurate',
@@ -48,7 +48,7 @@ const CANNED_FALLBACK: CannedAnswer[] = [
     id: 'model-used',
     title: 'What model produces forecasts?',
     tab: 'predictions',
-    body: 'Kronos — an open candlestick prediction model. Inference runs on the operator\'s laptop (GPU-eligible) and forecasts are synced to the always-on Railway replica. The demo ships no model weights and runs no inference; the visible forecasts are frozen historical outputs from the laptop.',
+    body: 'Kronos — an open candlestick prediction model. Inference runs on the operator\'s laptop (Apple-Silicon-eligible, MLX fallback). The demo ships no model weights and runs no inference; the visible forecasts are frozen historical outputs from the laptop run. A Railway always-on replica used to mirror the laptop DB over Tailscale; it was retired 2026-05-17 (ADR 018) once the laptop became the canonical runtime.',
   },
   {
     id: 'data-sources',
@@ -60,13 +60,13 @@ const CANNED_FALLBACK: CannedAnswer[] = [
     id: 'tech-stack',
     title: "What's the tech stack?",
     tab: 'about',
-    body: 'Python 3.12 + FastAPI + SQLAlchemy + Alembic + Postgres on the backend. React 18 + Vite + TanStack Query + Tailwind on the frontend. Tailscale for laptop ↔ Railway sync. Cloudflare Pages for static frontend hosting. This demo strips the backend to FastAPI + a few JSON files; no DB, no model, no Tailscale.',
+    body: 'Python 3.12 + FastAPI + SQLAlchemy + Alembic + Postgres on the backend. React 18 + Vite + TanStack Query + Tailwind on the frontend. Kronos for candlestick forecasts; Claude Sonnet 4.6 for TV-context chart vision summaries; Whisper-MLX + Qwen2-VL for YouTube ticker extraction. Vault-indexer sidecar over an Obsidian corpus for research retrieval. Cloudflare Pages hosts the static frontend; this demo backend is a thin FastAPI on Railway serving frozen JSON. The base app retired its own Railway replica 2026-05-17 — laptop is now sole runtime there.',
   },
   {
     id: 'why-frozen',
     title: 'Why is this demo frozen?',
     tab: 'about',
-    body: 'Frozen-snapshot demos are cheap (no DB on Railway), safe (no secrets, no write paths, no model), and predictable (recruiters always see the same polished story). The bake script in scripts/ refreshes the JSON from the live laptop DB; the operator chooses when to re-bake.',
+    body: 'Frozen-snapshot demos are cheap (no DB on the demo host), safe (no secrets, no write paths, no model), and predictable (visitors always see the same polished story). The bake script in scripts/ refreshes the JSON from the live laptop DB; the operator chooses when to re-bake.',
   },
   {
     id: 'drift-alerts',
@@ -78,7 +78,7 @@ const CANNED_FALLBACK: CannedAnswer[] = [
     id: 'live-vs-demo',
     title: "What's missing vs the live app?",
     tab: 'about',
-    body: 'Live app: runs Kronos inference, ingests yfinance + FRED + TradingView webhooks, evaluates accuracy hourly, runs drift + research + ingestion loops, syncs laptop ↔ Railway via Tailscale, sends Telegram digests, accepts manual trade entries, runs a vault-indexer sidecar for the Research tab. Demo app: serves 7 JSON files. That\'s it.',
+    body: 'Live app: runs Kronos inference, ingests yfinance + FRED + TradingView webhooks + operator-paste chart screenshots (Claude vision summary) + YouTube channel auto-ingest (Whisper transcripts + Qwen2-VL chart-text extraction), evaluates accuracy hourly, runs drift + research + ingestion loops, sends Telegram digests, accepts manual trade entries, evaluates formal hypotheses against an invalidator DSL, fans unknown tickers into a review queue. Demo app: serves 7 JSON files. That\'s it.',
   },
   {
     id: 'code-access',

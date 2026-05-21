@@ -24,12 +24,24 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 // --- types ---------------------------------------------------------------
 
+export interface SystemPillar {
+  key: string
+  name: string
+  surfaced_in_demo: boolean
+}
+
 export interface Manifest {
   schema_version: number
   cutoff_date: string
+  entry_date?: string
+  snapshot_refreshed_at?: string
   generated_at: string
   scrub_version: string
+  base_branch_as_of?: string
   note: string
+  tickers?: string[]
+  horizons?: string[]
+  system_pillars?: SystemPillar[]
 }
 
 export interface DriftAlert {
@@ -55,6 +67,9 @@ export interface FreshSignal {
   kind: string
   rule: string
   score: number
+  /** Optional. Present when the system has cross-referenced this ticker
+   * against recent TV-context items. Higher = more operator attention. */
+  attention_score?: number
   horizon: string
   created_at: string
 }
@@ -136,6 +151,9 @@ export interface Opportunity {
   kind: string
   rule: string
   score: number
+  /** Optional. Present when the system has cross-referenced this ticker
+   * against recent TV-context items. */
+  attention_score?: number
   horizon: string
   status: string
   created_at: string

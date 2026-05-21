@@ -138,6 +138,14 @@ export function DemoHome() {
                       <span className="font-mono">{s.ticker}</span>{' '}
                       <span className="text-muted-foreground">·</span>{' '}
                       <span>{s.rule}</span>
+                      {typeof s.attention_score === 'number' && (
+                        <span
+                          className="ml-2 rounded-full bg-violet/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-violet"
+                          title="TV-context attention score — operator paste-screenshot pipeline cross-referenced this ticker recently"
+                        >
+                          attn {(s.attention_score * 100).toFixed(0)}
+                        </span>
+                      )}
                     </span>
                     <Badge variant={s.kind === 'BUY' ? 'default' : 'secondary'}>
                       {s.kind} · {(s.score * 100).toFixed(0)}%

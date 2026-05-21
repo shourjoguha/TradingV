@@ -1,5 +1,15 @@
 # Architecture
 
+> **Snapshot note (2026-05-22):** this document describes the base `main`
+> branch at the time the demo was branched (≈2026-05-09). Base has since
+> shipped additional modules (`rx/`, `the_street/`, `ticker_review/`,
+> `earnings/`, `admin/`, deeper `tv_context/` + `hypotheses/`, video-vision
+> ingest, macro/sectors workbench) and retired the Railway replica
+> (base [ADR 018](decisions/018-railway-shutdown.md), 2026-05-17). See
+> [`../CHANGELOG.md`](../CHANGELOG.md) for the running delta. The module
+> map below has NOT been swept — treat unfamiliar references as historical
+> rather than authoritative.
+
 Modular monorepo. Single FastAPI process. Modules are independent packages under `app/` with thin cross-imports (services, not routes). Each module owns its models, schemas, service, and routes.
 
 ## Layout

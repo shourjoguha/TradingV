@@ -21,14 +21,69 @@ const STACK = [
   'Python 3.12',
   'FastAPI',
   'SQLAlchemy + Alembic',
-  'Postgres',
+  'Postgres (local)',
   'Kronos (candlestick model)',
+  'Claude Sonnet 4.6 (TV-context vision)',
+  'Whisper-MLX + Qwen2-VL (video ingest)',
+  'Vault-indexer (Obsidian corpus)',
   'React 18',
   'Vite + Tailwind',
   'TanStack Query',
-  'Tailscale',
-  'Cloudflare Pages',
-  'Railway',
+  'Cloudflare Pages (demo frontend)',
+  'Railway (demo backend host)',
+] as const
+
+const PILLARS = [
+  {
+    name: 'Predictions',
+    body: 'Daily Kronos candlestick forecasts across the watchlist, scored against actual closes once each horizon elapses. Surfaced in this demo.',
+    state: 'shipped',
+  },
+  {
+    name: 'Opportunities + per-rule attribution',
+    body: 'Hourly rule engine emits BUY/SELL signals weighted by historical hit-rate. Manually logged trades carry the originating opportunity_id so per-rule P&L rolls up automatically. Surfaced in this demo.',
+    state: 'shipped',
+  },
+  {
+    name: 'Drift detection',
+    body: 'Per-(ticker, horizon) MAPE-ratio detector with operator-ack. Telegram-notified in the live system when configured. Surfaced in this demo.',
+    state: 'shipped',
+  },
+  {
+    name: 'Vault-indexed research',
+    body: 'Operator-curated Obsidian knowledge corpus, embedded by a local indexer sidecar. The Research tab in the live system retrieves over it and answers stress-test questions; the weekly stress-test loop is opt-in. Operator surface — not in this demo.',
+    state: 'operator-only',
+  },
+  {
+    name: 'TV-context (chart-screenshot vision)',
+    body: 'Operator pastes a TradingView screenshot; Claude Sonnet 4.6 returns a structured chart summary. The system stamps an attention score, feeds the hypothesis layer, and queues unknown tickers for review. Operator surface — not in this demo.',
+    state: 'operator-only',
+  },
+  {
+    name: 'Hypothesis layer + invalidator DSL',
+    body: 'Each research question can graduate into a tracked hypothesis with an explicit invalidator expression (e.g. tv_context_stance_count_since). The daily evaluator marks hypotheses ACTIVE / INVALIDATED / NEEDS_CONTEXT. Operator surface — not in this demo.',
+    state: 'operator-only',
+  },
+  {
+    name: 'Earnings calendar gating',
+    body: 'Earnings days are step-functions Kronos was not conditioned on. The system maintains an earnings calendar over the watchlist + smart-money tier-1/2 names and surfaces upcoming releases so exposure can be throttled manually. Operator surface — not in this demo.',
+    state: 'operator-only',
+  },
+  {
+    name: 'Video-vision ingest (YouTube)',
+    body: 'Opt-in channels get auto-ingested: Whisper-MLX transcribes the audio, Qwen2-VL extracts on-chart tickers, the result lands in the vault and unknown tickers fan into the review queue. Apple-Silicon-only. Operator surface — not in this demo.',
+    state: 'operator-only',
+  },
+  {
+    name: 'Ticker review queue',
+    body: 'A single inbox for unknown-symbol mentions surfaced by video-vision or TV-context. Operator approves / rejects / labels. Keeps the watchlist honest. Operator surface — not in this demo.',
+    state: 'operator-only',
+  },
+  {
+    name: 'Macro / sectors workbench',
+    body: 'Regime-aware research surface — cycle wheel, rotation-bump chart, correlation heatmap with rolling-pair drill-in, configurable cadences. Operator surface — not in this demo.',
+    state: 'operator-only',
+  },
 ] as const
 
 const FAILURE_MODES = [
@@ -133,9 +188,11 @@ export function DemoAbout() {
           Stack
         </h3>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          One operator's laptop runs the model + DB + ingestion. Tailscale connects it to a
-          Railway always-on replica that absorbs reads and webhooks. The frontend ships
-          static from Cloudflare Pages. This demo is the same shape minus the model + DB.
+          One operator's laptop runs the model + DB + ingestion + vault + indexer.
+          The base app's Railway always-on replica was retired 2026-05-17 (ADR 018) once
+          the laptop became the canonical runtime. This demo is a separate concern: a
+          frozen JSON snapshot served from a tiny FastAPI on Railway, with the frontend
+          on Cloudflare Pages. Cheap, idle, no secrets, no model, no DB.
         </p>
         <div className="flex flex-wrap gap-2">
           {STACK.map((s) => (
@@ -149,6 +206,39 @@ export function DemoAbout() {
         </div>
       </section>
 
+      <section className="space-y-3">
+        <h3 className="font-display text-xl font-bold">System map</h3>
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          The closed loop has more pillars than the four tabs in this demo can show.
+          Each row below is a layer of the live system. Three of them are surfaced
+          here directly — the rest are operator surfaces that aren't safe to expose
+          publicly (paste-screenshot ingest, vault corpus, hypothesis evaluator, etc).
+          The honest demo names them rather than hiding them.
+        </p>
+        <ul className="space-y-2">
+          {PILLARS.map((p) => (
+            <li
+              key={p.name}
+              className="flex items-start gap-3 rounded-2xl bg-background p-3 shadow-extruded-sm"
+            >
+              <span
+                className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider ${
+                  p.state === 'shipped'
+                    ? 'bg-emerald-500/15 text-emerald-700'
+                    : 'bg-violet/15 text-violet'
+                }`}
+              >
+                {p.state === 'shipped' ? 'in demo' : 'operator-only'}
+              </span>
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">{p.name}</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">{p.body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section className="space-y-3 rounded-2xl bg-background p-6 shadow-extruded">
         <div className="flex items-center gap-2">
           <Briefcase className="h-5 w-5 text-violet" />
@@ -156,9 +246,10 @@ export function DemoAbout() {
         </div>
         <p className="max-w-2xl text-sm text-muted-foreground">
           One operator. Two engagements at a time. The patterns here — frozen demo on cheap
-          infra, dual-backend laptop+cloud sync, rule engine + per-rule P&L attribution,
-          vault-indexed knowledge layer — generalize past trading. Internal tools that need
-          this engineering shape are a fit.
+          infra, rule engine + per-rule P&L attribution, vault-indexed knowledge layer,
+          chart-screenshot vision summarisation, formal hypothesis evaluator with
+          invalidator DSL, video-vision ingest for content-driven signal — generalize past
+          trading. Internal tools that need this engineering shape are a fit.
         </p>
         <div className="flex flex-wrap gap-3 pt-2">
           <a
