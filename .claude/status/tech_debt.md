@@ -21,18 +21,11 @@ Things we know about, deferred on purpose, with the trigger to revisit. Differen
 
 ---
 
-## Railway: torch/Kronos still installed even with KRONOS_ENABLED=false
+## ~~Railway: torch/Kronos still installed even with KRONOS_ENABLED=false~~ (ARCHIVED 2026-05-20)
 
-**What:** Railway image bundles `torch`, `huggingface_hub`, `einops`, `safetensors` (full Kronos stack ~500MB) even though `KRONOS_ENABLED=false` on Railway. Python imports cost RAM at idle even when toggle is off — those packages get pulled into module space at any code path that touches `app/kronos/`.
+**Status:** Moot. Railway shut down permanently on 2026-05-17 ([ADR 018](../decisions/018-railway-shutdown.md)). The split-requirements approach this entry called for is no longer needed; laptop-only deployment carries the full Kronos stack as a hard requirement.
 
-**Why deferred:** Stripping requires a separate `requirements-laptop.txt` + Railway-specific Dockerfile (or pip install branching by env). Kept on Railway today because `RAILWAY_FALLBACK_ENABLED` *could* be flipped to `True` and need Kronos. Most of operator's bill is RAM ($2.46/wk) and torch is the fattest import.
-
-**How to apply when ready:**
-- Decide: is `RAILWAY_FALLBACK_ENABLED` ever going to be true?
-  - **No** → split requirements: `requirements.txt` slim, `requirements-laptop.txt` adds Kronos. Railway image drops ~500MB of torch RAM. Estimated savings: ~$5-7/mo (about 50% of RAM line).
-  - **Yes** → lazy-load: don't import `torch` at startup. Import only inside `kronos.real_adapter.activate()`. Cold start 30-60s on first fallback fire — acceptable for once-a-day backfill.
-
-**Trigger to revisit:** Railway bill review after the lifespan-loop gate (this commit) lands — if RAM line still dominates, this is the next lever.
+**Why archived here vs. removed:** Dockerfile + `railway.toml` + `tailscale-entrypoint.sh` retained in repo as historical reference; if Railway is ever re-deployed, this entry's analysis (lazy-load vs. split requirements) is still the correct decision tree.
 
 ---
 
@@ -71,19 +64,19 @@ Things we know about, deferred on purpose, with the trigger to revisit. Differen
 
 ---
 
-## `app.analysis.concurrency` slot gate (post-Phase queue)
+## ~~`app.analysis.concurrency` slot gate~~ (RESOLVED 2026-05-20)
 
-**What:** `app/analysis/concurrency.py` (`AtCapacityError`, `acquire_slot`) is kept inside `analysis.service.submit_run` after the queue ships. Belt-and-braces: queue worker is single-flight, so the slot gate should never fire. If it does, something's wrong upstream.
+**Status:** Stripped. 4+ weeks of clean Tier-1 queue operation with zero `AtCapacityError` fires in `.dev-logs/backend.log`. Removed:
 
-**Why deferred:** Cheap insurance. Removing it now means trusting the queue serialization completely; we want a few weeks of clean operation before that.
+- `app/analysis/concurrency.py` (51 LOC) — deleted
+- `tests/test_concurrency.py` (89 LOC) — deleted
+- `async with concurrency.acquire_slot()` wrapper in `app/analysis/service.py::submit_run` — removed
+- `from app.analysis.concurrency import AtCapacityError` + the `except AtCapacityError` branch in `app/queue/worker.py::_process_one` — removed
+- `from app.analysis import concurrency` re-export in `app/analysis/routes.py` — removed
 
-**How to apply when ready:**
-- Delete `app/analysis/concurrency.py`.
-- Remove `async with concurrency.acquire_slot()` in `app/analysis/service.py::submit_run`.
-- Remove imports + the `AtCapacityError` catch (already gone from routes).
-- Tests: drop `tests/test_analysis_concurrency.py` if it exists.
+`MAX_CONCURRENT_JOBS=1` setting in `app/core/config.py` retained as a feature flag for any future multi-worker resurrection (Tier 2). Tests: 64 in `test_analysis.py + test_queue.py + test_schedule.py` pass.
 
-**Trigger to revisit:** queue runs cleanly for 4 weeks with zero `acquire_slot` failures (grep logs). Or: when scale forces multi-worker (Tier 2 in [backlog.md](backlog.md)).
+If a Tier 2 multi-worker queue ever ships ([backlog.md](backlog.md)), reintroduce a real semaphore — the old single-process counter wouldn't have helped anyway.
 
 ---
 
@@ -96,6 +89,19 @@ Things we know about, deferred on purpose, with the trigger to revisit. Differen
 **How to apply when ready:** see [backlog.md](backlog.md) "Job submission queue" → Tier 2 section. Adds a Redis dep + a separate worker process on Railway.
 
 **Trigger to revisit:** sustained queue depth > 5 OR GPU inference lands OR Kronos-base CPU latency drops below 3s/run (parallelism becomes worth the infra).
+
+---
+
+## ~~rx denylist + ticker regex duplication~~ (RESOLVED 2026-05-20)
+
+**Status:** Resolved. `app/rx/_constants.py` now owns the canonical `TICKER_TOKEN_RE` + `TICKER_NOISE_DENYLIST` + `extract_tickers()` helper. Refactored:
+
+- `app/rx/service.py` re-exports the constants under the legacy `_TICKER_NOISE_DENYLIST` / `_TICKER_TOKEN_RE` names (backwards-compat for any callers reading the underscore-prefixed surface). `links_for_rec` now uses the compiled regex instead of an inline `re.findall(r"\b[A-Z]{2,5}\b", ...)` call.
+- `app/rx/tv_context_signal.py` no longer imports from `app.rx.service` (fragile module-load coupling); now imports the shared `extract_tickers()` helper directly. Local re-export keeps `tv_context_signal.extract_tickers` as the public symbol for `tests/test_rx_attention.py` + `service.create`.
+
+**Frontend** (`frontend/src/pages/RxFinanceDetail.tsx`) keeps its own hardcoded `TICKER_NOISE_DENYLIST` for the "Log trade from this rec" prefill — bundling sync isn't worth a build-step change for a 40-entry frozen set. Comment in `_constants.py` notes the mirror requirement.
+
+**Vault-indexer** (`tools/vault_indexer/ingest/chart_extractor.py`) keeps its OWN denylist intentionally — that module must run without `from app...` imports because three indexer instances (finance / fitness / nutrition) sit outside the FastAPI app's package tree.
 
 ---
 

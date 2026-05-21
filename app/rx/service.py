@@ -277,17 +277,14 @@ async def get(rec_id: str) -> Optional[Recommendation]:
 # Cross-entity links (rx v1.x.1-b)
 # ---------------------------------------------------------------------------
 
-# Common ALL-CAPS tokens that match the ticker regex but never identify a
-# real ticker in a finance rec. Operator can grow this if a new noise
-# token starts polluting links. Tickers that ALSO appear as words (TWLO
-# etc. are unique; HOLD/BUY/CASH are not).
-_TICKER_NOISE_DENYLIST = {
-    "AI", "API", "BUY", "CEO", "CFO", "CPI", "CPU", "DCF", "EBIT",
-    "EBITDA", "EOD", "ETF", "FAQ", "FED", "FOMC", "GDP", "GPU", "HOLD",
-    "IPO", "IRR", "LBO", "MA", "OPEN", "OTC", "PE", "PMI", "ROI", "RSI",
-    "SELL", "SP", "SPX", "SP500", "SPY", "TBD", "TLDR", "UK", "US", "USA",
-    "VIX", "WSJ", "YOY", "YTD",
-}
+# Ticker regex + denylist live in `app.rx._constants` so the rx layer
+# and the tv_context attention signal share a single source of truth.
+# Re-exported here under the legacy name so existing internal callers
+# keep working without a churn pass.
+from app.rx._constants import (
+    TICKER_NOISE_DENYLIST as _TICKER_NOISE_DENYLIST,
+    TICKER_TOKEN_RE as _TICKER_TOKEN_RE,
+)
 
 async def links_for_rec(rec_id: str) -> dict:
     """Resolve hypotheses + trades referenced by a rec.
@@ -343,8 +340,9 @@ async def links_for_rec(rec_id: str) -> dict:
         # 2. Time-bound the trade match: open trades always, or closed
         #    trades within the last 90 days. A 2-year-old closed META
         #    trade should not appear on every rec mentioning META.
-        import re
-        candidates = set(re.findall(r"\b[A-Z]{2,5}\b", (rec.tldr or "") + " " + (rec.body_md or "")))
+        candidates = set(
+            _TICKER_TOKEN_RE.findall((rec.tldr or "") + " " + (rec.body_md or ""))
+        )
         tickers = candidates - _TICKER_NOISE_DENYLIST
         if tickers:
             import datetime as _dt2

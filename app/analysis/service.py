@@ -23,7 +23,6 @@ from typing import Iterable, List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analysis import concurrency
 from app.analysis.models import AnalysisJob, AnalysisTask
 from app.core import db as _db
 from app.core.config import SETTINGS
@@ -99,37 +98,35 @@ async def submit_run(
         "horizon_bars": horizon_bars,
     }
 
-    # Acquire the concurrency gate BEFORE any DB writes so we don't leave
-    # orphan job rows when another job is already running. Under the Tier-1
-    # queue this gate is belt-and-braces — the worker is single-flight, so
-    # this should never raise. Tracked in tech_debt.md.
-    async with concurrency.acquire_slot():
-        async with _db.SessionLocal() as session:
-            job = AnalysisJob(inputs_json=inputs, status="pending")
-            session.add(job)
-            await session.flush()
+    # Slot gate removed 2026-05-20 — Tier-1 queue worker is single-flight,
+    # so the belt-and-braces gate never fired in 4+ weeks of production
+    # use. See archived tech_debt entry "analysis.concurrency slot gate".
+    async with _db.SessionLocal() as session:
+        job = AnalysisJob(inputs_json=inputs, status="pending")
+        session.add(job)
+        await session.flush()
 
-            # Upsert each ticker + build task rows.
-            tasks: List[AnalysisTask] = []
-            for sym in inputs["tickers"]:
-                await tickers_svc.upsert_ticker(session, sym, source="analysis")
-                for interval in inputs["intervals"]:
-                    for model_id in resolved_models:
-                        tasks.append(
-                            AnalysisTask(
-                                job_id=job.id,
-                                ticker=sym,
-                                interval=interval,
-                                model_id=model_id,
-                            )
+        # Upsert each ticker + build task rows.
+        tasks: List[AnalysisTask] = []
+        for sym in inputs["tickers"]:
+            await tickers_svc.upsert_ticker(session, sym, source="analysis")
+            for interval in inputs["intervals"]:
+                for model_id in resolved_models:
+                    tasks.append(
+                        AnalysisTask(
+                            job_id=job.id,
+                            ticker=sym,
+                            interval=interval,
+                            model_id=model_id,
                         )
-            session.add_all(tasks)
-            job.task_count = len(tasks)
-            await session.commit()
-            job_id = job.id
+                    )
+        session.add_all(tasks)
+        job.task_count = len(tasks)
+        await session.commit()
+        job_id = job.id
 
-        # Process tasks inline for v1; swap for a worker in Phase 5.
-        await _process_job(job_id, horizon_bars=horizon_bars)
+    # Process tasks inline for v1; swap for a worker in Phase 5.
+    await _process_job(job_id, horizon_bars=horizon_bars)
 
     return await get_job(job_id)  # type: ignore[return-value]
 

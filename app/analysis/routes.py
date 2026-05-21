@@ -8,7 +8,7 @@ from typing import Any, Dict
 
 from fastapi import Body
 
-from app.analysis import concurrency, service  # noqa: F401 — concurrency kept for tech-debt cleanup
+from app.analysis import service
 from app.queue import service as _qsvc
 from app.analysis.schemas import (
     AnalysisImportResponse,

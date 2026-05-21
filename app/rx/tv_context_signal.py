@@ -22,7 +22,6 @@ from __future__ import annotations
 import datetime as _dt
 import logging
 import math
-import re
 from typing import Dict, Iterable, Optional
 
 from sqlalchemy import select
@@ -55,32 +54,21 @@ HALF_LIFE_DAYS: float = 7.0
 """Weekly half-life — screenshots from a month ago barely count."""
 
 
-# ---- Ticker extraction (mirrors rx/service.py:_TICKER_NOISE_DENYLIST) ------
+# ---- Ticker extraction ------------------------------------------------------
+#
+# Regex + denylist live in `app.rx._constants` so this module + service.py +
+# the frontend RxFinanceDetail TICKER_NOISE_DENYLIST stay in lockstep.
+# Previous shape `from app.rx.service import _TICKER_NOISE_DENYLIST` coupled
+# us to service.py's module load order — extracted 2026-05-20.
 
-_TICKER_TOKEN_RE = re.compile(r"\b[A-Z]{2,5}\b")
-
-# Re-use the existing rx denylist so the attention signal sees the same
-# universe of "real tickers" as the cross-references panel.
-from app.rx.service import _TICKER_NOISE_DENYLIST  # noqa: E402
+from app.rx._constants import extract_tickers as _extract  # noqa: E402
 
 
 def extract_tickers(tldr: Optional[str], body_md: Optional[str]) -> list[str]:
-    """Pull ALL-CAPS 2-5 letter tokens from rec text. Apply the rx
-    denylist (AI/USA/GDP/SELL/BUY/etc). Returns uppercase deduped list,
-    preserves first-seen order."""
-    haystack = ((tldr or "") + " " + (body_md or "")).strip()
-    if not haystack:
-        return []
-    out: list[str] = []
-    seen: set[str] = set()
-    for tok in _TICKER_TOKEN_RE.findall(haystack):
-        if tok in _TICKER_NOISE_DENYLIST:
-            continue
-        if tok in seen:
-            continue
-        seen.add(tok)
-        out.append(tok)
-    return out
+    """Pull ALL-CAPS 2-5 letter tokens from rec text. Apply the shared
+    rx denylist (AI/USA/GDP/SELL/BUY/etc). Returns uppercase deduped
+    list, preserves first-seen order."""
+    return _extract(tldr, body_md)
 
 
 # ---- Decay math -------------------------------------------------------------

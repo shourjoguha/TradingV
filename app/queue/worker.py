@@ -41,7 +41,6 @@ def request_wake() -> None:
 async def _process_one(queue_id: str, inputs: dict) -> None:
     """Run one queued submission via the existing analysis pipeline."""
     from app.analysis import service as _asvc
-    from app.analysis.concurrency import AtCapacityError
 
     try:
         job = await _asvc.submit_run(
@@ -51,14 +50,6 @@ async def _process_one(queue_id: str, inputs: dict) -> None:
             horizon_bars=inputs.get("horizon_bars", 0),
         )
         await _qsvc.mark_done(queue_id, job_id=job.id)
-    except AtCapacityError as e:
-        # Should never happen under single-worker discipline, but the slot
-        # gate is still in place. Mark failed; operator can re-enqueue.
-        logger.error(
-            "queue.worker: AtCapacityError on %s — slot gate fired despite single-flight queue",
-            queue_id,
-        )
-        await _qsvc.mark_failed(queue_id, error=f"at_capacity: {e}")
     except Exception as e:  # noqa: BLE001
         logger.exception("queue.worker: submit_run failed for %s", queue_id)
         await _qsvc.mark_failed(queue_id, error=f"{type(e).__name__}: {e}")
