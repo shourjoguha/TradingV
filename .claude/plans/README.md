@@ -26,6 +26,7 @@ before we built it" and the retro is "what actually happened."
 | [phase-3.7-research-ui-single-turn.md](phase-3.7-research-ui-single-turn.md) | Research UI v1 | shipped |
 | [phase-3.8-research-ui-threading.md](phase-3.8-research-ui-threading.md) | Research threading | deferred |
 | [video-channel-auto-ingest.md](video-channel-auto-ingest.md) | YouTube channel auto-ingest | shipped |
+| [video-series-platform-design.md](video-series-platform-design.md) | Build-in-public video series — content architecture, forking model, in-platform feature, pilot | brainstorm |
 
 ## Pre-plans / brainstorms
 
