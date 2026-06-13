@@ -160,16 +160,19 @@ log "$(c_cyan "running")  alembic upgrade head"
 
 # ----- 2. Vault indexer (port 8001) -----------------------------------------
 
-# Multi-domain vault: finance MUST exclude fitness/nutrition prefixes or
-# /search will surface non-finance content. See
-# tools/vault_indexer/MULTI_DOMAIN_BRIEFING.md (rule #2).
-EXCLUDE_FOLDERS="${EXCLUDE_FOLDERS:-Videos/fitness,Topics/fitness,Newsletters/fitness,Books/fitness}"
+# Multi-domain vault: scope is registry-driven. `DOMAIN=finance` makes the
+# indexer read `<vault>/_domains.yaml` and derive include/exclude prefixes
+# automatically — no hand-set EXCLUDE_FOLDERS needed. `INDEXER_DB_PATH` is
+# set explicitly to match the launchd plist convention `cache-<domain>.db`.
+# See tools/vault_indexer/MULTI_DOMAIN_BRIEFING.md for the full registry rules.
+INDEXER_DB_PATH="${INDEXER_DB_PATH:-${VAULT_PATH}/.indexer/cache-finance.db}"
 
-log "$(c_cyan "starting")  vault-indexer on :8001 (vault=${VAULT_PATH}, exclude=${EXCLUDE_FOLDERS})"
+log "$(c_cyan "starting")  vault-indexer on :8001 (vault=${VAULT_PATH}, domain=finance, db=${INDEXER_DB_PATH})"
 (
     cd "${REPO_DIR}"
     VAULT_PATH="${VAULT_PATH}" \
-    EXCLUDE_FOLDERS="${EXCLUDE_FOLDERS}" \
+    DOMAIN=finance \
+    INDEXER_DB_PATH="${INDEXER_DB_PATH}" \
     "${VENV_PY}" -m uvicorn \
         tools.vault_indexer.app:app --port 8001 --host 127.0.0.1 \
         > "${LOG_DIR}/indexer.log" 2>&1

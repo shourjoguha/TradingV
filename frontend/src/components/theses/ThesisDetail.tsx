@@ -87,11 +87,15 @@ export function ThesisDetail({ hypothesisId }: Props) {
   }
 
   return (
-    <Card>
-      <CardHeader className="space-y-2 pb-2">
+    <Card className="relative">
+      <div
+        aria-hidden
+        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-3xl bg-identity-narrative"
+      />
+      <CardHeader className="space-y-2 pb-1 md:pb-1">
         <div className="flex items-start justify-between gap-3">
-          <CardTitle className="text-base">{h.title}</CardTitle>
-          <Badge variant="outline" className="shrink-0 text-[10px]">
+          <CardTitle className="text-xl">{h.title}</CardTitle>
+          <Badge variant="outline" className="shrink-0 text-xs">
             {h.status}
           </Badge>
         </div>
@@ -162,8 +166,8 @@ export function ThesisDetail({ hypothesisId }: Props) {
         </div>
 
         {h.recent_evaluations && h.recent_evaluations.length > 0 && (
-          <div className="space-y-1.5">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+          <div className="space-y-2">
+            <div className="text-xs font-mono text-muted-foreground">
               Recent evaluations ({h.recent_evaluations.length})
             </div>
             {h.recent_evaluations.map((e) => (

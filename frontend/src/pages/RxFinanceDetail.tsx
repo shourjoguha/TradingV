@@ -57,6 +57,19 @@ export function RxFinanceDetail() {
   const [snoozeDays, setSnoozeDays] = useState(1)
   const [showJson, setShowJson] = useState(false)
   const [pendingAction, setPendingAction] = useState<RxDispositionAction | null>(null)
+  // Disposition wash (Phase 5 color taxonomy) — one-shot 320ms ease-out
+  // card-bg lerp on success, then settle. Receipt for the operator that
+  // the verb landed in the ledger. Three variants: success/snooze/dismiss.
+  const [washClass, setWashClass] = useState<string | null>(null)
+
+  function fireWash(kind: 'success' | 'snooze' | 'dismiss') {
+    const cls =
+      kind === 'success' ? 'animate-disposition-wash-success'
+      : kind === 'snooze' ? 'animate-disposition-wash-snooze'
+      : 'animate-disposition-wash-dismiss'
+    setWashClass(cls)
+    window.setTimeout(() => setWashClass(null), 350)
+  }
 
   if (rec.isLoading) return <Skeleton className="h-60 w-full" />
   if (rec.error || !rec.data) {
@@ -81,14 +94,19 @@ export function RxFinanceDetail() {
       setPendingAction(action)
       return
     }
-    disp.mutate({
-      id: r.id,
-      body: {
-        disposition: action,
-        subjective_fit_1_5: fit ?? undefined,
-        outcome_note: note || undefined,
+    const washKind: 'success' | 'dismiss' =
+      action.startsWith('acted') ? 'success' : 'dismiss'
+    disp.mutate(
+      {
+        id: r.id,
+        body: {
+          disposition: action,
+          subjective_fit_1_5: fit ?? undefined,
+          outcome_note: note || undefined,
+        },
       },
-    })
+      { onSuccess: () => fireWash(washKind) },
+    )
     setPendingAction(null)
   }
 
@@ -99,7 +117,16 @@ export function RxFinanceDetail() {
   const statusBadge = <StatusBadge kind="rec" value={statusValue} />
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      {/* Disposition wash overlay — one-shot 320ms ease-out. Sits behind
+          content (pointer-events none) so the operator's click flow is
+          uninterrupted; gives a body-receipt the verb committed. */}
+      {washClass && (
+        <div
+          aria-hidden
+          className={`pointer-events-none fixed inset-0 z-0 rounded-3xl ${washClass}`}
+        />
+      )}
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" onClick={() => navigate('/motion/recs')}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to recommendations
@@ -111,22 +138,34 @@ export function RxFinanceDetail() {
       </div>
 
       {forcedDecision && (
-        <div className="rounded-2xl border border-red-500/50 bg-red-500/10 p-4 text-sm text-red-900 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
-          <div>
-            <strong>Forced decision.</strong> This rec has been snoozed {r.snooze_count} times. Pick a disposition rather than snoozing again — the recommendation is past its useful window.
-          </div>
+        <div className="rounded-xl border border-danger/50 bg-danger/10 px-3 py-2 text-xs text-danger-fg flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="font-medium">Forced decision</span>
+          <span className="text-muted-foreground">·</span>
+          <span className="text-muted-foreground">
+            snoozed {r.snooze_count}× — pick a disposition, don't snooze again
+          </span>
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
-        <Card label="Drift score">
-          {r.drift_score != null ? r.drift_score.toFixed(2) : '—'}
-        </Card>
-        <Card label="Confidence">{r.confidence ?? '—'}</Card>
-        <Card label="Created">
+      {/* Inline meta strip (2026-05-17 density audit): replaced a 3-stat
+          card-of-cards grid that ate ~100px of vertical space for 3
+          numbers. Same data, one line, reads as a contextual footer. */}
+      <div className="flex items-center gap-3 text-xs text-muted-foreground tabular-nums font-mono">
+        <span>
+          drift{' '}
+          <span className="text-foreground font-semibold">
+            {r.drift_score != null ? r.drift_score.toFixed(2) : '—'}
+          </span>
+        </span>
+        <span className="text-muted-foreground/40">·</span>
+        <span>
+          conf <span className="text-foreground font-semibold">{r.confidence ?? '—'}</span>
+        </span>
+        <span className="text-muted-foreground/40">·</span>
+        <span title={new Date(r.created_at).toLocaleString()}>
           {new Date(r.created_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
-        </Card>
+        </span>
       </div>
 
       {/* Phase 2: Operator-attention axis. Shows when TV-context items (note/
@@ -134,8 +173,8 @@ export function RxFinanceDetail() {
           this rec discusses. Closes the feedback loop: operator sees WHY
           this rec ranked higher than another. */}
       {r.attention_score != null && r.attention_score > 0 && r.attention_breakdown && (
-        <div className="rounded-2xl border border-violet/30 bg-violet/5 p-4 flex items-start gap-3">
-          <Eye className="h-5 w-5 mt-0.5 shrink-0 text-violet" />
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 flex items-start gap-3">
+          <Eye className="h-5 w-5 mt-0.5 shrink-0 text-primary" />
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline justify-between gap-2">
               <strong className="text-sm text-foreground">Operator attention</strong>
@@ -169,7 +208,7 @@ export function RxFinanceDetail() {
       {(r.tldr || r.body_md) && (
         <article className="rounded-2xl bg-background shadow-inset-sm p-6 docs-article max-w-none space-y-4">
           {r.tldr && (
-            <p className="text-base font-medium text-foreground border-l-4 border-violet pl-4 m-0">
+            <p className="text-base font-medium text-foreground border-l-4 border-primary pl-4 m-0">
               {r.tldr}
             </p>
           )}
@@ -177,42 +216,32 @@ export function RxFinanceDetail() {
         </article>
       )}
 
-      {/* Action CTAs: trade + promote-to-thesis. Both prefill via URL. */}
+      {/* Action CTAs: trade + promote-to-thesis. Both prefill via URL.
+          2026-05-17 density audit: collapsed from twin framed cards (each
+          w/ subtitle copy explaining the verb) to a flat button row;
+          hover tooltips carry the prefill explanation. */}
       {(r.status === 'open' || r.status === 'snoozed') && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="flex items-center justify-between rounded-2xl bg-background shadow-inset-sm p-3 gap-3">
-            <div className="text-sm min-w-0">
-              <div className="font-medium">Ready to act?</div>
-              <div className="text-muted-foreground text-xs truncate">
-                {guessedTicker
-                  ? `Pre-fills ${guessedTicker} + this rec into the trade form.`
-                  : 'Opens trade form linked to this rec.'}
-              </div>
-            </div>
-            <Link to={tradeHref} className="shrink-0">
-              <Button size="sm" variant="primary">
-                <Receipt className="h-4 w-4 mr-2" />
-                Log trade
-              </Button>
-            </Link>
-          </div>
-          <div className="flex items-center justify-between rounded-2xl bg-background shadow-inset-sm p-3 gap-3">
-            <div className="text-sm min-w-0">
-              <div className="font-medium">Pattern worth tracking?</div>
-              <div className="text-muted-foreground text-xs truncate">
-                Crystallise this rec into a hypothesis on /theses.
-              </div>
-            </div>
-            <Link
-              to={`/theses?from_rec=${r.id}${guessedTicker ? `&ticker=${guessedTicker}` : ''}`}
-              className="shrink-0"
-            >
-              <Button size="sm" variant="outline">
-                <FlaskConical className="h-4 w-4 mr-2" />
-                Promote to thesis
-              </Button>
-            </Link>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to={tradeHref}
+            title={guessedTicker
+              ? `Pre-fills ${guessedTicker} + this rec into the trade form`
+              : 'Opens trade form linked to this rec'}
+          >
+            <Button size="sm" variant="primary">
+              <Receipt className="h-4 w-4 mr-2" />
+              Log trade
+            </Button>
+          </Link>
+          <Link
+            to={`/theses?from_rec=${r.id}${guessedTicker ? `&ticker=${guessedTicker}` : ''}`}
+            title="Crystallise this rec into a hypothesis on /theses"
+          >
+            <Button size="sm" variant="outline">
+              <FlaskConical className="h-4 w-4 mr-2" />
+              Promote to thesis
+            </Button>
+          </Link>
         </div>
       )}
 
@@ -395,7 +424,12 @@ export function RxFinanceDetail() {
               variant="outline"
               className="text-blue-700 border-blue-500/40"
               disabled={snz.isPending}
-              onClick={() => snz.mutate({ id: r.id, days: snoozeDays })}
+              onClick={() =>
+                snz.mutate(
+                  { id: r.id, days: snoozeDays },
+                  { onSuccess: () => fireWash('snooze') },
+                )
+              }
             >
               <Clock className="h-4 w-4 mr-2" />
               Snooze
@@ -423,11 +457,7 @@ export function RxFinanceDetail() {
   )
 }
 
-function Card({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-3xl bg-background shadow-extruded-sm p-4">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="text-xl font-display font-extrabold tabular-nums mt-1">{children}</div>
-    </div>
-  )
-}
+// Local <Card label> stat helper retired 2026-05-17 — drift/conf/created
+// fields now render as a single inline meta strip near the title (density
+// audit). If a future stat needs a framed badge, use the shadcn <Card>
+// primitive directly with custom padding/typography.

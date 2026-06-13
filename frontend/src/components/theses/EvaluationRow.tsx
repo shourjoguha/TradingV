@@ -14,13 +14,13 @@ export function EvaluationRow({ evaluation }: Props) {
           {new Date(evaluation.evaluated_at).toLocaleString()}
         </span>
         <div className="flex items-center gap-1">
-          <Badge variant="outline" className="text-[10px]">
+          <Badge variant="outline" className="text-xs">
             {evaluation.status_before}
           </Badge>
           {transitioned && (
             <>
               <span className="text-muted-foreground">→</span>
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-xs">
                 {evaluation.status_after}
               </Badge>
             </>

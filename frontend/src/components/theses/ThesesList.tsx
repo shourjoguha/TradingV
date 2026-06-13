@@ -27,13 +27,17 @@ export function ThesesList({ status, selectedId, onSelect }: Props) {
   const items = data?.items ?? []
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">
-          Theses {status && <span className="text-muted-foreground">/ {status}</span>}
+    <Card className="relative">
+      <div
+        aria-hidden
+        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-3xl bg-identity-narrative"
+      />
+      <CardHeader className="pb-1 md:pb-1">
+        <CardTitle className="text-xl">
+          Theses {status && <span className="text-muted-foreground text-base font-normal">/ {status}</span>}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-1.5">
+      <CardContent className="space-y-2">
         {isLoading ? (
           <Skeleton className="h-32 w-full" />
         ) : items.length === 0 ? (
@@ -56,7 +60,7 @@ export function ThesesList({ status, selectedId, onSelect }: Props) {
                 <span className="text-sm font-medium truncate">{h.title}</span>
                 <Badge
                   variant="outline"
-                  className={`text-[10px] shrink-0 ${STATUS_TONE[h.status]}`}
+                  className={`text-xs shrink-0 ${STATUS_TONE[h.status]}`}
                 >
                   {h.status}
                 </Badge>

@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Camera, Laptop, Lightbulb, StickyNote, Calendar } from 'lucide-react'
+import { Camera, Lightbulb, StickyNote, Calendar } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { useBackend } from '../hooks/use-backend'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
@@ -10,6 +9,7 @@ import { Textarea } from '../components/ui/textarea'
 import { Skeleton } from '../components/ui/skeleton'
 import { ScreenshotUploadModal } from '../components/tv-context/ScreenshotUploadModal'
 import { ContextItemCard } from '../components/tv-context/ContextItemCard'
+import { InfoBubble } from '../components/common'
 import {
   useTVContextByTicker,
   useTVVisionSpend,
@@ -23,49 +23,11 @@ function currentMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-function TVContextLaptopOnlyBanner() {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Camera className="h-5 w-5 text-violet" />
-        <div>
-          <h2 className="text-2xl font-heading font-semibold tracking-tight">TV Context</h2>
-          <p className="text-muted-foreground text-sm">
-            TradingView signals — webhooks, screenshots, notes, ideas, events.
-          </p>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Laptop className="h-4 w-4 text-violet" />
-            TV Context is laptop-only
-          </CardTitle>
-          <CardDescription>
-            Screenshots are stored as sidecar markdown in your local Obsidian vault, which lives on
-            your laptop. Railway has no vault to read or write into.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>
-            Switch the backend toggle (top-right) to <strong>Laptop</strong> to drop screenshots,
-            attach notes, or browse the per-ticker context feed.
-          </p>
-          <p className="text-xs">
-            Webhook / note / idea / event rows still replicate to Railway via the sync outbox so
-            retrieval works cross-machine — only this UI surface is gated. See{' '}
-            <code>.claude/decisions/016-tv-context-no-browser-automation.md</code>.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+// Railway shut down 2026-05-17 — the LaptopOnlyBanner branch was removed.
+// TV Context has always been laptop-only (vault sidecar markdown lives on
+// laptop disk); see .claude/decisions/016-tv-context-no-browser-automation.md.
 
 export function TVContextInbox() {
-  const { backendId } = useBackend()
-  if (backendId === 'railway') return <TVContextLaptopOnlyBanner />
   return <TVContextInboxLaptop />
 }
 
@@ -86,18 +48,18 @@ function TVContextInboxLaptop() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <div className="flex items-center gap-3">
-            <Camera className="h-5 w-5 text-violet" />
-            <h2 className="text-2xl font-heading font-semibold tracking-tight">
-              TV Context
-            </h2>
-          </div>
-          <p className="text-muted-foreground text-sm mt-1">
-            TradingView signals — webhooks, screenshots, notes, ideas, events.
-          </p>
+          <h2 className="text-2xl font-heading font-semibold tracking-tight flex items-center gap-2">
+            <Camera className="h-5 w-5 text-primary" />
+            TV Context
+            <InfoBubble
+              label="About TV Context"
+              size={14}
+              content="TradingView signals — webhooks, screenshots, notes, ideas, events."
+            />
+          </h2>
         </div>
 
         <Card className="px-4 py-2 text-sm">
@@ -112,9 +74,13 @@ function TVContextInboxLaptop() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Lookup ticker</CardTitle>
+      <Card className="relative">
+        <div
+          aria-hidden
+          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-3xl bg-identity-narrative"
+        />
+        <CardHeader className="pb-1 md:pb-1">
+          <CardTitle className="text-xl">Lookup ticker</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 items-end flex-wrap">
@@ -153,15 +119,19 @@ function TVContextInboxLaptop() {
             <EventIngestForm ticker={ticker} />
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
+          <Card className="relative">
+            <div
+              aria-hidden
+              className="absolute left-0 top-0 bottom-0 w-1 rounded-l-3xl bg-identity-narrative"
+            />
+            <CardHeader className="pb-1 md:pb-1 flex-row items-baseline justify-between gap-3 space-y-0">
+              <CardTitle className="text-xl">
                 Recent context for {ticker}
               </CardTitle>
-              <CardDescription>
+              <span className="text-xs text-muted-foreground shrink-0">
                 {items.data?.length ?? 0} items
                 {includeExpired ? ' (incl. expired)' : ' active'}
-              </CardDescription>
+              </span>
             </CardHeader>
             <CardContent className="space-y-2">
               {items.isLoading ? (

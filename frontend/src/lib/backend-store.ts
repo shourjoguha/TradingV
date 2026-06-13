@@ -1,7 +1,11 @@
 import type { BackendConfig, BackendId } from './types'
 
-const STORAGE_KEY = 'kronos_backend'
-
+/**
+ * Single-backend store. Railway was permanently shut down 2026-05-17 —
+ * we keep the `BackendId` plumbing as a single-member union so React-Query
+ * cache keys + `apiFetch({backendId})` call sites continue compiling
+ * without a sweep. All getters now collapse to the laptop config.
+ */
 export const BACKENDS: Record<BackendId, BackendConfig> = {
   laptop: {
     id: 'laptop',
@@ -9,50 +13,25 @@ export const BACKENDS: Record<BackendId, BackendConfig> = {
     baseUrl: import.meta.env.VITE_LAPTOP_URL ?? 'http://localhost:8000',
     apiKey: import.meta.env.VITE_LAPTOP_KEY ?? '',
   },
-  railway: {
-    id: 'railway',
-    label: 'Railway',
-    baseUrl:
-      import.meta.env.VITE_RAILWAY_URL ??
-      'https://tradingv-production.up.railway.app',
-    apiKey: import.meta.env.VITE_RAILWAY_KEY ?? '',
-  },
 }
 
-const DEFAULT_BACKEND_ENV = import.meta.env.VITE_DEFAULT_BACKEND
-const DEFAULT_BACKEND: BackendId =
-  DEFAULT_BACKEND_ENV === 'railway' || DEFAULT_BACKEND_ENV === 'laptop'
-    ? DEFAULT_BACKEND_ENV
-    : 'laptop'
-
-export function isBackendAvailable(id: BackendId): boolean {
-  if (id === 'laptop' && import.meta.env.DEV) return true
-  return BACKENDS[id].baseUrl !== ''
+export function isBackendAvailable(_id: BackendId): boolean {
+  return true
 }
 
 export function availableBackends(): BackendId[] {
-  return (Object.keys(BACKENDS) as BackendId[]).filter(isBackendAvailable)
-}
-
-function resolveDefault(): BackendId {
-  if (isBackendAvailable(DEFAULT_BACKEND)) return DEFAULT_BACKEND
-  const first = availableBackends()[0]
-  return first ?? 'laptop'
+  return ['laptop']
 }
 
 export function getBackendId(): BackendId {
-  if (typeof window === 'undefined') return resolveDefault()
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if ((stored === 'laptop' || stored === 'railway') && isBackendAvailable(stored)) {
-    return stored
-  }
-  return resolveDefault()
+  return 'laptop'
 }
 
-export function setBackendId(id: BackendId): void {
-  localStorage.setItem(STORAGE_KEY, id)
+export function setBackendId(_id: BackendId): void {
+  // no-op — kept for backward compatibility w/ any caller that
+  // still invokes the setter (e.g. legacy BackendHealthBanner).
 }
 
-export function getBackendConfig(id?: BackendId): BackendConfig {
-  return BACKENDS[id ?? getBackendId()]
+export function getBackendConfig(_id?: BackendId): BackendConfig {
+  return BACKENDS.laptop
 }

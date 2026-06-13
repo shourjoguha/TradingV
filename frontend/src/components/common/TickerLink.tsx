@@ -37,7 +37,7 @@ export function TickerLink({
   if (!upper) return null
   const base = chip
     ? 'inline-flex items-center px-2 py-0.5 rounded-full shadow-extruded-sm font-mono text-xs hover:shadow-extruded transition-all'
-    : 'font-mono hover:text-violet hover:underline'
+    : 'font-mono hover:text-primary hover:underline'
   return (
     <span className="inline-flex items-center gap-1">
       <Link to={`/ticker/${upper}`} className={`${base} ${className ?? ''}`.trim()}>
@@ -50,7 +50,7 @@ export function TickerLink({
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           aria-label={`Open ${upper} on TradingView.com`}
-          className="inline-flex items-center text-muted-foreground hover:text-violet transition-colors"
+          className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors"
         >
           <ExternalLink className="h-3 w-3" />
         </a>

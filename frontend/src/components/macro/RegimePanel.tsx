@@ -1,16 +1,28 @@
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
-import { Sparkline } from './Sparkline'
-import { RatioChart } from './RatioChart'
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { Sparkline } from '../charts/svg/Sparkline'
+import { LineChart as RatioChart } from '../charts/plotly/LineChart'
 import { useMacroRatio, useMacroSeries, useMacroSpread } from '../../hooks/use-api'
 import {
   isRatioRow,
   isSeriesRow,
   isSpreadRow,
   rowSubtitle,
+  type PanelIdentity,
   type RegimePanel as RegimePanelDef,
   type RegimeRow,
 } from '../../lib/macro-views'
+
+// Pre-computed Tailwind classes for the identity left-bar. Tailwind needs
+// literal classnames at build time — can't interpolate `bg-identity-${x}`.
+const IDENTITY_BAR_BG: Record<PanelIdentity, string> = {
+  inflation: 'bg-identity-inflation',
+  growth:    'bg-identity-growth',
+  liquidity: 'bg-identity-liquidity',
+  stress:    'bg-identity-stress',
+  narrative: 'bg-identity-narrative',
+  ambient:   'bg-identity-ambient',
+}
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { InfoBubble } from '../common'
 
@@ -87,7 +99,7 @@ function RegimeRowItem({ row, since }: { row: RegimeRow; since: string }) {
           type="button"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
-          className="flex items-center gap-2 min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet rounded-md"
+          className="flex items-center gap-2 min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
         >
           {expanded ? (
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -98,7 +110,7 @@ function RegimeRowItem({ row, since }: { row: RegimeRow; since: string }) {
             <div className="text-sm font-medium leading-tight truncate">
               {row.label}
             </div>
-            <div className="text-[10px] font-mono text-muted-foreground truncate">
+            <div className="text-xs font-mono text-muted-foreground truncate">
               {rowSubtitle(row)}
             </div>
           </div>
@@ -137,14 +149,31 @@ function RegimeRowItem({ row, since }: { row: RegimeRow; since: string }) {
 }
 
 export function RegimePanel({ panel, since }: RegimePanelProps) {
+  // 4px identity left-bar — visual designer + UX strategist council
+  // (2026-05-17). Pre-attentive regime classifier for the 6-panel grid.
+  // Card stays clay; only the bar carries identity color.
+  const barClass = IDENTITY_BAR_BG[panel.identity]
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-1">
+    <Card className="relative">
+      <div
+        aria-hidden
+        className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-3xl ${barClass}`}
+      />
+      <CardHeader className="pb-1 md:pb-1">
+        {/* 2026-05-17 card-header consistency pass: Macro panel titles
+            bumped to text-xl (20px) — operator audit picked Macro as the
+            "good baseline, even bigger." Trailing gap dropped to pb-1
+            (4px) — 67% reduction from the previous pb-3 (12px) — so the
+            ratio rows start much closer to the regime label. */}
+        <CardTitle className="text-xl flex items-center gap-1.5">
           {panel.title}
-          {panel.term && <InfoBubble term={panel.term} />}
+          {/* When the panel has a glossary term, the term's short/long copy
+              covers what the blurb said — use the term. Otherwise fall
+              back to inline blurb via the content prop. */}
+          {panel.term
+            ? <InfoBubble term={panel.term} />
+            : <InfoBubble label={`${panel.title} — about`} content={panel.blurb} />}
         </CardTitle>
-        <CardDescription className="text-xs">{panel.blurb}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         {panel.rows.map((row) => (

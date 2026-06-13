@@ -26,13 +26,13 @@ export function EvidenceItemRow({ item, value, vaultName = 'knowledge-vault' }: 
             {label}
           </span>
           <div className="flex items-center gap-1.5 ml-auto tabular-nums shrink-0">
-            <Badge variant="outline" className="text-[10px]">
+            <Badge variant="outline" className="text-xs">
               score {item.score.toFixed(3)}
             </Badge>
-            <Badge variant="outline" className="text-[10px]">
+            <Badge variant="outline" className="text-xs">
               sim {item.similarity.toFixed(2)}
             </Badge>
-            <Badge variant="outline" className="text-[10px]">
+            <Badge variant="outline" className="text-xs">
               decay {item.decay_weight.toFixed(2)}
             </Badge>
           </div>
@@ -42,7 +42,7 @@ export function EvidenceItemRow({ item, value, vaultName = 'knowledge-vault' }: 
         <div className="space-y-2 pt-1">
           <a
             href={uri}
-            className="font-medium text-sm text-foreground hover:text-violet inline-flex items-center gap-1 break-all"
+            className="font-medium text-sm text-foreground hover:text-primary inline-flex items-center gap-1 break-all"
             title="Open in Obsidian"
           >
             {label}
@@ -59,7 +59,7 @@ export function EvidenceItemRow({ item, value, vaultName = 'knowledge-vault' }: 
             </div>
           )}
           {(item.author || item.published_at) && (
-            <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+            <div className="text-xs font-mono text-muted-foreground">
               {item.author ? <span>{item.author}</span> : null}
               {item.author && item.published_at ? <span> · </span> : null}
               {item.published_at ? <span>{item.published_at}</span> : null}

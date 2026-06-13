@@ -4,18 +4,21 @@ Operator's personal evidence layer. Markdown vault on disk, indexed by a
 sidecar service that TradingView reads from. Phase 2 of the
 macro-workbench → decision-tool roadmap (shipped 2026-05-02).
 
-> **Source-of-truth:** the vault. The indexer's SQLite cache at
-> `<vault>/.indexer/cache.db` is fully rebuildable. Nuke and re-embed in
-> <10 min if anything goes sideways.
+> **Source-of-truth:** the vault. The indexer's SQLite caches at
+> `<vault>/.indexer/cache-<domain>.db` are fully rebuildable. Nuke and re-embed
+> in <10 min if anything goes sideways.
 
-> **Multi-domain (since 2026-05-10):** the same vault directory is shared
-> with a fitness indexer on `:8002` (own cache `cache-fitness.db`, own
-> taxonomy `_taxonomy-fitness.md`, own review queue). The finance indexer
-> on `:8001` **MUST** launch with
-> `EXCLUDE_FOLDERS=Videos/fitness,Topics/fitness,Newsletters/fitness,Books/fitness`
-> or `/search` will surface fitness chunks. `run-dev.sh` injects this
-> default. Adding a new domain (e.g. nutrition) means appending its
-> prefixes to finance's `EXCLUDE_FOLDERS`. Full ruleset:
+> **Multi-domain (since 2026-05-10, symmetrized 2026-05-16):** the same vault
+> directory is shared by three indexer instances:
+> - **finance** on `:8001` — own cache `cache-finance.db`, taxonomy `_taxonomy.md`, queue `_review-queue.md`
+> - **fitness** on `:8002` — own cache `cache-fitness.db`, taxonomy `_taxonomy-fitness.md`, queue `_review-queue-fitness.md`
+> - **nutrition** on `:8003` — own cache `cache-nutrition.db`, taxonomy `_taxonomy-nutrition.md`, queue `_review-queue-nutrition.md`
+>
+> Scope filters (include/exclude prefixes) are derived from
+> `<vault>/_domains.yaml` at boot. Each instance is launched with
+> `DOMAIN=<slug>` (and `INDEXER_DB_PATH=<cache>`); the indexer reads the
+> registry and applies the right scope automatically. Adding a new domain =
+> one entry in `_domains.yaml`. Full rules:
 > [`tools/vault_indexer/MULTI_DOMAIN_BRIEFING.md`](../../tools/vault_indexer/MULTI_DOMAIN_BRIEFING.md).
 
 ## What lives where
@@ -36,7 +39,10 @@ macro-workbench → decision-tool roadmap (shipped 2026-05-02).
   _review-queue.md                ← indexer-managed; operator ticks checkboxes
   _index.md                       ← operator-authored folder context (any level)
   _channel.yaml                   ← per-channel auto-ingest config (Videos/<channel>/)
-  .indexer/cache.db               ← SQLite + sqlite-vec; gitignored
+  _domains.yaml                   ← domain registry; single source of truth for scope rules
+  .indexer/cache-finance.db       ← finance SQLite + sqlite-vec; gitignored
+  .indexer/cache-fitness.db       ← fitness cache; gitignored
+  .indexer/cache-nutrition.db     ← nutrition cache; gitignored
 
 tools/vault_indexer/              ← FastAPI sidecar; port 8001
   ingest/                         ← PDF / EPUB / newsletter / video CLIs
@@ -208,10 +214,16 @@ The queue file is the entire review API. No separate UI.
 
 ```bash
 export VAULT_PATH=$HOME/Documents/knowledge-vault
+export DOMAIN=finance
+export INDEXER_DB_PATH="$VAULT_PATH/.indexer/cache-finance.db"
 uvicorn tools.vault_indexer.app:app --port 8001
 ```
 
-**Cache persistence:** `<vault>/.indexer/cache.db` survives restarts.
+(For day-to-day work use `run-dev.sh` or rely on the launchd agents
+`com.shourjo.kb-{finance,fitness,nutrition}-indexer` which already set
+`DOMAIN` and `INDEXER_DB_PATH` correctly.)
+
+**Cache persistence:** `<vault>/.indexer/cache-<domain>.db` survives restarts.
 Laptop reboots / uvicorn restarts do **not** trigger re-embedding —
 embedding is one-time per markdown file (re-runs only on body-hash
 change). Restart uvicorn and the corpus is searchable again on first

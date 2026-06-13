@@ -2,14 +2,50 @@ import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Skeleton } from '../ui/skeleton'
-import { useBackend } from '../../hooks/use-backend'
 import {
   type AdminLoopRow,
   useAdminLoops,
   useUpdateCadence,
   useAdminSettings,
   useUpdateAdminSetting,
+  useCostsMonthly,
 } from '../../hooks/use-api'
+
+/**
+ * Loop → cost attribution. Anthropic charges accrue via Research stress-tests
+ * (only loop with `cost_sensitive=true` on the cadenced side) and TV-context
+ * vision summaries (HTTP-triggered on screenshot ingest, not a cadenced loop;
+ * shown as a footnote rather than a per-loop row).
+ *
+ * If a new cost-sensitive loop is added, map its loop_id → driver here.
+ */
+type CostDriver = 'research' | 'vision' | 'none'
+const LOOP_COST_DRIVER: Record<string, CostDriver> = {
+  research_weekly: 'research',
+}
+
+function costForLoop(
+  loopId: string,
+  costsMonthly: { research_total_usd: number; vision_total_usd: number } | undefined,
+): { usd: number; driver: CostDriver } {
+  const driver = LOOP_COST_DRIVER[loopId] ?? 'none'
+  if (!costsMonthly || driver === 'none') return { usd: 0, driver }
+  const usd = driver === 'research' ? costsMonthly.research_total_usd : costsMonthly.vision_total_usd
+  return { usd, driver }
+}
+
+function fmtCostCell(usd: number, driver: CostDriver): React.ReactNode {
+  if (driver === 'none') {
+    return <span className="text-muted-foreground tabular-nums">$0</span>
+  }
+  const dollars = usd >= 0.01 ? usd.toFixed(2) : usd.toFixed(3)
+  return (
+    <span className="tabular-nums">
+      ${dollars}
+      <span className="text-xs text-muted-foreground ml-1">/mo · {driver}</span>
+    </span>
+  )
+}
 
 const UNITS = [
   { id: 'seconds', label: 'sec', mul: 1 },
@@ -113,8 +149,9 @@ function AnthropicKillSwitch() {
 }
 
 export function CadencesTab() {
-  const { backendId } = useBackend()
   const { data, isLoading } = useAdminLoops({ refetchMs: 30_000 })
+  // MTD spend per cost driver (research / vision) — surfaced per-loop in the Cost column.
+  const costs = useCostsMonthly()
 
   return (
     <Card>
@@ -122,42 +159,50 @@ export function CadencesTab() {
         <CardTitle className="text-base">Cadences</CardTitle>
         <CardDescription>
           Edit each loop's cadence and enabled flag. Writes to `app_settings`;
-          next tick reads the new value.
+          next tick reads the new value. Cost column shows month-to-date spend
+          attributed to the loop's cost driver — see <code className="text-xs">/admin/costs</code> for the per-day breakdown.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {backendId === 'railway' && (
-          <div className="rounded-md border border-warning-fg/30 bg-warning-bg/30 px-3 py-2 text-xs text-warning-fg">
-            Admin UI is laptop-local. Loops on Railway are gated by `INSTANCE_NAME` and don't read these settings.
-          </div>
-        )}
         <AnthropicKillSwitch />
         {isLoading && <Skeleton className="h-24 w-full" />}
         {data && (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                <tr className="border-b text-xs font-mono text-muted-foreground">
                   <th className="py-2 pr-3">Loop</th>
                   <th className="py-2 pr-3">Cadence</th>
+                  <th className="py-2 pr-3 text-right">Cost (MTD)</th>
                 </tr>
               </thead>
               <tbody>
-                {data.items.map((row) => (
-                  <tr key={row.loop_id} className="border-b last:border-b-0">
-                    <td className="py-2 pr-3">
-                      <div className="text-sm font-medium">{row.title}</div>
-                      <div className="text-[10px] text-muted-foreground">
-                        default: {row.default_cadence_seconds}s
-                      </div>
-                    </td>
-                    <td className="py-2 pr-3">
-                      <CadenceEditor row={row} />
-                    </td>
-                  </tr>
-                ))}
+                {data.items.map((row) => {
+                  const { usd, driver } = costForLoop(row.loop_id, costs.data)
+                  return (
+                    <tr key={row.loop_id} className="border-b last:border-b-0">
+                      <td className="py-2 pr-3">
+                        <div className="text-sm font-medium">{row.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          default: {row.default_cadence_seconds}s · loop_id: <code>{row.loop_id}</code>
+                        </div>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <CadenceEditor row={row} />
+                      </td>
+                      <td className="py-2 pr-3 text-right text-xs">
+                        {fmtCostCell(usd, driver)}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
+            <p className="text-xs text-muted-foreground mt-3">
+              <strong>TV-context vision cost</strong> (HTTP-triggered on screenshot ingest, not a cadenced loop):
+              {costs.data ? <> ${costs.data.vision_total_usd.toFixed(2)} MTD across {costs.data.vision_count} calls.</> : <> loading...</>}{' '}
+              Disable for the rest of the month via the Costs tab.
+            </p>
           </div>
         )}
       </CardContent>

@@ -87,14 +87,14 @@ function MiniBarChart({ items }: { items: { date: string; research_usd: number; 
               className="flex-1 flex flex-col-reverse"
               title={`${item.date}: research $${item.research_usd.toFixed(3)} + vision $${item.vision_usd.toFixed(3)}`}
             >
-              <div className="bg-violet" style={{ height: `${research_pct}%` }} />
+              <div className="bg-primary" style={{ height: `${research_pct}%` }} />
               <div className="bg-emerald-500" style={{ height: `${vision_pct}%` }} />
             </div>
           )
         })}
       </div>
-      <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-        <span><span className="inline-block w-2 h-2 bg-violet mr-1"/>research</span>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span><span className="inline-block w-2 h-2 bg-primary mr-1"/>research</span>
         <span><span className="inline-block w-2 h-2 bg-emerald-500 mr-1"/>vision</span>
       </div>
     </div>
@@ -126,24 +126,24 @@ export function CostsTab() {
             <>
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div>
-                  <div className="text-muted-foreground text-[10px] uppercase">Total</div>
+                  <div className="text-muted-foreground text-xs uppercase">Total</div>
                   <div className="text-2xl font-semibold">${total.toFixed(2)}</div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground text-[10px] uppercase">Research</div>
+                  <div className="text-muted-foreground text-xs uppercase">Research</div>
                   <div className="text-lg font-medium">
                     ${monthly.data.research_total_usd.toFixed(2)}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {monthly.data.research_count} queries
                   </div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground text-[10px] uppercase">Vision</div>
+                  <div className="text-muted-foreground text-xs uppercase">Vision</div>
                   <div className="text-lg font-medium">
                     ${monthly.data.vision_total_usd.toFixed(2)}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {monthly.data.vision_count} screenshots
                   </div>
                 </div>

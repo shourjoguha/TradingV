@@ -224,6 +224,28 @@ async def post_screenshot(
         return IngestResult(item=_to_out(item))
 
 
+@router.get("/recent", response_model=List[TVContextItemOut])
+async def get_recent(
+    include_expired: bool = Query(False),
+    kinds: str | None = Query(
+        None, description="Comma-separated kinds filter (note,idea,event,screenshot,webhook)"
+    ),
+    limit: int = Query(50, ge=1, le=500),
+    _api_key: str = Depends(verify_api_key),
+):
+    """Most-recent active TV-context items across all tickers. Powers Today's
+    InboxCounter aggregate (no per-ticker fan-out)."""
+    kinds_list = [k.strip() for k in kinds.split(",")] if kinds else None
+    async with _db.SessionLocal() as session:
+        rows = await _svc.list_recent(
+            session=session,
+            include_expired=include_expired,
+            kinds=kinds_list,
+            limit=limit,
+        )
+        return [_to_out(r) for r in rows]
+
+
 @router.get("/by-ticker/{ticker}", response_model=List[TVContextItemOut])
 async def get_by_ticker(
     ticker: str,

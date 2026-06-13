@@ -1,11 +1,15 @@
-import React, { useEffect, useState, useRef } from 'react'
-import { createChart, ColorType } from 'lightweight-charts'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   usePredictionsByTarget,
   useWatchlist,
   useModels,
   useOhlcv,
 } from '../hooks/use-api'
+import {
+  CandlestickChart,
+  type PredictionSeries,
+} from '../components/charts/plotly/CandlestickChart'
+import { PREDICTION_LINES } from '../components/charts/theme/palette'
 import {
   Card,
   CardContent,
@@ -37,22 +41,10 @@ import { Badge } from '../components/ui/badge'
 import { TrendingUp } from 'lucide-react'
 const FIELD_PRESETS = ['open', 'high', 'low', 'close', 'volume'] as const
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
-// Color palette for prediction lines by days_ago
-// Prediction-line palette: anchored on neumorphic accent (violet)
-// + secondary accent (teal), with neighborly variations. Keeps the
-// chart inside the design system while still distinguishing N runs.
-const PREDICTION_COLORS = [
-  '#6C63FF', // violet (primary accent)
-  '#38B2AC', // teal (secondary accent)
-  '#8B84FF', // violet light
-  '#5FAFA8', // success (also candle up)
-  '#A78BFA', // muted violet
-  '#4FD1C5', // muted teal
-  '#7986CB', // indigo neighbor
-  '#9F7AEA', // mid violet
-  '#48BB78', // muted green
-  '#06b6d4', // cyan neighbor
-]
+// Per-line color palette now lives in the shared chart theme
+// (`components/charts/theme/palette.ts`). Re-aliased locally for the
+// legend swatches further down so the file reads at a glance.
+const PREDICTION_COLORS = PREDICTION_LINES
 export function PredictionsByTarget() {
   const [ticker, setTicker] = useState('')
   const [tickerTouched, setTickerTouched] = useState(false)
@@ -65,7 +57,6 @@ export function PredictionsByTarget() {
   const [modelId, setModelId] = useState('')
   const [fields, setFields] = useState<string[]>(['close'])
   const [madeOnDow, setMadeOnDow] = useState<string[]>([])
-  const chartContainerRef = useRef<HTMLDivElement>(null)
   const { data: watchlist } = useWatchlist({
     limit: 100,
   })
@@ -90,123 +81,62 @@ export function PredictionsByTarget() {
     interval,
     limit: 60,
   })
-  // Lightweight-charts rendering
-  useEffect(() => {
-    if (!chartContainerRef.current || !ohlcvData || ohlcvData.length === 0)
-      return
-    const container = chartContainerRef.current
-    const chart = createChart(container, {
-      layout: {
-        background: {
-          type: ColorType.Solid,
-          color: '#E0E5EC',
-        },
-        textColor: '#3D4852',
-        fontFamily: '"DM Sans", system-ui, sans-serif',
-        fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: 'rgba(163, 177, 198, 0.2)' },
-        horzLines: { color: 'rgba(163, 177, 198, 0.2)' },
-      },
-      width: container.clientWidth,
-      height: 320,
-      crosshair: {
-        vertLine: { color: 'rgba(108, 99, 255, 0.4)' },
-        horzLine: { color: 'rgba(108, 99, 255, 0.4)' },
-      },
-      rightPriceScale: { borderColor: 'rgba(163, 177, 198, 0.4)' },
-      timeScale: { borderColor: 'rgba(163, 177, 198, 0.4)' },
-    })
-    // Candlestick series — neumorphic-toned semantic colors so up/down
-    // direction stays readable without breaking the cool-grey palette.
-    const candleSeries = chart.addCandlestickSeries({
-      upColor: '#5FAFA8',
-      downColor: '#E07A6F',
-      borderUpColor: '#5FAFA8',
-      borderDownColor: '#E07A6F',
-      wickUpColor: '#5FAFA8',
-      wickDownColor: '#E07A6F',
-    })
-    const candleData = ohlcvData
-      .map((bar) => ({
+  // Derive OHLC bars + per-`days_ago` prediction series for the Plotly
+  // CandlestickChart. Ordering invariants (sort by `time` / `made_on`) come
+  // for free from the consumer; we just shape the data and let the chart
+  // theme handle colors.
+  const ohlcBars = useMemo(
+    () =>
+      (ohlcvData ?? []).map((bar) => ({
         time: bar.time as string,
         open: bar.open,
         high: bar.high,
         low: bar.low,
         close: bar.close,
-      }))
-      .sort((a, b) => (a.time < b.time ? -1 : 1))
-    candleSeries.setData(candleData)
-    // Add prediction lines color-coded by days_ago
-    if (predictions?.predictions && predictions.predictions.length > 0) {
-      const uniqueDaysAgo = [
-        ...new Set(predictions.predictions.map((p) => p.days_ago)),
-      ].sort((a, b) => a - b)
-      uniqueDaysAgo.forEach((daysAgo, idx) => {
+      })),
+    [ohlcvData],
+  )
+
+  const predictionSeries = useMemo<PredictionSeries[]>(() => {
+    if (!predictions?.predictions?.length) return []
+    const uniqueDaysAgo = [
+      ...new Set(predictions.predictions.map((p) => p.days_ago)),
+    ].sort((a, b) => a - b)
+    return uniqueDaysAgo
+      .map((daysAgo) => {
         const predsForDay = [...predictions.predictions]
           .filter((p) => p.days_ago === daysAgo && p.close !== null)
           .sort((a, b) => (a.made_on < b.made_on ? -1 : 1))
-        if (predsForDay.length === 0) return
-        const color = PREDICTION_COLORS[idx % PREDICTION_COLORS.length]
-        const lineSeries = chart.addLineSeries({
-          color,
-          lineWidth: 2,
-          title: `T-${daysAgo}`,
-          crosshairMarkerVisible: true,
-          crosshairMarkerRadius: 3,
-        })
-        // 2-point segment (made_on → target_date) only valid when made_on
-        // is strictly before target_date. Otherwise lightweight-charts
-        // throws on non-ascending or duplicate-time data points and the
-        // useEffect tear unmounts the whole tab. Fall back to a single
-        // marker at the target date.
+        if (predsForDay.length === 0) return null
+        // Single prediction strictly before target → connect made_on → target.
+        // Same-day or multi → single marker at target_date w/ predicted close.
+        const x: string[] = []
+        const y: number[] = []
         if (
           predsForDay.length === 1 &&
           predsForDay[0].made_on < predictions.target_date
         ) {
-          const pred = predsForDay[0]
-          lineSeries.setData([
-            { time: pred.made_on as string, value: pred.close! },
-            { time: predictions.target_date as string, value: pred.close! },
-          ])
+          const p = predsForDay[0]
+          x.push(p.made_on as string, predictions.target_date as string)
+          y.push(p.close!, p.close!)
         } else {
-          // Multi-prediction OR same-day single — plot one dot per pred
-          // at the target date. Dedupe by made_on to avoid duplicate
-          // time keys (lightweight-charts rejects them).
+          // Dedupe by made_on to avoid duplicate time keys (Plotly tolerates
+          // them but the legacy behaviour was to keep the latest only).
           const seen = new Set<string>()
-          const dots = predsForDay
-            .filter((p) => {
-              if (seen.has(p.made_on)) return false
-              seen.add(p.made_on)
-              return true
-            })
-            .map((p) => ({
-              time: predictions.target_date as string,
-              value: p.close!,
-            }))
-          if (dots.length > 0) lineSeries.setData([dots[0]])
+          for (const p of predsForDay) {
+            if (seen.has(p.made_on)) continue
+            seen.add(p.made_on)
+            x.push(predictions.target_date as string)
+            y.push(p.close!)
+            break // mirror legacy: only the first dedup'd value rendered
+          }
         }
+        return { label: `T-${daysAgo}`, x, y }
       })
-    }
-    chart.timeScale().fitContent()
-
-    // Window resize is the slow path; container resize (zoom, sidebar
-    // toggle, flex reflow) is the fast path. Watch both.
-    const applyWidth = () => {
-      chart.applyOptions({ width: container.clientWidth })
-    }
-    const ro = new ResizeObserver(applyWidth)
-    ro.observe(container)
-    window.addEventListener('resize', applyWidth)
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('resize', applyWidth)
-      chart.remove()
-    }
-  }, [ohlcvData, predictions])
+      .filter((s): s is PredictionSeries => s !== null)
+  }, [predictions])
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-heading font-semibold tracking-tight">
           Predictions by Target
@@ -218,7 +148,7 @@ export function PredictionsByTarget() {
 
       {/* Controls */}
       <Card>
-        <CardContent className="p-6 space-y-5">
+        <CardContent className="p-6 space-y-6">
           <div className="grid gap-6 md:grid-cols-4">
             <div className="space-y-2">
               <Label>Ticker</Label>
@@ -336,7 +266,7 @@ export function PredictionsByTarget() {
           </CardContent>
         </Card>
       ) : predictions ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -352,7 +282,7 @@ export function PredictionsByTarget() {
                         : '—'}
                     </span>
                     {!predictions.actual && (
-                      <Badge variant="secondary" className="ml-2 text-[10px]">
+                      <Badge variant="secondary" className="ml-2 text-xs">
                         Actual unavailable
                       </Badge>
                     )}
@@ -386,7 +316,11 @@ export function PredictionsByTarget() {
               </div>
             </CardHeader>
             <CardContent className="overflow-hidden">
-              <div ref={chartContainerRef} className="w-full min-w-0" />
+              <CandlestickChart
+                bars={ohlcBars}
+                predictions={predictionSeries}
+                height={320}
+              />
             </CardContent>
           </Card>
 

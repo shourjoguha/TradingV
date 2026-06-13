@@ -120,6 +120,69 @@ If a Tier 2 multi-worker queue ever ships ([backlog.md](backlog.md)), reintroduc
 
 ---
 
+## n=1 landmine ledger (retrieval-depth-and-debiasing-program, Phase 6)
+
+These are deliberate shortcuts that are **correct at n=1 (single operator) and
+detonate the instant a second user exists**. The council's resolution of the
+Critic-vs-Pragmatist disagreement: cheap to ignore now because the operator is
+the error-correction loop; catastrophic exactly when the system "succeeds"
+enough to add a user. Each carries an explicit TRIGGER — the observable signal
+that flips it from green to red.
+
+### L1 — substring hypothesis-rec linkage is a fallback, not a guarantee
+
+**What:** `links_for_rec` (`app/rx/service.py`) now prefers explicit
+`linked_hypothesis_ids` (Phase 4) but still falls back to a case-insensitive
+substring match (`match_type="substring_fallback"`) when no explicit link exists.
+At n=1 the operator wrote the vault + hypotheses, so the surface forms are
+predictable and self-correcting.
+**Why deferred:** removing the substring fallback entirely would drop linkage for
+every legacy rec that predates explicit linkage.
+**How to apply when ready:** once `/rx-finance` always populates
+`linked_hypothesis_ids`, delete the substring branch; treat absence of an
+explicit link as "no link" rather than guessing.
+**Trigger to revisit:** a SECOND user, OR the hypothesis count grows past ~50
+(common-word substrings like "growth"/"risk" start cross-matching unrelated recs
+and silently corrupt trade-attribution roll-up — D2 × B4 interaction).
+
+### L2 — single hard-coded operator UUID
+
+**What:** `SETTINGS.RX_OPERATOR_UUID` is server-stamped on every rec + deep
+result; all reads filter by it. There is no per-user history, threshold, or auth
+scoping.
+**Why deferred:** the system is explicitly single-operator; multi-tenancy is
+pure cost with zero benefit at n=1.
+**How to apply when ready:** introduce a real `users` table + per-request
+identity; thread `owner_user_id` from auth, not env; make every threshold
+(action-rate gate, drift) per-user.
+**Trigger to revisit:** anyone other than the operator needs to log in. This is
+the master n=2 landmine — most other shortcuts (L1, L3) detonate with it.
+
+### L3 — action-rate + drift thresholds are global, not per-cohort
+
+**What:** action-rate health bands + the new preference-drift detector
+(`app/rx/drift_monitor.py`) treat the operator as the whole population.
+**Why deferred:** with one user, a single blob IS the population — per-cohort
+analysis would be dividing one data point.
+**How to apply when ready:** per-user × per-rule × per-cohort rates; add a
+Bayesian smoother instead of the raw ratio so small-N cohorts don't swing wildly.
+**Trigger to revisit:** the second user, OR any desire to compare segments.
+
+### L4 — `/rx-analyze` lift/P&L math lives in the command, not app code
+
+**What:** the predictive-lift + P&L computation is prose+SQL in
+`~/.claude/commands/rx-analyze.md`; the app exposes mirrored pure helpers in
+`app/rx/analytics.py` but the command doesn't call them.
+**Why deferred:** the command path works and refactoring to an endpoint is scope
+beyond the de-biasing program.
+**How to apply when ready:** add a `/v1/rx/analyze` endpoint that calls
+`analytics.py`; have the command call the endpoint so there is one source of
+truth and no prose-vs-helper drift.
+**Trigger to revisit:** the command and helpers ever disagree, OR `/rx-analyze`
+needs to run unattended (cron) where in-session prose can't execute.
+
+---
+
 ## How to add an entry
 
 Use this skeleton:

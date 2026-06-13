@@ -1293,6 +1293,40 @@ export function useResolveTickerReview() {
 // TV Context — ingest + retrieval hooks
 // ---------------------------------------------------------------------------
 
+/**
+ * useTVContextRecent — list-all hook for the InboxCounter (Today).
+ *
+ * Backed by `GET /v1/tv-context/recent` (added 2026-05-17). Replaces the
+ * roster-top-8 per-ticker fan-out previously needed to compute a count.
+ */
+export function useTVContextRecent(opts?: {
+  includeExpired?: boolean
+  kinds?: string
+  limit?: number
+}) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: [
+      'tv-context-recent',
+      backendId,
+      opts?.includeExpired,
+      opts?.kinds,
+      opts?.limit,
+    ],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (opts?.includeExpired) s.set('include_expired', 'true')
+      if (opts?.kinds) s.set('kinds', opts.kinds)
+      if (opts?.limit) s.set('limit', String(opts.limit))
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<TVContextItem[]>(`/v1/tv-context/recent${qs}`, {
+        backendId,
+      })
+    },
+    staleTime: 30_000,
+  })
+}
+
 export function useTVContextByTicker(
   ticker: string | null | undefined,
   opts?: { includeExpired?: boolean },

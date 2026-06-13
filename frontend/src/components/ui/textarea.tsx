@@ -12,7 +12,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
         'flex min-h-[80px] w-full rounded-2xl bg-background px-4 py-3 text-sm text-foreground ' +
           'shadow-inset-sm transition-shadow duration-200 ease-out ' +
           'placeholder:text-[#A0AEC0] ' +
-          'focus-visible:outline-none focus-visible:shadow-inset focus-visible:ring-2 focus-visible:ring-violet focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
+          'focus-visible:outline-none focus-visible:shadow-inset focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
           'disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}

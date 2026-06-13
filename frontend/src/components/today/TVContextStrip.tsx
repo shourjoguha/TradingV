@@ -36,12 +36,12 @@ export function TVContextStrip({ limit = 8 }: { limit?: number }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Camera className="h-4 w-4 text-violet" />
+          <Camera className="h-4 w-4 text-primary" />
           Recent TV Context
         </CardTitle>
         <Link
           to="/tv-context"
-          className="text-xs text-muted-foreground hover:text-violet flex items-center gap-1"
+          className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
         >
           Inbox <ArrowRight className="h-3 w-3" />
         </Link>
@@ -99,9 +99,9 @@ function TickerStripBody({
   }
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {freshCount > 0 && (
-        <Badge variant="outline" className="text-[10px]">
+        <Badge variant="outline" className="text-xs">
           {freshCount} new since last visit
         </Badge>
       )}
@@ -111,10 +111,10 @@ function TickerStripBody({
           <div
             key={it.id}
             className={`flex items-center gap-2 rounded-2xl shadow-inset-sm bg-background px-3 py-2 text-xs min-w-0 ${
-              isFresh ? 'ring-1 ring-violet/30' : ''
+              isFresh ? 'ring-1 ring-primary/30' : ''
             }`}
           >
-            <Badge variant="outline" className="text-[10px] shrink-0">
+            <Badge variant="outline" className="text-xs shrink-0">
               {it.kind}
             </Badge>
             {it.ticker && (

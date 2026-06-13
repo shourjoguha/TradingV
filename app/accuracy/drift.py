@@ -25,7 +25,7 @@ from app.notifications import telegram as _telegram
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_TICK_SECONDS = 60 * 60 * 6  # every 6 hours; drift is slow-moving
+_DEFAULT_TICK_SECONDS = 60 * 60 * 24  # daily — drift evaluates same actuals as accuracy; matched cadence (was 6h pre-2026-05-16)
 
 
 async def detect_drift(

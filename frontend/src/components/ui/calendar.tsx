@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
-// Neumorphic skin for react-day-picker. Selected day uses the violet
+// Neumorphic skin for react-day-picker. Selected day uses the primary
 // accent (extruded); today gets a subtle inset ring; nav buttons read
 // like the rest of the soft-UI button palette.
 export function Calendar({
@@ -37,7 +37,7 @@ export function Calendar({
         month_grid: 'w-full border-collapse',
         weekdays: 'flex',
         weekday:
-          'w-9 text-[10px] font-medium uppercase tracking-wider text-muted-foreground',
+          'w-9 text-xs font-medium text-muted-foreground',
         week: 'flex w-full mt-1',
         day: cn(
           'relative p-0 text-center text-sm',
@@ -47,14 +47,14 @@ export function Calendar({
           'inline-flex h-9 w-9 items-center justify-center rounded-xl font-mono text-sm',
           'transition-shadow duration-150',
           'hover:bg-background hover:shadow-inset-sm',
-          'focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-violet/40',
+          'focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-primary/40',
         ),
         selected: cn(
-          '[&>button]:bg-violet [&>button]:text-white',
+          '[&>button]:bg-primary [&>button]:text-white',
           '[&>button]:shadow-extruded-sm [&>button:hover]:shadow-extruded',
-          '[&>button:hover]:bg-violet [&>button:hover]:text-white',
+          '[&>button:hover]:bg-primary [&>button:hover]:text-white',
         ),
-        today: '[&>button]:ring-2 [&>button]:ring-violet/40 [&>button]:ring-offset-1',
+        today: '[&>button]:ring-2 [&>button]:ring-primary/40 [&>button]:ring-offset-1',
         outside: '[&>button]:text-muted-foreground/40',
         disabled: '[&>button]:opacity-30 [&>button]:cursor-not-allowed',
         hidden: 'invisible',

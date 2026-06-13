@@ -33,6 +33,10 @@ class RecCreate(BaseModel):
     # Allow the generator to seed `created_at` to align with the markdown
     # frontmatter timestamp. If omitted, server stamps NOW().
     created_at: Optional[datetime.datetime] = None
+    # retrieval-depth Phase 4 (D2 fix): explicit hypothesis linkage set at
+    # compose time. PRIMARY linkage; substring is fallback. Optional list of
+    # hypothesis ids.
+    linked_hypothesis_ids: Optional[List[str]] = None
 
 
 class RecListItem(BaseModel):
@@ -56,6 +60,10 @@ class RecListItem(BaseModel):
     # is `{ticker: {kind: count, score: float}}` (JSON-flexible).
     attention_score: Optional[float] = None
     attention_breakdown: Optional[Any] = None
+    # Phase 2 (retrieval-depth): citation verification status derived from
+    # source_refs — one of no_quotes | all_verified | has_mismatch |
+    # unverifiable. `has_mismatch` is the trust-critical flag (D1).
+    citations_status: str = "no_quotes"
 
 
 class RecList(BaseModel):
@@ -92,6 +100,8 @@ class RecRead(BaseModel):
     # Phase 2 attention axis (same shape as list endpoint).
     attention_score: Optional[float] = None
     attention_breakdown: Optional[Any] = None
+    # Phase 2 (retrieval-depth): citation verification status (see RecListItem).
+    citations_status: str = "no_quotes"
 
 
 class DispositionWrite(BaseModel):
@@ -128,6 +138,9 @@ class RxLinkHypothesis(BaseModel):
     slug: str
     title: str
     status: str
+    # Phase 4 (D2 fix): "explicit" (operator/compose-time link) vs
+    # "substring_fallback" (heuristic suggestion). Defaults preserve back-compat.
+    match_type: str = "substring_fallback"
 
 
 class RxLinkTrade(BaseModel):
@@ -151,3 +164,48 @@ class RxLinks(BaseModel):
 
     hypotheses: List[RxLinkHypothesis]
     trades: List[RxLinkTrade]
+
+
+# ---------------------------------------------------------------------------
+# Deep-result store (retrieval-depth-and-debiasing-program, Phase 0)
+# ---------------------------------------------------------------------------
+
+DEEP_RESULT_KINDS = ("deep_retrieval", "contradiction", "disconfirmation")
+
+
+class DeepResultCreate(BaseModel):
+    """Payload POSTed back from a Claude Code session via the ingest token.
+
+    ``payload`` is intentionally schema-flexible (Any) — each ``kind`` carries
+    a different shape (deep_retrieval: candidate list w/ metadata;
+    contradiction: pairwise stance report; disconfirmation: off-vault counter)
+    and the producing command owns that contract. One of ``rec_id`` /
+    ``query_hash`` is required so every row is addressable.
+    """
+
+    kind: Literal["deep_retrieval", "contradiction", "disconfirmation"]
+    rec_id: Optional[str] = Field(default=None, max_length=36)
+    query_hash: Optional[str] = Field(default=None, max_length=64)
+    payload: Any
+    created_at: Optional[datetime.datetime] = None
+
+    @model_validator(mode="after")
+    def _require_a_key(self) -> "DeepResultCreate":
+        if not self.rec_id and not self.query_hash:
+            raise ValueError("one of rec_id or query_hash is required")
+        return self
+
+
+class DeepResultRead(BaseModel):
+    id: str
+    owner_user_id: str
+    rec_id: Optional[str] = None
+    query_hash: Optional[str] = None
+    kind: str
+    payload: Any
+    created_at: datetime.datetime
+
+
+class DeepResultList(BaseModel):
+    items: List[DeepResultRead]
+    count: int

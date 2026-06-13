@@ -147,7 +147,7 @@ function OutcomeBar({
           />
         ))}
       </div>
-      <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] font-mono text-muted-foreground">
+      <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs font-mono text-muted-foreground">
         {segments.map((s) => (
           <span key={s.bucket}>
             {s.label}: <span className="text-foreground font-medium">{s.count}</span>
@@ -222,7 +222,7 @@ function JobRow({ job }: { job: AnalysisJob }) {
             <div>
               <div className="font-medium text-sm leading-tight">{jobSummary(job)}</div>
               <div
-                className="text-[10px] font-mono text-muted-foreground truncate max-w-[260px]"
+                className="text-xs font-mono text-muted-foreground truncate max-w-[260px]"
                 title={job.tickers.join(', ')}
               >
                 {job.tickers.slice(0, 6).join(' ')}
@@ -288,11 +288,11 @@ function JobRow({ job }: { job: AnalysisJob }) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-[10px] uppercase">Ticker</TableHead>
-                      <TableHead className="text-[10px] uppercase">Interval</TableHead>
-                      <TableHead className="text-[10px] uppercase">Model</TableHead>
-                      <TableHead className="text-[10px] uppercase">Status</TableHead>
-                      <TableHead className="text-[10px] uppercase">Detail</TableHead>
+                      <TableHead className="text-xs uppercase">Ticker</TableHead>
+                      <TableHead className="text-xs uppercase">Interval</TableHead>
+                      <TableHead className="text-xs uppercase">Model</TableHead>
+                      <TableHead className="text-xs uppercase">Status</TableHead>
+                      <TableHead className="text-xs uppercase">Detail</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -389,7 +389,7 @@ export function AnalysisJobs() {
     )
   }
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-heading font-semibold tracking-tight">
@@ -477,7 +477,7 @@ export function AnalysisJobs() {
                             })
                           }
                         }}
-                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                        className="text-xs font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                       >
                         +{m.id}
                       </button>
@@ -515,7 +515,7 @@ export function AnalysisJobs() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-violet" />
+              <Layers className="h-4 w-4 text-primary" />
               Queue
             </CardTitle>
             <CardDescription>

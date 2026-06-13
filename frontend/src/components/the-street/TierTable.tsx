@@ -31,11 +31,15 @@ export function TierTable({ tier, date, includeEtfs }: Props) {
   const [openTicker, setOpenTicker] = useState<string | null>(null)
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">{TIER_LABELS[tier]}</CardTitle>
+    <Card className="relative">
+      <div
+        aria-hidden
+        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-3xl bg-identity-narrative"
+      />
+      <CardHeader className="pb-1 md:pb-1 flex-row items-center justify-between gap-3 space-y-0">
+        <CardTitle className="text-xl">{TIER_LABELS[tier]}</CardTitle>
         {data?.snapshot_date && (
-          <Badge variant="outline" className="w-fit text-[10px]">
+          <Badge variant="outline" className="text-xs shrink-0">
             Snapshot {data.snapshot_date}
           </Badge>
         )}
@@ -50,7 +54,7 @@ export function TierTable({ tier, date, includeEtfs }: Props) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              <thead className="text-xs font-mono text-muted-foreground">
                 <tr className="border-b border-foreground/10">
                   <th className="w-6 py-2"></th>
                   <th className="text-left px-2 py-2">Ticker</th>

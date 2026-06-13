@@ -32,7 +32,7 @@ export function TickerHub() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <HeaderStrip symbol={symbol} />
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -62,12 +62,12 @@ function TVContextSection({ symbol }: { symbol: string }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Camera className="h-4 w-4 text-violet" />
+          <Camera className="h-4 w-4 text-primary" />
           Recent TV Context
         </CardTitle>
         <Link
           to={`/tv-context/${symbol}`}
-          className="text-xs text-muted-foreground hover:text-violet"
+          className="text-xs text-muted-foreground hover:text-primary"
         >
           Inbox
         </Link>
@@ -80,19 +80,19 @@ function TVContextSection({ symbol }: { symbol: string }) {
             No context items for {symbol}. Drop a screenshot or note via the inbox.
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {items.slice(0, 5).map((it) => (
               <div
                 key={it.id}
                 className="flex items-center justify-between gap-2 rounded-2xl shadow-inset-sm bg-background px-3 py-2 text-xs"
               >
-                <Badge variant="outline" className="text-[10px] shrink-0">
+                <Badge variant="outline" className="text-xs shrink-0">
                   {it.kind}
                 </Badge>
                 <span className="font-mono text-muted-foreground truncate">
                   {new Date(it.captured_at).toLocaleDateString()}
                 </span>
-                <span className="text-[10px] text-muted-foreground truncate flex-1">
+                <span className="text-xs text-muted-foreground truncate flex-1">
                   {it.source}
                 </span>
               </div>
@@ -117,12 +117,12 @@ function OpportunitiesSection({ symbol }: { symbol: string }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Target className="h-4 w-4 text-violet" />
+          <Target className="h-4 w-4 text-primary" />
           Open opportunities
         </CardTitle>
         <Link
           to="/motion/opportunities"
-          className="text-xs text-muted-foreground hover:text-violet"
+          className="text-xs text-muted-foreground hover:text-primary"
         >
           All
         </Link>
@@ -135,7 +135,7 @@ function OpportunitiesSection({ symbol }: { symbol: string }) {
             No open opps on {symbol}.
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {matches.map((o) => (
               <Link
                 key={o.id}
@@ -185,12 +185,12 @@ function TradesSection({ symbol }: { symbol: string }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Receipt className="h-4 w-4 text-violet" />
+          <Receipt className="h-4 w-4 text-primary" />
           Recent trades
         </CardTitle>
         <Link
           to="/motion/trades"
-          className="text-xs text-muted-foreground hover:text-violet"
+          className="text-xs text-muted-foreground hover:text-primary"
         >
           Journal
         </Link>
@@ -203,7 +203,7 @@ function TradesSection({ symbol }: { symbol: string }) {
             No trades on {symbol}.
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {matches.slice(0, 5).map((t: any) => (
               <div
                 key={t.id}

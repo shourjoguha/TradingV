@@ -74,7 +74,7 @@ export function ConfirmApproveModal({
 
         <div className="space-y-4 text-sm">
           <div className="space-y-1">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+            <div className="text-xs font-mono text-muted-foreground">
               Hypothesis
             </div>
             <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ export function ConfirmApproveModal({
 
           {hyp && (
             <div className="space-y-1">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              <div className="text-xs font-mono text-muted-foreground">
                 Current invalidator
               </div>
               <pre className="rounded-2xl shadow-inset-sm bg-background p-3 text-[11px] font-mono whitespace-pre-wrap break-all">
@@ -97,7 +97,7 @@ export function ConfirmApproveModal({
           )}
 
           <div className="space-y-1">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+            <div className="text-xs font-mono text-muted-foreground">
               Proposed invalidator
             </div>
             <pre className="rounded-2xl shadow-inset-sm bg-background p-3 text-[11px] font-mono whitespace-pre-wrap break-all">
@@ -106,7 +106,7 @@ export function ConfirmApproveModal({
           </div>
 
           <div className="space-y-1">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+            <div className="text-xs font-mono text-muted-foreground">
               Rationale (Claude){' '}
               <span className="opacity-60">· confidence {(proposed.confidence ?? 0).toFixed(2)}</span>
             </div>

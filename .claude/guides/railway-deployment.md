@@ -1,5 +1,12 @@
 # Railway deployment notes
 
+> **Status (2026-05-17):** Railway backend has been **permanently shut down** —
+> see [ADR 018](../decisions/018-railway-shutdown.md). This document is
+> retained as historical reference for the build/deploy lessons in case the
+> decision ever reverses, but Railway is not a live target. Frontend has no
+> backend switcher. New deploy work should target the laptop-only setup in
+> [laptop-setup.md](./laptop-setup.md).
+
 Hard-won lessons from getting this stack onto Railway. Read before changing anything build-related.
 
 ## Builder

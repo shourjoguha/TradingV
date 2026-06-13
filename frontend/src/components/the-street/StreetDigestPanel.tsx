@@ -93,13 +93,13 @@ function DigestBody({
           {entry.company && entry.company.length > 1 && (
             <span className="text-xs text-muted-foreground">{entry.company}</span>
           )}
-          <Badge variant="outline" className="text-[10px]">
+          <Badge variant="outline" className="text-xs">
             {entry.channel_count} channels
           </Badge>
-          <Badge variant="outline" className="text-[10px]">
+          <Badge variant="outline" className="text-xs">
             {entry.total_signals} signals
           </Badge>
-          <Badge variant="outline" className="text-[10px]">
+          <Badge variant="outline" className="text-xs">
             {snapshotDate}
           </Badge>
         </div>
@@ -117,7 +117,7 @@ function DigestBody({
         {hasBil && (
           <Section
             label={`Billionaires (${ch.billionaires!.length})`}
-            icon={<Briefcase className="h-3.5 w-3.5 text-violet" />}
+            icon={<Briefcase className="h-3.5 w-3.5 text-primary" />}
             help="Named billionaires (Buffett, Tepper, Laffont, Sundheim, …) whose Q4 2025 13F filing showed an Added or New position. Quarterly cadence; ~45-day filing lag."
           >
             <FundList rows={ch.billionaires!} />
@@ -126,7 +126,7 @@ function DigestBody({
         {hasTb && (
           <Section
             label={`Trailblazers (${ch.trailblazers!.length})`}
-            icon={<Building2 className="h-3.5 w-3.5 text-violet" />}
+            icon={<Building2 className="h-3.5 w-3.5 text-primary" />}
             help="High-performing fund managers tracked by the smart-money aggregator (51 funds). Same 13F cadence as Billionaires. Higher fund count = denser cross-fund crowding on this name."
           >
             <FundList rows={ch.trailblazers!} />
@@ -135,7 +135,7 @@ function DigestBody({
         {hasIns && (
           <Section
             label={`Insiders (${ch.insiders!.length})`}
-            icon={<Camera className="h-3.5 w-3.5 text-violet" />}
+            icon={<Camera className="h-3.5 w-3.5 text-primary" />}
             help="SEC Form-4 open-market buys by corporate officers and directors over the last ~60 days, ≥$100K. Treated as high-signal because insiders cannot legally trade on undisclosed material info."
           >
             <InsiderList rows={ch.insiders!} />
@@ -144,7 +144,7 @@ function DigestBody({
         {hasPol && (
           <Section
             label={`Politicians (${ch.politicians!.length})`}
-            icon={<Landmark className="h-3.5 w-3.5 text-violet" />}
+            icon={<Landmark className="h-3.5 w-3.5 text-primary" />}
             help="STOCK Act disclosures by U.S. House/Senate members, ≥$100K, 90-day window. Buys only. Disclosure is a $-range, not a precise value. ~30-45 day lag from trade to disclosure."
           >
             <PoliticianList rows={ch.politicians!} />
@@ -153,7 +153,7 @@ function DigestBody({
         {hasOpt && (
           <Section
             label={`Options-Bullish (${ch.options_bullish!.length})`}
-            icon={<Activity className="h-3.5 w-3.5 text-violet" />}
+            icon={<Activity className="h-3.5 w-3.5 text-primary" />}
             help={OPTIONS_HELP}
           >
             <OptionsList rows={ch.options_bullish!} />
@@ -210,8 +210,8 @@ function Section({
   help?: React.ReactNode
 }) {
   return (
-    <div className="rounded-2xl shadow-inset-sm bg-background p-3 space-y-1.5">
-      <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+    <div className="rounded-2xl shadow-inset-sm bg-background p-3 space-y-2">
+      <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
         {icon}
         <span>{label}</span>
         {help && (
@@ -220,7 +220,7 @@ function Section({
               <button
                 type="button"
                 aria-label="Section help"
-                className="ml-auto inline-flex items-center text-muted-foreground hover:text-violet"
+                className="ml-auto inline-flex items-center text-muted-foreground hover:text-primary"
                 onClick={(e) => e.preventDefault()}
               >
                 <Info className="h-3 w-3" />
@@ -243,7 +243,7 @@ function FundList({ rows }: { rows: StreetDigestFundEntry[] }) {
       {rows.map((r, i) => (
         <li key={`${r.fund}-${i}`} className="flex items-center justify-between gap-2">
           <span className="font-medium truncate">{r.fund}</span>
-          <Badge variant="outline" className="text-[10px] shrink-0">
+          <Badge variant="outline" className="text-xs shrink-0">
             {normaliseStatus(r.status)}
           </Badge>
         </li>
@@ -254,14 +254,14 @@ function FundList({ rows }: { rows: StreetDigestFundEntry[] }) {
 
 function InsiderList({ rows }: { rows: StreetDigestInsiderEntry[] }) {
   return (
-    <ul className="space-y-1.5 text-xs">
+    <ul className="space-y-2 text-xs">
       {rows.map((r, i) => (
         <li key={i} className="space-y-0.5">
           <div className="flex items-center justify-between gap-2">
             <span className="font-medium truncate">{r.person}</span>
-            <span className="font-mono text-[10px] shrink-0">{r.value}</span>
+            <span className="font-mono text-xs shrink-0">{r.value}</span>
           </div>
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {r.title} · {r.shares} sh @ {r.price} · {r.date}
           </div>
         </li>
@@ -272,7 +272,7 @@ function InsiderList({ rows }: { rows: StreetDigestInsiderEntry[] }) {
 
 function PoliticianList({ rows }: { rows: StreetDigestPoliticianEntry[] }) {
   return (
-    <ul className="space-y-1.5 text-xs">
+    <ul className="space-y-2 text-xs">
       {rows.map((r, i) => {
         const partyDist = [r.party, r.district].filter(Boolean).join(' ')
         return (
@@ -286,7 +286,7 @@ function PoliticianList({ rows }: { rows: StreetDigestPoliticianEntry[] }) {
               </span>
               {r.fv && r.fv !== '—' && r.fv !== '-' && (
                 <span
-                  className={`font-mono text-[10px] shrink-0 ${
+                  className={`font-mono text-xs shrink-0 ${
                     r.fv.startsWith('+') ? 'text-success' : 'text-danger'
                   }`}
                 >
@@ -294,7 +294,7 @@ function PoliticianList({ rows }: { rows: StreetDigestPoliticianEntry[] }) {
                 </span>
               )}
             </div>
-            <div className="text-[10px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {r.value_range} · traded {r.traded} · disclosed {r.disclosed}
               {r.committee ? ` · ${r.committee}` : ''}
             </div>
@@ -307,7 +307,7 @@ function PoliticianList({ rows }: { rows: StreetDigestPoliticianEntry[] }) {
 
 function OptionsList({ rows }: { rows: StreetDigestOptionsEntry[] }) {
   return (
-    <ul className="space-y-1.5 text-xs">
+    <ul className="space-y-2 text-xs">
       {rows.map((r, i) => {
         const parsed = parseContract(r.contract)
         return (
@@ -347,11 +347,11 @@ function OptionsList({ rows }: { rows: StreetDigestOptionsEntry[] }) {
               ) : (
                 <span className="font-mono truncate">{r.contract}</span>
               )}
-              <Badge variant="outline" className="text-[10px] shrink-0">
+              <Badge variant="outline" className="text-xs shrink-0">
                 conv {r.conviction}
               </Badge>
             </div>
-            <div className="text-[10px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {r.premium} premium · {r.ratio} vs OI · {r.date}
             </div>
           </li>

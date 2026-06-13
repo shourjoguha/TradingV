@@ -66,7 +66,7 @@ export function MultiSelect({
           className={cn(
             'flex min-h-10 w-full items-center justify-between gap-2 rounded-2xl bg-background px-3 py-1.5 text-sm text-foreground',
             'shadow-inset-sm transition-shadow duration-200 ease-out',
-            'focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-violet focus:ring-offset-2 focus:ring-offset-background',
+            'focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background',
             className,
           )}
           aria-haspopup="listbox"
@@ -97,7 +97,7 @@ export function MultiSelect({
               </span>
             ))}
             {overflow > 0 && (
-              <span className="font-mono text-[10px] text-muted-foreground">
+              <span className="font-mono text-xs text-muted-foreground">
                 +{overflow} more
               </span>
             )}
@@ -111,7 +111,7 @@ export function MultiSelect({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={searchPlaceholder}
-            className="w-full rounded-xl bg-background px-3 py-1.5 text-sm font-mono shadow-inset-sm focus:outline-none focus:shadow-inset focus:ring-1 focus:ring-violet/40"
+            className="w-full rounded-xl bg-background px-3 py-1.5 text-sm font-mono shadow-inset-sm focus:outline-none focus:shadow-inset focus:ring-1 focus:ring-primary/40"
           />
         </div>
         <div className="max-h-64 overflow-y-auto p-1">
@@ -138,9 +138,9 @@ export function MultiSelect({
                   <span>{o.value}</span>
                   <span className="flex items-center gap-2">
                     {o.label && o.label !== o.value && (
-                      <span className="text-[10px] text-muted-foreground">{o.label}</span>
+                      <span className="text-xs text-muted-foreground">{o.label}</span>
                     )}
-                    {checked && <Check className="h-4 w-4 text-violet" />}
+                    {checked && <Check className="h-4 w-4 text-primary" />}
                   </span>
                 </button>
               )
@@ -149,13 +149,13 @@ export function MultiSelect({
         </div>
         {value.length > 0 && (
           <div className="flex items-center justify-between border-t border-muted-foreground/10 p-2">
-            <span className="text-[10px] font-mono text-muted-foreground">
+            <span className="text-xs font-mono text-muted-foreground">
               {value.length} selected
             </span>
             <button
               type="button"
               onClick={() => onChange([])}
-              className="text-[10px] font-mono text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+              className="text-xs font-mono text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
             >
               Clear
             </button>

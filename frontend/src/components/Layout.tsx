@@ -1,316 +1,380 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Sun, Menu, X, AlertTriangle, BookOpen, ChevronDown, ChevronRight,
+  Sun, AlertTriangle, BookOpen,
   LineChart as LineChartIcon, Brain, Zap, Sparkles, Camera, Building2,
-  FlaskConical,
+  FlaskConical, Telescope,
 } from 'lucide-react'
-import { BackendToggle } from './BackendToggle'
 import { HypothesisStatusWidget } from './HypothesisStatusWidget'
+import { RxStatusWidget } from './RxStatusWidget'
 import { useHealth } from '../hooks/use-api'
-import { useBackend } from '../hooks/use-backend'
-import { availableBackends } from '../lib/backend-store'
+import { useInboxTotal } from '../hooks/use-inbox-total'
 
 function BackendHealthBanner() {
-  const { backendId, setBackend } = useBackend()
   const health = useHealth()
   if (!health.isError) return null
-  const others = availableBackends().filter((id) => id !== backendId)
-  const otherId = others[0]
   return (
     <div className="bg-warning-bg text-warning-fg px-4 md:px-8 py-2 flex items-center gap-3 text-sm shadow-inset-sm">
       <AlertTriangle className="h-4 w-4 shrink-0" />
       <div className="flex-1">
-        Cannot reach <span className="font-mono font-medium">{backendId}</span> backend.
-        {' '}Health check failing — laptop may be asleep, Tailscale down, or server stopped.
+        Cannot reach the backend. Health check failing — server may be stopped,
+        or `localhost:8000` is unreachable.
       </div>
-      {otherId && (
-        <button
-          onClick={() => setBackend(otherId)}
-          className="text-xs font-medium px-3 py-1 rounded-xl shadow-extruded-sm hover:shadow-extruded transition-all"
-        >
-          Switch to {otherId}
-        </button>
-      )}
     </div>
   )
 }
 
-// Grouped sidebar IA. Each group is either a single leaf (Dashboard) or a
-// section with children. Groups expand automatically when one of their
-// children is the active route; collapse state otherwise persists in
-// localStorage.
-type NavLeaf = { path: string; label: string; icon?: any; exact?: boolean }
-type NavGroup = { id: string; label: string; icon?: any; children: NavLeaf[] }
-type NavEntry = NavLeaf | NavGroup
+/**
+ * Nav IA — icon rail + drawer-on-click. Clicking a rail icon either:
+ *   - navigates directly (leaves: Today, Admin, Docs), or
+ *   - opens a slide-out drawer with the section's children (Decide, Think).
+ *
+ * Re-imagination 2026-05-17:
+ *   - Persistent 240px sidebar replaced w/ a 56px icon rail (always visible)
+ *     + a 240px drawer that appears only when a section is clicked. Drawer
+ *     auto-closes on navigation or Esc, frees the canvas the rest of the
+ *     time. Operator stays one click from any route via the rail's tooltip
+ *     icons.
+ *   - Collapsibles removed entirely. Sections show flat lists w/ a section
+ *     heading. No persisted collapse state, no auto-expand surprises.
+ *   - Admin demoted to a leaf (single panel) after the legacy
+ *     /admin/overview Dashboard was retired in the same pass.
+ *   - Topbar shrunk; backend toggle removed (Railway shut down per
+ *     ADR 018).
+ *
+ * Ticker Hub (`/ticker/:symbol`) is deep-linked from everywhere; not in nav.
+ */
+type NavLeaf = { kind: 'leaf'; id: string; path: string; label: string; icon: any }
+type NavSection = { kind: 'section'; id: string; label: string; icon: any; children: NavChild[] }
+type NavChild = { path: string; label: string; icon?: any }
+type NavEntry = NavLeaf | NavSection
 
-// IA reorg (Phase 1): grouped by user-job not backend-module.
-//   Today  — single-screen morning catch-up (was: Dashboard).
-//   Decide — numerical / market-state surfaces operator scans daily.
-//   Think  — narrative / intelligence surfaces (research, theses, vault).
-//   Admin  — config + system health (collapsed by default).
-//   Docs   — reference.
-// Ticker Hub (`/ticker/:symbol`) is deep-linked from everywhere; not in nav.
-const NAV_GROUPS: NavEntry[] = [
-  { path: '/', label: 'Today', icon: Sun },
+const NAV_ENTRIES: NavEntry[] = [
+  { kind: 'leaf', id: 'today', path: '/', label: 'Today', icon: Sun },
+  // Think before Decide (2026-05-17): operator IA preference — narrative /
+  // intelligence surfaces (research, theses, vault, macro context) are the
+  // first stop after the morning glance, *then* the numerical decision
+  // surfaces. Macro relocated from Decide → Think because operator reads
+  // macro as regime context (narrative input), not a daily decision lever.
   {
-    id: 'decide',
-    label: 'Decide',
-    icon: LineChartIcon,
-    children: [
-      { path: '/motion', label: 'Signals' },
-      { path: '/predictions', label: 'Predictions' },
-      { path: '/macro', label: 'Macro' },
-      { path: '/watchlist', label: 'Watchlist' },
-    ],
-  },
-  {
+    kind: 'section',
     id: 'think',
     label: 'Think',
     icon: Brain,
     children: [
       { path: '/research', label: 'Research', icon: Sparkles },
       { path: '/theses', label: 'Theses', icon: FlaskConical },
+      { path: '/macro', label: 'Macro', icon: Telescope },
       { path: '/tv-context', label: 'TV Context', icon: Camera },
       { path: '/the-street', label: 'The Street', icon: Building2 },
     ],
   },
   {
-    id: 'admin',
-    label: 'Admin',
-    icon: Zap,
+    kind: 'section',
+    id: 'decide',
+    label: 'Decide',
+    icon: LineChartIcon,
     children: [
-      // /admin opens the tabbed shell (Processes/Cadences/Costs/Retention/Schedule/Jobs).
-      { path: '/admin', label: 'Admin' },
-      { path: '/admin/overview', label: 'Legacy Dashboard', exact: true },
+      { path: '/motion', label: 'Signals' },
+      { path: '/predictions', label: 'Predictions' },
+      { path: '/watchlist', label: 'Watchlist' },
     ],
   },
-  { path: '/docs', label: 'Docs', icon: BookOpen },
+  { kind: 'leaf', id: 'admin', path: '/admin', label: 'Admin', icon: Zap },
+  { kind: 'leaf', id: 'docs', path: '/docs', label: 'Docs', icon: BookOpen },
 ]
 
-function isLeaf(e: NavEntry): e is NavLeaf {
-  return (e as NavLeaf).path !== undefined
-}
-
-function pathMatches(pathname: string, target: string, exact = false): boolean {
+function pathMatches(pathname: string, target: string): boolean {
   if (target === '/') return pathname === '/'
-  if (exact) return pathname === target
   return pathname === target || pathname.startsWith(target + '/')
 }
 
-function NavList({ onNavigate }: { onNavigate?: () => void }) {
-  const location = useLocation()
+function isEntryActive(entry: NavEntry, pathname: string): boolean {
+  if (entry.kind === 'leaf') return pathMatches(pathname, entry.path)
+  return entry.children.some((c) => pathMatches(pathname, c.path))
+}
+
+/**
+ * Resolve the section a pathname belongs to. Used by the topbar to switch
+ * from breadcrumb-mode (for leaves like /, /admin, /docs) to tab-mode
+ * (for /motion, /predictions, /macro, /watchlist → Decide;
+ * /research, /theses, /tv-context, /the-street → Think).
+ *
+ * Returns null when the route is a leaf, deep-link (e.g. /ticker/:symbol),
+ * or unmatched — caller falls back to breadcrumb.
+ */
+function findCurrentSection(pathname: string): NavSection | null {
+  for (const entry of NAV_ENTRIES) {
+    if (
+      entry.kind === 'section' &&
+      entry.children.some((c) => pathMatches(pathname, c.path))
+    ) {
+      return entry
+    }
+  }
+  return null
+}
+
+function RailIcon({
+  entry,
+  active,
+  onClick,
+}: {
+  entry: NavEntry
+  active: boolean
+  onClick: () => void
+}) {
+  const Icon = entry.icon
   return (
-    <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-      {NAV_GROUPS.map((entry) =>
-        isLeaf(entry) ? (
-          <NavLeafLink
-            key={entry.path}
-            leaf={entry}
-            active={pathMatches(location.pathname, entry.path, entry.exact)}
-            onNavigate={onNavigate}
-          />
-        ) : (
-          <NavSection
-            key={entry.id}
-            group={entry}
-            pathname={location.pathname}
-            onNavigate={onNavigate}
-          />
-        ),
-      )}
-    </nav>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={entry.label}
+      title={entry.label}
+      className={[
+        'h-11 w-11 flex items-center justify-center rounded-2xl transition-all duration-150',
+        active
+          ? 'shadow-inset-sm text-primary'
+          : 'text-muted-foreground hover:text-foreground hover:shadow-extruded-sm',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+      ].join(' ')}
+    >
+      <Icon className="h-5 w-5" />
+    </button>
   )
 }
 
-function NavLeafLink({
-  leaf,
-  active,
+function DrawerPanel({
+  section,
+  pathname,
   onNavigate,
-  nested = false,
 }: {
-  leaf: NavLeaf
-  active: boolean
-  onNavigate?: () => void
-  nested?: boolean
+  section: NavSection
+  pathname: string
+  onNavigate: () => void
 }) {
-  const Icon = leaf.icon
+  return (
+    <div className="flex flex-col h-full">
+      <div className="px-6 pt-6 pb-3">
+        <div className="text-xs font-mono text-muted-foreground">
+          {section.label}
+        </div>
+      </div>
+      <nav className="flex-1 overflow-y-auto px-3 space-y-1">
+        {section.children.map((child) => {
+          const active = pathMatches(pathname, child.path)
+          const ChildIcon = child.icon
+          return (
+            <Link
+              key={child.path}
+              to={child.path}
+              onClick={onNavigate}
+              className={[
+                'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 min-h-[44px]',
+                active
+                  ? 'shadow-inset-sm text-primary bg-background'
+                  : 'text-muted-foreground hover:text-foreground hover:shadow-extruded-sm',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              ].join(' ')}
+            >
+              {ChildIcon && <ChildIcon className="h-4 w-4" />}
+              <span>{child.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+      <div className="pt-2">
+        <RxStatusWidget />
+        <HypothesisStatusWidget />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * KLogoLink — home link + ambient attention ring.
+ *
+ * Phase 6 color taxonomy (motion designer council): the K-glyph in the
+ * rail breathes a primary box-shadow ring (0.10 → 0.22 alpha at 3.2s
+ * ease-in-out infinite) when total inbox count > 0. Peripheral-vision
+ * channel — operator never has to look at it directly, but they "feel
+ * the room go quiet" when inbox hits zero. One signal app-wide;
+ * deliberately constrained per the no-decoration rule.
+ */
+function KLogoLink({ onClick }: { onClick: () => void }) {
+  const inboxTotal = useInboxTotal()
+  const ringClass = inboxTotal > 0 ? 'animate-attention-pulse' : ''
   return (
     <Link
-      to={leaf.path}
-      onClick={onNavigate}
-      className={[
-        'flex items-center gap-3 rounded-2xl text-sm font-medium transition-all duration-200 ease-out min-h-[40px]',
-        nested ? 'pl-10 pr-4 py-2' : 'px-4 py-3 min-h-[44px]',
-        active
-          ? 'shadow-inset-sm text-violet bg-background'
-          : 'text-muted-foreground hover:text-foreground hover:shadow-extruded-sm',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-      ].join(' ')}
+      to="/"
+      aria-label="Kronos home"
+      title={inboxTotal > 0 ? `Kronos · Today (${inboxTotal} in inbox)` : 'Kronos · Today'}
+      onClick={onClick}
+      className={`h-10 w-10 flex items-center justify-center rounded-2xl font-display font-extrabold text-base text-primary shadow-extruded-sm hover:shadow-extruded transition-all mb-2 ${ringClass}`}
     >
-      {Icon && <Icon className="h-4 w-4" />}
-      {leaf.label}
+      K
     </Link>
   )
 }
 
-function NavSection({
-  group,
+function TopbarSectionTabs({
+  section,
   pathname,
-  onNavigate,
 }: {
-  group: NavGroup
+  section: NavSection
   pathname: string
-  onNavigate?: () => void
 }) {
-  const sectionActive = useMemo(
-    () => group.children.some((c) => pathMatches(pathname, c.path, c.exact)),
-    [group.children, pathname],
-  )
-  const storageKey = `sidebar.collapsed.${group.id}`
-  // Admin is system-config + recovery — not opened daily. Default-collapsed.
-  const defaultCollapsed = group.id === 'admin'
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return defaultCollapsed
-    const stored = window.localStorage.getItem(storageKey)
-    if (stored === '1') return true
-    if (stored === '0') return false
-    return defaultCollapsed
-  })
-
-  // Auto-expand when navigating into a child route. Don't auto-collapse —
-  // operator's manual collapse must stick.
-  useEffect(() => {
-    if (sectionActive) setCollapsed(false)
-  }, [sectionActive])
-
-  useEffect(() => {
-    window.localStorage.setItem(storageKey, collapsed ? '1' : '0')
-  }, [collapsed, storageKey])
-
-  const Icon = group.icon
+  const SectionIcon = section.icon
   return (
-    <div className="space-y-1">
-      <button
-        type="button"
-        onClick={() => setCollapsed((v) => !v)}
-        aria-expanded={!collapsed}
-        className={[
-          'w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 ease-out min-h-[44px]',
-          sectionActive
-            ? 'text-foreground'
-            : 'text-muted-foreground hover:text-foreground hover:shadow-extruded-sm',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-        ].join(' ')}
+    <div className="flex items-center gap-3 min-w-0 w-full">
+      <div className="flex items-center gap-2 shrink-0">
+        <SectionIcon className="h-4 w-4 text-primary" />
+        <span className="text-sm font-semibold text-foreground">
+          {section.label}
+        </span>
+      </div>
+      <div className="h-4 w-px bg-border/60 shrink-0" aria-hidden />
+      <nav
+        className="flex items-center gap-1 overflow-x-auto"
+        aria-label={`${section.label} tabs`}
       >
-        {Icon && <Icon className="h-4 w-4" />}
-        <span className="flex-1 text-left">{group.label}</span>
-        {collapsed ? (
-          <ChevronRight className="h-3.5 w-3.5 opacity-60" />
-        ) : (
-          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-        )}
-      </button>
-      {!collapsed && (
-        <div className="space-y-0.5">
-          {group.children.map((child) => (
-            <NavLeafLink
+        {section.children.map((child) => {
+          const active = pathMatches(pathname, child.path)
+          return (
+            <Link
               key={child.path}
-              leaf={child}
-              active={pathMatches(pathname, child.path, child.exact)}
-              onNavigate={onNavigate}
-              nested
-            />
-          ))}
-        </div>
-      )}
+              to={child.path}
+              className={[
+                'px-3 py-1.5 rounded-xl text-sm font-medium transition-all duration-150 whitespace-nowrap',
+                active
+                  ? 'shadow-inset-sm text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:shadow-extruded-sm',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              ].join(' ')}
+            >
+              {child.label}
+            </Link>
+          )
+        })}
+      </nav>
     </div>
   )
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const navigate = useNavigate()
+  const [openSection, setOpenSection] = useState<string | null>(null)
 
-  // Close mobile drawer on route change.
+  // Drawer auto-closes on navigation — keeps the canvas clear once you've
+  // picked a destination. Operator can re-open via the rail any time.
   useEffect(() => {
-    setMobileOpen(false)
+    setOpenSection(null)
   }, [location.pathname])
 
-  // Lock body scroll when drawer open.
+  // Esc collapses the drawer (a11y muscle memory).
   useEffect(() => {
-    document.body.style.overflow = mobileOpen ? 'hidden' : ''
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpenSection(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Lock body scroll while the overlay is up (matters on mobile).
+  useEffect(() => {
+    document.body.style.overflow = openSection ? 'hidden' : ''
     return () => {
       document.body.style.overflow = ''
     }
-  }, [mobileOpen])
+  }, [openSection])
 
   const breadcrumb =
     location.pathname === '/'
       ? 'Today'
       : location.pathname.split('/').filter(Boolean).join(' / ')
 
+  const openEntry =
+    openSection
+      ? (NAV_ENTRIES.find(
+          (e) => e.id === openSection && e.kind === 'section',
+        ) as NavSection | undefined)
+      : undefined
+
+  // Topbar adapts: section-aware tabs for /motion, /predictions, ...
+  // (Decide/Think children); breadcrumb-only for leaves + deep-links.
+  const sectionForTopbar = findCurrentSection(location.pathname)
+
+  function handleRailClick(entry: NavEntry) {
+    if (entry.kind === 'leaf') {
+      navigate(entry.path)
+      setOpenSection(null)
+      return
+    }
+    setOpenSection((cur) => (cur === entry.id ? null : entry.id))
+  }
+
   return (
     <div className="min-h-screen w-full bg-background text-foreground">
-      {/* Desktop sidebar (hidden < md) */}
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-60 flex-col bg-background shadow-extruded z-40">
-        <div className="h-16 flex items-center px-6">
-          <h1 className="font-display font-extrabold text-xl tracking-tight">
-            Kronos
-          </h1>
-        </div>
-        <NavList />
-        <HypothesisStatusWidget />
+      {/* Icon rail — 56px, fixed, always visible (incl. mobile). */}
+      <aside className="fixed left-0 top-0 bottom-0 w-14 flex flex-col items-center py-3 bg-background shadow-extruded z-50">
+        <KLogoLink onClick={() => setOpenSection(null)} />
+        <nav className="flex-1 flex flex-col items-center gap-1 mt-2">
+          {NAV_ENTRIES.map((entry) => (
+            <RailIcon
+              key={entry.id}
+              entry={entry}
+              active={
+                isEntryActive(entry, location.pathname) || openSection === entry.id
+              }
+              onClick={() => handleRailClick(entry)}
+            />
+          ))}
+        </nav>
       </aside>
 
-      {/* Mobile drawer + overlay */}
-      {mobileOpen && (
+      {/* Drawer + backdrop (only when a section is open). */}
+      {openEntry && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
-            onClick={() => setMobileOpen(false)}
+            className="fixed inset-0 z-30 bg-black/20 backdrop-blur-[1px]"
+            onClick={() => setOpenSection(null)}
+            aria-hidden
           />
-          <aside className="fixed left-0 top-0 bottom-0 w-72 flex flex-col bg-background shadow-extruded z-50 md:hidden animate-in slide-in-from-left duration-200">
-            <div className="h-16 flex items-center justify-between px-6">
-              <h1 className="font-display font-extrabold text-xl tracking-tight">
-                Kronos
-              </h1>
-              <button
-                onClick={() => setMobileOpen(false)}
-                className="h-10 w-10 flex items-center justify-center rounded-xl shadow-extruded-sm hover:shadow-extruded transition-all"
-                aria-label="Close menu"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <NavList />
-            <HypothesisStatusWidget />
+          <aside
+            className="fixed left-14 top-0 bottom-0 w-60 flex flex-col bg-background shadow-extruded z-40 animate-in slide-in-from-left duration-150"
+            role="dialog"
+            aria-label={`${openEntry.label} menu`}
+          >
+            <DrawerPanel
+              section={openEntry}
+              pathname={location.pathname}
+              onNavigate={() => setOpenSection(null)}
+            />
           </aside>
         </>
       )}
 
-      {/* Main column */}
-      <main className="md:ml-60 flex flex-col min-h-screen">
-        {/* Topbar */}
-        <header className="sticky top-0 h-16 bg-background/80 backdrop-blur-sm flex items-center justify-between px-4 md:px-8 z-30 shadow-[0_4px_12px_rgba(163,177,198,0.2)]">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              onClick={() => setMobileOpen(true)}
-              className="md:hidden h-10 w-10 flex items-center justify-center rounded-xl shadow-extruded-sm hover:shadow-extruded transition-all"
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
+      {/* Main column — always offset by the rail (56px). */}
+      <main className="ml-14 flex flex-col min-h-screen">
+        {/* Translucent topbar — float over content w/ a thin underline so
+            the body reads as a separate plane underneath. Section-aware:
+            tabs for Decide/Think, breadcrumb for leaves + deep-links. */}
+        <header className="sticky top-0 h-14 bg-background/30 backdrop-blur-xl flex items-center px-4 md:px-6 z-20 border-b border-border/30 shadow-[0_1px_6px_rgba(163,177,198,0.06)]">
+          {sectionForTopbar ? (
+            <TopbarSectionTabs
+              section={sectionForTopbar}
+              pathname={location.pathname}
+            />
+          ) : (
             <div className="font-medium text-sm text-muted-foreground capitalize truncate">
               {breadcrumb}
             </div>
-          </div>
-          <BackendToggle />
+          )}
         </header>
 
         <BackendHealthBanner />
 
-        {/* Content */}
         <div className="flex-1 p-4 md:p-8">
           <div className="max-w-7xl mx-auto">{children}</div>
         </div>

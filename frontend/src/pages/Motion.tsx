@@ -1,56 +1,66 @@
-import { useNavigate, useParams } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import { useParams } from 'react-router-dom'
 import { Opportunities } from './Opportunities'
 import { Trades } from './Trades'
+import { Skeleton } from '../components/ui/skeleton'
+import { TabbedShell } from '../components/common/TabbedShell'
 
-type Tab = 'opportunities' | 'trades'
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'opportunities', label: 'Opportunities' },
-  { id: 'trades',        label: 'Trades' },
-]
+// Lazy-load the rx-layer surfaces so react-markdown + the rec pages only
+// ship when the operator opens them.
+const RxFinance = lazy(() =>
+  import('./RxFinance').then((m) => ({ default: m.RxFinance })),
+)
+const RxFinanceDetail = lazy(() =>
+  import('./RxFinanceDetail').then((m) => ({ default: m.RxFinanceDetail })),
+)
+const RxFinancePositions = lazy(() =>
+  import('./RxFinancePositions').then((m) => ({ default: m.RxFinancePositions })),
+)
 
-// "Motion" groups what-could-happen (opportunities) with what-did-happen
-// (trades) — both are decision-action surfaces that share the
-// per-rule/per-hypothesis P&L story. Same wrapper shape as Predictions.
+const SuspendedRxFinance = () => (
+  <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+    <RxFinance />
+  </Suspense>
+)
+const SuspendedRxPositions = () => (
+  <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+    <RxFinancePositions />
+  </Suspense>
+)
+const SuspendedRxDetail = () => (
+  <Suspense fallback={<Skeleton className="h-60 w-full" />}>
+    <RxFinanceDetail />
+  </Suspense>
+)
+
+/**
+ * Motion — decide/act/hold/reflect shell.
+ *
+ *   /motion              → Opportunities (default)
+ *   /motion/trades       → Trade journal
+ *   /motion/positions    → Position aggregation
+ *   /motion/recs         → rx recommendations list
+ *   /motion/recs/:id     → rec detail (shell short-circuits)
+ *
+ * The `id` URL param indicates detail mode (literal `recs` segment means
+ * `tab` is unbound). Phase 1 refactor — uses `TabbedShell` primitive.
+ */
 export function Motion() {
-  const { tab: tabParam } = useParams<{ tab?: string }>()
-  const navigate = useNavigate()
-  const tab: Tab = (TABS.find((t) => t.id === tabParam)?.id ?? 'opportunities') as Tab
+  const { id } = useParams<{ id?: string }>()
 
   return (
-    <div className="space-y-4">
-      <div
-        role="tablist"
-        aria-label="Motion view"
-        className="inline-flex rounded-xl bg-background shadow-inset-sm p-1 gap-1"
-      >
-        {TABS.map((t) => {
-          const active = t.id === tab
-          return (
-            <button
-              key={t.id}
-              role="tab"
-              aria-selected={active}
-              onClick={() =>
-                navigate(
-                  t.id === 'opportunities' ? '/motion' : `/motion/${t.id}`,
-                )
-              }
-              className={[
-                'px-3 py-1.5 rounded-lg text-xs transition-all',
-                active
-                  ? 'bg-card text-foreground shadow-extruded-sm font-medium'
-                  : 'text-muted-foreground hover:text-foreground',
-              ].join(' ')}
-            >
-              {t.label}
-            </button>
-          )
-        })}
-      </div>
-
-      {tab === 'opportunities' && <Opportunities />}
-      {tab === 'trades' && <Trades />}
-    </div>
+    <TabbedShell
+      basePath="/motion"
+      ariaLabel="Motion view"
+      isDetail={!!id}
+      detail={<SuspendedRxDetail />}
+      tabs={[
+        { id: 'opportunities', label: 'Opportunities', render: () => <Opportunities /> },
+        { id: 'trades',        label: 'Trades',        render: () => <Trades /> },
+        { id: 'positions',     label: 'Positions',     render: () => <SuspendedRxPositions /> },
+        { id: 'recs',          label: 'Recommendations', render: () => <SuspendedRxFinance /> },
+      ]}
+    />
   )
 }
 

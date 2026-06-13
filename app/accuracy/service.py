@@ -39,9 +39,10 @@ from app.tickers import service as tickers_svc
 
 logger = logging.getLogger(__name__)
 
-# How often the lifespan loop ticks. Hourly is plenty — actuals only land
-# after each bar closes, and the evaluator is cheap when nothing's pending.
-_DEFAULT_TICK_SECONDS = 60 * 60
+# How often the lifespan loop ticks. Daily (24h) — predictions + OHLCV bars
+# land once per trading day, so hourly was work without new actuals to score.
+# Reduced 2026-05-16 from hourly per operator request.
+_DEFAULT_TICK_SECONDS = 60 * 60 * 24
 
 # Cap how many times we ask the provider for the same (ticker, interval,
 # target_ts) bar. Hourly tick × 24 = give up after one day of trying. Beyond

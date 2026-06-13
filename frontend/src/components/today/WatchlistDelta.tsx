@@ -65,12 +65,12 @@ export function WatchlistDelta() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <List className="h-4 w-4 text-violet" />
+          <List className="h-4 w-4 text-primary" />
           Watchlist delta
         </CardTitle>
         <Link
           to="/roster"
-          className="text-xs text-muted-foreground hover:text-violet flex items-center gap-1"
+          className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
         >
           Roster <ArrowRight className="h-3 w-3" />
         </Link>

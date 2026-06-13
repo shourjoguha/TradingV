@@ -26,6 +26,7 @@ def _serialize(t: Trade) -> dict[str, Any]:
         "id": t.id,
         "opportunity_id": t.opportunity_id,
         "related_rec_id": t.related_rec_id,
+        "rec_influence_kind": t.rec_influence_kind,
         "ticker": t.ticker,
         "side": t.side,
         "qty": t.qty,
@@ -51,9 +52,20 @@ async def create_trade(
     fees: float = 0.0,
     notes_md: Optional[str] = None,
     related_rec_id: Optional[str] = None,
+    rec_influence_kind: Optional[str] = None,
 ) -> dict[str, Any]:
     if side not in ("buy", "sell"):
         raise ValueError(f"invalid side: {side}")
+    if rec_influence_kind is not None:
+        if rec_influence_kind not in ("preceded_independent", "influenced"):
+            raise ValueError(
+                "rec_influence_kind must be 'preceded_independent' or "
+                "'influenced'"
+            )
+        if not related_rec_id:
+            raise ValueError(
+                "rec_influence_kind requires related_rec_id"
+            )
     entry_at = entry_at or datetime.datetime.now(datetime.timezone.utc)
     async with _db.SessionLocal() as session:
         if opportunity_id:
@@ -81,6 +93,7 @@ async def create_trade(
             fees=fees,
             notes_md=notes_md,
             related_rec_id=related_rec_id,
+            rec_influence_kind=rec_influence_kind,
         )
         session.add(t)
         await session.commit()

@@ -57,7 +57,7 @@ export function RetentionTab() {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                <tr className="border-b text-xs font-mono text-muted-foreground">
                   <th className="py-2 pr-3">Class</th>
                   <th className="py-2 pr-3">Rows</th>
                   <th className="py-2 pr-3">Oldest</th>
@@ -70,12 +70,12 @@ export function RetentionTab() {
                   <tr key={row.key} className="border-b last:border-b-0 align-top">
                     <td className="py-2 pr-3">
                       <div className="text-sm font-medium">{row.title}</div>
-                      <div className="text-[10px] text-muted-foreground">{row.key}</div>
+                      <div className="text-xs text-muted-foreground">{row.key}</div>
                     </td>
                     <td className="py-2 pr-3 text-sm">
                       {row.row_count}
                       {row.row_count_extra && (
-                        <div className="text-[10px] text-muted-foreground">
+                        <div className="text-xs text-muted-foreground">
                           {Object.entries(row.row_count_extra)
                             .map(([k, v]) => `${k}: ${v}`)
                             .join(' · ')}
@@ -88,7 +88,7 @@ export function RetentionTab() {
                     <td className="py-2 pr-3 text-xs text-muted-foreground">
                       {typeof row.ttl_days === 'number' ? `${row.ttl_days}d` : row.ttl_days}
                       {row.ttl_days_extra && (
-                        <div className="text-[10px]">
+                        <div className="text-xs">
                           {Object.entries(row.ttl_days_extra)
                             .map(([k, v]) => `${k}: ${typeof v === 'number' ? `${v}d` : v}`)
                             .join(' · ')}

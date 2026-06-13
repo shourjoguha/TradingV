@@ -18,19 +18,19 @@ export function ProposedActionCard({ queryId, proposed, status }: Props) {
   const isFinal = status === 'approved' || status === 'dismissed'
 
   return (
-    <div className="rounded-2xl shadow-extruded-sm bg-background p-3 space-y-2 border-2 border-violet/20">
+    <div className="rounded-2xl shadow-extruded-sm bg-background p-3 space-y-2 border-2 border-primary/20">
       <div className="flex items-center gap-2 flex-wrap">
-        <Wand2 className="h-4 w-4 text-violet shrink-0" />
+        <Wand2 className="h-4 w-4 text-primary shrink-0" />
         <div className="text-sm font-medium">Proposed action</div>
-        <Badge variant="default" className="font-mono text-[10px]">
+        <Badge variant="default" className="font-mono text-xs">
           {proposed.hypothesis_slug}
         </Badge>
-        <div className="ml-auto text-[10px] font-mono uppercase tracking-wider text-muted-foreground tabular-nums">
+        <div className="ml-auto text-xs font-mono text-muted-foreground tabular-nums">
           conf {(proposed.confidence ?? 0).toFixed(2)}
         </div>
       </div>
 
-      <pre className="rounded-xl shadow-inset-sm bg-background p-2 text-[10px] font-mono whitespace-pre-wrap break-all">
+      <pre className="rounded-xl shadow-inset-sm bg-background p-2 text-xs font-mono whitespace-pre-wrap break-all">
         {proposed.proposed_invalidator.op}
         {'  '}
         {JSON.stringify(proposed.proposed_invalidator.args)}

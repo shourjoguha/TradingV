@@ -46,7 +46,7 @@ export function HeaderStrip({ symbol }: Props) {
               <Badge
                 key={k}
                 variant="outline"
-                className="text-[10px] max-w-full truncate"
+                className="text-xs max-w-full truncate"
               >
                 {k}: {String(v)}
               </Badge>
@@ -92,7 +92,7 @@ export function HeaderStrip({ symbol }: Props) {
               to={`https://www.tradingview.com/symbols/${symbol}/`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-muted-foreground hover:text-violet flex items-center gap-1"
+              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
             >
               TV.com <ExternalLink className="h-3 w-3" />
             </Link>

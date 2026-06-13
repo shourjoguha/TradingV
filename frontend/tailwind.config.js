@@ -29,6 +29,12 @@ export default {
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
+          // Hover + active variants for the graphite-ink primary (2026-05-17
+          // recast — replaces the previous vibrant violet). Use as
+          // `bg-primary-light` for hover surface fills and inactive-tab text,
+          // `bg-primary-active` for pressed CTAs + focused input borders.
+          light: '#4A5C73',
+          active: '#1C2838',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
@@ -74,14 +80,36 @@ export default {
           fg: '#574115',
           bg: '#F5E7C5',
         },
-        // Accent shorthand for direct use (the design-system spec
-        // names these). Same as primary above; here for clarity.
-        violet: {
-          DEFAULT: '#6C63FF',
-          light: '#8B84FF',
-        },
+        // (Previously a vibrant violet `#6C63FF` lived here as the
+        // primary accent. Recast to graphite ink 2026-05-17 — see ADR
+        // / decisions in roadmap-shipped retro. Use `primary` /
+        // `primary-light` / `primary-active` instead.)
         teal: {
           DEFAULT: '#38B2AC',
+        },
+        // Matte-bold identity palette (2026-05-17 council).
+        // Identity = "what kind of content is this" (regime / narrative
+        // / ambient). Orthogonal to the semantic trio above (success
+        // /danger/warning encode direction-of-state). Use as 4px left-
+        // bars, dots, badge fills, sparkline strokes — NEVER as card
+        // backgrounds. See .claude/frontend/ui-components.md "Color
+        // taxonomy" for the rules of engagement.
+        identity: {
+          inflation: '#C58A3D',  // burnt ochre — Macro/Inflation regime
+          growth:    '#3F7A6E',  // forest-teal — Macro/Growth + realized-positive (closed wins)
+          liquidity: '#4A6FA5',  // slate-blue  — Macro/Liquidity + Yield curve
+          stress:    '#B0533C',  // brick       — Macro/Stress + invalidated-thesis tier
+          narrative: '#7A5AA8',  // plum        — Theses + Research-answer chrome + TV-Context
+          ambient:   '#5C7A8C',  // steel       — sparkline gridlines + Today's "curious" card
+        },
+        // Motion-only wash colors. Used to lerp card-bg during
+        // disposition POST 200 (success/snooze/dismiss) and the
+        // K-logo ambient-attention ring. Saturation is intentionally
+        // low so washes feel like light, not paint.
+        wash: {
+          success: 'hsl(158 38% 84%)',
+          snooze:  'hsl(38 45% 86%)',
+          dismiss: 'hsl(220 6% 82%)',
         },
       },
       borderRadius: {
@@ -102,6 +130,9 @@ export default {
         inset: 'inset 6px 6px 10px rgb(163 177 198 / 0.6), inset -6px -6px 10px rgba(255 255 255 / 0.5)',
         'inset-deep': 'inset 10px 10px 20px rgb(163 177 198 / 0.7), inset -10px -10px 20px rgba(255 255 255 / 0.6)',
         'inset-sm': 'inset 3px 3px 6px rgb(163 177 198 / 0.6), inset -3px -3px 6px rgba(255 255 255 / 0.5)',
+        // Ambient-attention ring for the K-logo when inbox > 0.
+        // Used by the .animate-attention-pulse keyframe in index.css.
+        'attention-ring': '0 0 0 1px hsl(213 28% 25% / 0.18)',
       },
       fontFamily: {
         display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
@@ -121,11 +152,36 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        // K-logo breathing ring (Phase 6 color taxonomy). Slow 3.2s cycle,
+        // peripheral-vision channel — felt, not seen.
+        'attention-pulse': {
+          '0%, 100%': { boxShadow: '0 0 0 1px hsl(213 28% 25% / 0.10)' },
+          '50%':      { boxShadow: '0 0 0 1px hsl(213 28% 25% / 0.22)' },
+        },
+        // Disposition wash (Phase 5). Overlay div mounts on POST 200,
+        // backgroundColor lerps to wash color at mid-point and back to
+        // transparent. Three variants — success / snooze / dismiss.
+        'disposition-wash-success': {
+          '0%, 100%': { backgroundColor: 'transparent' },
+          '50%':      { backgroundColor: 'hsl(158 38% 84%)' },
+        },
+        'disposition-wash-snooze': {
+          '0%, 100%': { backgroundColor: 'transparent' },
+          '50%':      { backgroundColor: 'hsl(38 45% 86%)' },
+        },
+        'disposition-wash-dismiss': {
+          '0%, 100%': { backgroundColor: 'transparent' },
+          '50%':      { backgroundColor: 'hsl(220 6% 82%)' },
+        },
       },
       animation: {
         float: 'float 3s ease-in-out infinite',
         'accordion-down': 'accordion-down 0.18s ease-out',
         'accordion-up': 'accordion-up 0.18s ease-out',
+        'attention-pulse': 'attention-pulse 3.2s ease-in-out infinite',
+        'disposition-wash-success': 'disposition-wash-success 320ms ease-out',
+        'disposition-wash-snooze':  'disposition-wash-snooze 320ms ease-out',
+        'disposition-wash-dismiss': 'disposition-wash-dismiss 320ms ease-out',
       },
     },
   },

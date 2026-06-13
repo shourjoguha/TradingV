@@ -416,6 +416,36 @@ async def list_by_ticker(
     return list(result.scalars().all())
 
 
+async def list_recent(
+    *,
+    session: AsyncSession,
+    include_expired: bool = False,
+    kinds: list[str] | None = None,
+    limit: int = 50,
+) -> list[TVContextItem]:
+    """List the most recent TV-context items across all tickers.
+
+    Used by Today's `InboxCounter` to render an at-a-glance pending-count
+    without per-ticker fan-out. Pre-existing per-ticker hooks (e.g.
+    `useTVContextByTicker` × roster-top-N) over-fetch when the operator just
+    wants "how many items in the inbox right now?".
+
+    Default excludes expired rows (status != 'active'). `kinds` optionally
+    filters the polymorphic shape (note/idea/event/screenshot/webhook).
+    """
+    stmt = (
+        select(TVContextItem)
+        .order_by(TVContextItem.captured_at.desc())
+        .limit(limit)
+    )
+    if not include_expired:
+        stmt = stmt.where(TVContextItem.status == STATUS_ACTIVE)
+    if kinds:
+        stmt = stmt.where(TVContextItem.kind.in_(list(kinds)))
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def get_by_id(
     *, session: AsyncSession, item_id: str
 ) -> TVContextItem | None:

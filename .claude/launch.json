@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "frontend"],
       "port": 3000
+    },
+    {
+      "name": "ia-explainer",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/shourjosmac/Documents/Claude/ia-explainer", "run", "dev"],
+      "port": 8500
     }
   ]
 }

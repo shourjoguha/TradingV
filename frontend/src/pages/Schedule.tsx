@@ -77,7 +77,7 @@ export function Schedule() {
   }
   if (isLoadingSchedule || isLoadingModels) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-[200px]" />
         <Card>
           <CardContent className="p-6 space-y-4">
@@ -90,7 +90,7 @@ export function Schedule() {
     )
   }
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-heading font-semibold tracking-tight">
@@ -292,7 +292,7 @@ export function Schedule() {
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Status</CardTitle>

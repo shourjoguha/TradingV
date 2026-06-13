@@ -11,7 +11,67 @@ from . import embed as _embed
 from . import hybrid as _hybrid
 from . import lexical as _lexical
 from . import query_parse as _qp
+from . import retrieval_log as _rlog
 from .config import CONFIG
+
+
+def _maybe_log(
+    con,
+    *,
+    query: str,
+    mode: str,
+    k: int,
+    parsed,
+    eligible_count: int,
+    pre_cut: list[dict],
+    surfaced: list[dict],
+    enabled: bool,
+) -> None:
+    """Record this search to the retrieval log (best-effort).
+
+    ``dropped`` = candidates that were fully scored but fell outside the
+    top-k cut — the eligible-but-not-surfaced delta. In fast mode the reason
+    is always rank; Phase 1 deep mode attaches richer per-candidate reasons
+    upstream and they flow through here unchanged.
+    """
+    if not enabled:
+        return
+    try:
+        surfaced_keys = {(s.get("path"), s.get("ord")) for s in surfaced}
+        dropped = [
+            {
+                "path": c.get("path"),
+                "ord": c.get("ord"),
+                "score": c.get("score"),
+                "reason": c.get("drop_reason", "below_top_k"),
+            }
+            for c in pre_cut
+            if (c.get("path"), c.get("ord")) not in surfaced_keys
+        ]
+        anchors = None
+        if parsed is not None and parsed.has_anchors():
+            anchors = {
+                "tickers": sorted(getattr(parsed, "tickers", set()) or []),
+                "kinds": sorted(getattr(parsed, "kinds", set()) or []),
+                "since": (
+                    parsed.since.isoformat()
+                    if getattr(parsed, "since", None)
+                    else None
+                ),
+            }
+        _rlog.record(
+            con,
+            query=query,
+            mode=mode,
+            domain=CONFIG.domain,
+            k=k,
+            anchors=anchors,
+            eligible_count=max(eligible_count, len(pre_cut)),
+            surfaced=surfaced,
+            dropped=dropped,
+        )
+    except Exception:  # noqa: BLE001 — logging must never break search
+        pass
 
 
 # Process-cached ticker lexicon. Loaded lazily on first search call; refreshed
@@ -49,6 +109,8 @@ def search(
     hybrid: Optional[bool] = None,
     excerpts: bool = True,
     parse: bool = True,
+    mode: str = "fast",
+    log: bool = True,
 ) -> list[dict]:
     """Vector search with optional hybrid re-rank.
 
@@ -125,7 +187,15 @@ def search(
             """,
             (qblob, raw_k),
         ))
+    # Raw eligible pool size (vector KNN over-fetch) — recorded by the
+    # retrieval log as the denominator for "what could have surfaced".
+    eligible_count = len(rows)
+
     if not rows:
+        _maybe_log(
+            con, query=query, mode=mode, k=k, parsed=parsed,
+            eligible_count=0, pre_cut=[], surfaced=[], enabled=log,
+        )
         return []
 
     # Distance is cosine distance ∈ [0, 2]; convert to similarity ∈ [-1, 1].
@@ -321,7 +391,16 @@ def search(
     if use_hybrid:
         out = _hybrid.rerank(out, con, _hybrid.from_config())
 
+    # Snapshot the fully-scored candidate set BEFORE the top-k cut so the
+    # retrieval log can record which eligible candidates were dropped purely
+    # by rank (the "had it, didn't surface" delta — limitation C1).
+    pre_cut = list(out)
     out = out[:k]
+    _maybe_log(
+        con, query=query, mode=mode, k=k, parsed=parsed,
+        eligible_count=eligible_count, pre_cut=pre_cut, surfaced=out,
+        enabled=log,
+    )
 
     # Extractive teaser: 2 sentences from each chunk most relevant to the
     # query. Reuses the already-loaded BGE encoder. Despite the original

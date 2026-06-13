@@ -1,61 +1,24 @@
 import { useEffect, useState } from 'react'
-import { Laptop, Sparkles } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { Sparkles } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { AskInput } from '../components/research/AskInput'
 import { AnswerCard } from '../components/research/AnswerCard'
 import { HistoryList } from '../components/research/HistoryList'
 import { ContextNeededBanner } from '../components/research/ContextNeededBanner'
 import { SkillPicker } from '../components/research/SkillPicker'
+import { Input } from '../components/ui/input'
+import { Button } from '../components/ui/button'
+import { InfoBubble } from '../components/common'
+import { Loader2, Send } from 'lucide-react'
 import { useResearchAsk, useResearchQueries } from '../hooks/use-api'
-import { useBackend } from '../hooks/use-backend'
 
 const PAGE_SIZE = 10
 
-function ResearchLaptopOnlyBanner() {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Sparkles className="h-5 w-5 text-violet" />
-        <div>
-          <h2 className="text-2xl font-heading font-semibold tracking-tight">Research</h2>
-          <p className="text-muted-foreground text-sm">
-            Stress-test active hypotheses against the vault.
-          </p>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Laptop className="h-4 w-4 text-violet" />
-            Research is laptop-only
-          </CardTitle>
-          <CardDescription>
-            The knowledge vault and its indexer live on your laptop. Railway has no vault to query
-            against and no Obsidian for the markdown approval flow.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>
-            Switch the backend toggle (top-right) to <strong>Laptop</strong> to ask a question or
-            review past stress-tests.
-          </p>
-          <p className="text-xs">
-            Why this is a deliberate split: vault content is curated on your local disk; replicating
-            it to Railway would require a second indexer + embedding cache + a non-markdown
-            approval path. See <code>.claude/decisions/014-vault-indexer.md</code> and{' '}
-            <code>015-research-stress-test.md</code>.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+// Railway shut down 2026-05-17 — the LaptopOnlyBanner branch was removed.
+// Research has always been laptop-only (vault + indexer live on laptop disk);
+// see .claude/decisions/014-vault-indexer.md.
 
 export function Research() {
-  const { backendId } = useBackend()
-  if (backendId === 'railway') return <ResearchLaptopOnlyBanner />
-
   return <ResearchLaptop />
 }
 
@@ -100,27 +63,42 @@ function ResearchLaptop() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Sparkles className="h-5 w-5 text-violet" />
-        <div>
-          <h2 className="text-2xl font-heading font-semibold tracking-tight">Research</h2>
-          <p className="text-muted-foreground text-sm">
-            Stress-test active hypotheses against the vault. Single-turn — every answer is logged
-            both here and as a markdown file in the vault's <code>Research/</code> folder.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <h2 className="text-2xl font-heading font-semibold tracking-tight flex items-center gap-2">
+        <Sparkles className="h-5 w-5 text-primary" />
+        Research
+        <InfoBubble
+          label="About Research"
+          size={14}
+          content={
+            <>
+              Stress-test active hypotheses against the vault. Single-turn — every answer
+              is logged both here and as a markdown file in the vault's{' '}
+              <code>Research/</code> folder.
+            </>
+          }
+        />
+      </h2>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Ask</CardTitle>
-          <CardDescription>
-            Pose a question. Optionally scope to specific hypotheses. Claude returns a verdict +
-            supporting evidence + (sometimes) a proposed invalidator update.
-          </CardDescription>
+      <Card className="relative">
+        {/* Think-section card pattern (2026-05-17 — mirrors Macro
+            panels): 4px identity-narrative left-bar + text-xl title +
+            tight pb-1 trailing gap. Single consistent treatment across
+            Research / Theses / Macro / TV-Context / The Street. */}
+        <div
+          aria-hidden
+          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-3xl bg-identity-narrative"
+        />
+        <CardHeader className="pb-1 md:pb-1">
+          <CardTitle className="text-xl flex items-center gap-1.5">
+            Ask
+            <InfoBubble
+              label="About Ask"
+              content="Pose a question. Optionally scope to specific hypotheses. Claude returns a verdict + supporting evidence + (sometimes) a proposed invalidator update."
+            />
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <SkillPicker selected={skillSlug} onChange={setSkillSlug} />
           <AskInput
             query={query}
@@ -130,18 +108,54 @@ function ResearchLaptop() {
             onSubmit={() => onSubmit()}
             isPending={ask.isPending}
           />
-          <div className="mt-3">
-            <label className="text-xs text-muted-foreground">
-              Tickers (comma-sep, optional — required only for hypotheses flagged{' '}
-              <code>requires_tv_context</code>)
+          {/* Single action row (2026-05-17 density pass): Tickers field +
+              keyboard hint + Ask button live on one line. Was three
+              vertical regions (AskInput action row, Tickers row, ...).
+              Collapses ~80px of stacked rows into one. */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <label
+              htmlFor="research-tickers"
+              className="text-xs text-muted-foreground inline-flex items-center gap-1.5 shrink-0"
+            >
+              Tickers
+              <InfoBubble
+                label="When to fill tickers"
+                content={
+                  <>
+                    Comma-separated, optional. Required only for hypotheses flagged{' '}
+                    <code>requires_tv_context</code>.
+                  </>
+                }
+              />
             </label>
-            <input
+            <Input
+              id="research-tickers"
               type="text"
               value={tickers}
               onChange={(e) => setTickers(e.target.value)}
               placeholder="AAPL, MSFT"
-              className="mt-1 w-full rounded-md border bg-background px-3 py-1.5 text-sm uppercase"
+              className="flex-1 min-w-[180px] uppercase"
             />
+            <span className="text-[11px] text-muted-foreground/70 font-mono shrink-0">
+              ⌘/⌃+↵
+            </span>
+            <Button
+              onClick={() => onSubmit()}
+              disabled={!query.trim() || ask.isPending}
+              className="shrink-0"
+            >
+              {ask.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Asking…
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Ask
+                </>
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -157,10 +171,16 @@ function ResearchLaptop() {
         <AnswerCard response={ask.data} />
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">History</CardTitle>
-          <CardDescription>Expand any row for the full answer.</CardDescription>
+      <Card className="relative">
+        <div
+          aria-hidden
+          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-3xl bg-identity-narrative"
+        />
+        <CardHeader className="pb-1 md:pb-1">
+          <CardTitle className="text-xl flex items-center gap-1.5">
+            History
+            <InfoBubble label="About History" content="Expand any row for the full answer." />
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {queries.isLoading ? (

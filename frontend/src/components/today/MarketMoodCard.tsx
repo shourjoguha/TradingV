@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { TrendingUp, ArrowRight } from 'lucide-react'
 import { useMacroSeries } from '../../hooks/use-api'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { InfoBubble } from '../common'
 
 function weekAgoIso(): string {
   const d = new Date()
@@ -51,17 +52,19 @@ export function MarketMoodCard() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <TrendingUp className="h-4 w-4 text-violet" />
+        <CardTitle className="flex items-center gap-2">
+          {/* Ambient identity (steel) — Market mood is ambient context,
+              not a decision lever; uses identity-ambient per taxonomy. */}
+          <TrendingUp className="h-4 w-4 text-identity-ambient" />
           Market mood
+          <InfoBubble
+            label="What this means"
+            content="Macro context: volatility regime + broad-market 1w move. Drift alerts and rule firings re-rank around this backdrop."
+          />
         </CardTitle>
-        <CardDescription className="text-xs">
-          Macro context: volatility regime + broad-market 1w move. Drift
-          alerts and rule firings re-rank around this backdrop.
-        </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <div className="flex items-baseline gap-3 text-sm">
             <div>
               <span className="text-xs text-muted-foreground">VIX </span>
@@ -81,7 +84,7 @@ export function MarketMoodCard() {
           </div>
           <Link
             to="/macro"
-            className="inline-flex items-center gap-1 text-xs text-violet hover:text-violet/80"
+            className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80"
           >
             Open macro <ArrowRight className="h-3 w-3" />
           </Link>

@@ -1,11 +1,21 @@
-import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group'
-import { useMacroRatio, useMacroRefresh, useMacroSeries } from '../hooks/use-api'
+import { useMacroRefresh } from '../hooks/use-api'
+import {
+  ChartBuilder,
+  encodePanes,
+  decodePanes,
+  type PaneSpec,
+  type AvailableSeries,
+} from '../components/charts'
 import { RegimePanel } from '../components/macro/RegimePanel'
 import { SectorStrip } from '../components/macro/SectorStrip'
-import { RatioChart } from '../components/macro/RatioChart'
+import { CyclePhaseWheel } from '../components/macro/CyclePhaseWheel'
+import { RotationFootprintStrip } from '../components/macro/RotationFootprintStrip'
+import { CorrelationHeatmap } from '../components/macro/CorrelationHeatmap'
+import { RegimeConditionalBadges } from '../components/macro/RegimeConditionalBadges'
 import {
   REGIME_PANELS,
   TIME_RANGE_OPTIONS,
@@ -38,23 +48,25 @@ export function Macro() {
   const refresh = useMacroRefresh()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-heading font-semibold tracking-tight flex items-center gap-2">
             <LineChartIcon className="h-5 w-5 text-muted-foreground" />
             Macro
+            {/* Single canonical tooltip (2026-05-17 dedupe): the glossary
+                `regime` entry defines what regime IS; the previous
+                second tooltip ("12 curated ratios + sector strip, updated
+                nightly. Click any row to expand…") was chrome describing
+                page mechanics + a discoverable interaction. Dropped both
+                — keep the only one that adds knowledge. */}
             <InfoBubble term="regime" />
           </h2>
-          <p className="text-muted-foreground text-sm">
-            Regime context for per-ticker decisions. Twelve curated ratios + sector strip,
-            updated nightly. <span className="text-muted-foreground/70">Click any row to expand its chart inline.</span>
-          </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Time-range chips */}
+          {/* Time-range chips — 'Window' label dropped 2026-05-17
+              (operator audit: redundant next to 1Y/3Y/5Y/10Y/Max buttons). */}
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground">Window</label>
             <ToggleGroup
               type="single"
               value={String(years)}
@@ -114,7 +126,59 @@ export function Macro() {
 
       {tab === 'overview' && <OverviewTab since={since} />}
       {tab === 'ratios' && <RatiosTab since={since} />}
-      {tab === 'sectors' && <SectorStrip since={since} />}
+      {tab === 'sectors' && <SectorsTab since={since} />}
+    </div>
+  )
+}
+
+/**
+ * Sectors sub-tab — dropdown-driven visualization selector + compact
+ * sector grid + always-on drill-in chart at the bottom.
+ *
+ * 2026-05-17: operator opted to see ALL deferred viz options (rotation
+ * footprint, regime-conditional badges, correlation heatmap) plus the
+ * Phase Wheel, one at a time. The dropdown surfaces them; grid + chart
+ * stay constant beneath so the operator can flip between perspectives
+ * without losing context on the bottom panes.
+ */
+type SectorView = 'wheel' | 'rotation' | 'phaseConfirm' | 'correlation'
+
+const SECTOR_VIEWS: Array<{ id: SectorView; label: string }> = [
+  { id: 'wheel',        label: 'Cycle phase wheel' },
+  { id: 'rotation',     label: 'Rotation footprint (12w)' },
+  { id: 'phaseConfirm', label: 'Phase confirmation badges' },
+  { id: 'correlation',  label: 'Correlation matrix (90d)' },
+]
+
+function SectorsTab({ since }: { since: string }) {
+  const [view, setView] = useState<SectorView>('wheel')
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor="sector-view"
+          className="text-xs font-mono text-muted-foreground shrink-0"
+        >
+          View
+        </label>
+        <select
+          id="sector-view"
+          value={view}
+          onChange={(e) => setView(e.target.value as SectorView)}
+          className="bg-background rounded-xl px-3 py-2 text-sm shadow-inset-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          {SECTOR_VIEWS.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {view === 'wheel' && <CyclePhaseWheel since={since} />}
+      {view === 'rotation' && <RotationFootprintStrip since={since} />}
+      {view === 'phaseConfirm' && <RegimeConditionalBadges since={since} />}
+      {view === 'correlation' && <CorrelationHeatmap since={since} />}
+      <SectorStrip since={since} />
     </div>
   )
 }
@@ -129,49 +193,99 @@ function OverviewTab({ since }: { since: string }) {
   )
 }
 
+/**
+ * RatiosTab — multi-pane chart builder. Replaces the prior single-dropdown
+ * single-chart view (2026-05-18 charts-enrichment). Operator can:
+ *   - Add multiple ratios to the same pane (overlay)
+ *   - Toggle chart type per pane (line / area / log-Y)
+ *   - Add additional panes below (compare regimes)
+ * Pane config persists to URL `?panes=…` for bookmark/share.
+ *
+ * `availableSeries` derived from the same `ALL_ROWS` registry the legacy
+ * dropdown used — labels + numerator/denominator preserved verbatim.
+ */
 function RatiosTab({ since }: { since: string }) {
-  // Filter to actual ratios (have numerator + denominator).
-  const ratioRows = ALL_ROWS.filter((r): r is Extract<RegimeRow, { numerator: string }> =>
-    'numerator' in r,
-  )
-  const [activeId, setActiveId] = useState(ratioRows[0]?.id ?? '')
-  const active = ratioRows.find((r) => r.id === activeId) ?? ratioRows[0]
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const data = useMacroRatio({
-    numerator: active.numerator,
-    denominator: active.denominator,
-    since,
+  const ratioRows = useMemo(
+    () =>
+      ALL_ROWS.filter(
+        (r): r is Extract<RegimeRow, { numerator: string }> => 'numerator' in r,
+      ),
+    [],
+  )
+
+  const available = useMemo<AvailableSeries[]>(
+    () =>
+      ratioRows.map((r) => ({
+        id: `${r.numerator}/${r.denominator}`,
+        label: `${r.label} (${r.numerator} / ${r.denominator})`,
+        build: () => ({
+          kind: 'ratio',
+          numerator: r.numerator,
+          denominator: r.denominator,
+          label: r.label,
+        }),
+      })),
+    [ratioRows],
+  )
+
+  // Default = first ratio in a single line pane (preserves legacy default).
+  const buildDefaultPanes = useCallback((): PaneSpec[] => {
+    const first = ratioRows[0]
+    if (!first) return []
+    return [
+      {
+        id: `p_${Math.random().toString(36).slice(2, 8)}`,
+        chartType: 'line',
+        series: [
+          {
+            kind: 'ratio',
+            id: `s_${Math.random().toString(36).slice(2, 8)}`,
+            numerator: first.numerator,
+            denominator: first.denominator,
+            label: first.label,
+          },
+        ],
+      },
+    ]
+  }, [ratioRows])
+
+  // Initialize from URL on mount; thereafter local state drives URL.
+  const [panes, setPanes] = useState<PaneSpec[]>(() => {
+    const raw = searchParams.get('panes')
+    const decoded = decodePanes(raw)
+    return decoded.length > 0 ? decoded : buildDefaultPanes()
   })
 
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3 flex-wrap">
-        <label className="text-xs text-muted-foreground">Ratio</label>
-        <select
-          value={active.id}
-          onChange={(e) => setActiveId(e.target.value)}
-          className="bg-background rounded-xl px-3 py-2 text-sm shadow-inset-sm focus:outline-none focus:ring-2 focus:ring-violet"
-        >
-          {ratioRows.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.label} ({r.numerator} / {r.denominator})
-            </option>
-          ))}
-        </select>
-      </div>
+  // Sync local → URL (compact encoding, elides defaults).
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams)
+    const encoded = encodePanes(panes)
+    // Don't pollute the URL when the user is in the default state.
+    const isDefault =
+      panes.length === 1 &&
+      panes[0].chartType === 'line' &&
+      panes[0].series.length === 1 &&
+      panes[0].series[0].kind === 'ratio' &&
+      panes[0].series[0].numerator === ratioRows[0]?.numerator &&
+      panes[0].series[0].denominator === ratioRows[0]?.denominator
+    if (isDefault) {
+      next.delete('panes')
+    } else {
+      next.set('panes', encoded)
+    }
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panes])
 
-      {data.isLoading ? (
-        <div className="rounded-2xl bg-background shadow-inset-sm p-12 text-center text-sm text-muted-foreground">
-          Loading…
-        </div>
-      ) : (data.data?.points.length ?? 0) === 0 ? (
-        <div className="rounded-2xl bg-background shadow-inset-sm p-12 text-center text-sm text-muted-foreground">
-          No cached data — try Refresh above.
-        </div>
-      ) : (
-        <RatioChart points={data.data!.points} height={420} />
-      )}
-    </div>
+  return (
+    <ChartBuilder
+      panes={panes}
+      onChange={setPanes}
+      available={available}
+      since={since}
+    />
   )
 }
 

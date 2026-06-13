@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { FileSearch, ArrowRight } from 'lucide-react'
 import { useResearchQueries } from '../../hooks/use-api'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { InfoBubble } from '../common'
 
 /**
  * Today landing card: research curiosity preview.
@@ -30,14 +31,16 @@ export function ResearchCuriousCard() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <FileSearch className="h-4 w-4 text-violet" />
+        <CardTitle className="flex items-center gap-2">
+          {/* Narrative identity (plum) — research/Q&A surfaces map to
+              identity-narrative per color taxonomy (2026-05-17). */}
+          <FileSearch className="h-4 w-4 text-identity-narrative" />
           What it's curious about
+          <InfoBubble
+            label="What this means"
+            content="Stress-test questions the operator has queued against the curated knowledge vault — ranked by hypothesis at-risk + cost paid."
+          />
         </CardTitle>
-        <CardDescription className="text-xs">
-          Stress-test questions the operator has queued against the curated
-          knowledge vault — ranked by hypothesis at-risk + cost paid.
-        </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
         {isLoading ? (
@@ -48,7 +51,7 @@ export function ResearchCuriousCard() {
             wait for the next weekly auto-stress tick.
           </p>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <div className="flex items-baseline gap-2 text-sm">
               <span className="font-display text-lg font-semibold">{items.length}</span>
               <span className="text-xs text-muted-foreground">
@@ -62,7 +65,7 @@ export function ResearchCuriousCard() {
             )}
             <Link
               to="/research?status=pending"
-              className="inline-flex items-center gap-1 text-xs text-violet hover:text-violet/80"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80"
             >
               Open research <ArrowRight className="h-3 w-3" />
             </Link>

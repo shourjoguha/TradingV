@@ -21,12 +21,16 @@ export function AnswerCard({ response }: Props) {
   const status = response.status
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
-        <CardTitle className="text-base">Verdict</CardTitle>
+    <Card className="relative">
+      <div
+        aria-hidden
+        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-3xl bg-identity-narrative"
+      />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 pb-1 md:pb-1">
+        <CardTitle className="text-xl">Verdict</CardTitle>
         <div className="flex items-center gap-2">
           <Badge variant={status === 'approved' ? 'default' : 'outline'}>{status}</Badge>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground tabular-nums">
+          <span className="text-xs font-mono text-muted-foreground tabular-nums">
             ${(response.est_cost_usd ?? 0).toFixed(4)}
           </span>
         </div>
@@ -50,8 +54,8 @@ export function AnswerCard({ response }: Props) {
 
         <SourceContextSection items={sourceContext} />
 
-        <div className="space-y-1.5">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+        <div className="space-y-2">
+          <div className="text-xs font-mono text-muted-foreground">
             Evidence ({evidence.length})
           </div>
           {evidence.length === 0 ? (
@@ -61,7 +65,7 @@ export function AnswerCard({ response }: Props) {
               and the next query will retrieve excerpts.
             </div>
           ) : (
-            <Accordion type="multiple" className="space-y-1.5">
+            <Accordion type="multiple" className="space-y-2">
               {evidence.map((e, i) => (
                 <EvidenceItemRow
                   key={`${e.vault_path}-${i}`}
@@ -74,7 +78,7 @@ export function AnswerCard({ response }: Props) {
         </div>
 
         {response.answer_path && (
-          <div className="text-[10px] font-mono text-muted-foreground truncate">
+          <div className="text-xs font-mono text-muted-foreground truncate">
             archive: <span className="text-foreground/70">{response.answer_path}</span>
           </div>
         )}

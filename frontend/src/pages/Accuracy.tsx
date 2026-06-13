@@ -6,7 +6,12 @@ import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group'
 import { AlertTriangle, RefreshCw, X } from 'lucide-react'
 import { InfoBubble } from '../components/common'
 
-type DrillKey = { ticker: string; horizon: number; model: string; interval: string } | null
+type DrillKey = { ticker: string; horizon: number; model: string; interval: string }
+
+/** Stable id for a drill selection. Click toggles by this key. */
+function drillId(d: DrillKey): string {
+  return `${d.ticker}::${d.horizon}::${d.model}::${d.interval}`
+}
 
 // n below this → cell rendered grey ("insufficient"). Avoids 0/25/50/75/100 noise.
 const MIN_N = 4
@@ -41,7 +46,23 @@ function compositeColor(hit_rate: number | null, mape: number, n: number): strin
 export function Accuracy() {
   const [windowSize, setWindowSize] = useState(30)
   const [intervalFilter, setIntervalFilter] = useState<string>('1d')
-  const [drill, setDrill] = useState<DrillKey>(null)
+  // Multi-select drill: each click toggles a (ticker, horizon, model, interval)
+  // cell into the panel stack below. Hover/focus no longer trigger — only click.
+  const [drills, setDrills] = useState<DrillKey[]>([])
+  const selectedIds = useMemo(() => new Set(drills.map(drillId)), [drills])
+
+  const toggleDrill = (d: DrillKey) => {
+    setDrills((prev) => {
+      const id = drillId(d)
+      if (prev.some((p) => drillId(p) === id)) {
+        return prev.filter((p) => drillId(p) !== id)
+      }
+      return [...prev, d]
+    })
+  }
+  const removeDrill = (id: string) => {
+    setDrills((prev) => prev.filter((p) => drillId(p) !== id))
+  }
   const grid = useAccuracyGrid({
     last_n: windowSize,
     interval: intervalFilter === 'all' ? undefined : intervalFilter,
@@ -69,7 +90,7 @@ export function Accuracy() {
   }, [grid.data])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h2 className="font-display text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -77,7 +98,7 @@ export function Accuracy() {
             <InfoBubble term="composite_accuracy" />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Per-(ticker, horizon) Kronos performance over the rolling window. Hover a cell to open the per-prediction breakdown; click the × to dismiss.
+            Per-(ticker, horizon) Kronos performance over the rolling window. Click a cell to open its per-prediction breakdown below; click again (or the × on the panel) to dismiss. Click multiple cells to stack panels for side-by-side compare.
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -98,7 +119,7 @@ export function Accuracy() {
           <select
             value={windowSize}
             onChange={(e) => setWindowSize(parseInt(e.target.value, 10))}
-            className="bg-background rounded-xl px-3 py-2 text-sm shadow-inset-sm focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-violet"
+            className="bg-background rounded-xl px-3 py-2 text-sm shadow-inset-sm focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-primary"
           >
             <option value={10}>last 10</option>
             <option value={30}>last 30</option>
@@ -169,9 +190,9 @@ export function Accuracy() {
           <table className="w-full text-sm">
             <thead>
               <tr>
-                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ticker</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Ticker</th>
                 {horizons.map((h) => (
-                  <th key={h} className="text-center px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">+{h}{intervalFilter === '1h' ? 'h' : 'd'}</th>
+                  <th key={h} className="text-center px-3 py-2 text-xs font-semibold text-muted-foreground">+{h}{intervalFilter === '1h' ? 'h' : 'd'}</th>
                 ))}
               </tr>
             </thead>
@@ -188,32 +209,36 @@ export function Accuracy() {
                     }
                     const insufficient = row.sample_count < MIN_N
                     const colorCls = compositeColor(row.hit_rate, row.mape, row.sample_count)
+                    const key: DrillKey = {
+                      ticker: t,
+                      horizon: h,
+                      model: row.model_id,
+                      interval: row.interval,
+                    }
+                    const isSelected = selectedIds.has(drillId(key))
                     return (
                       <td key={h} className="px-1 py-1 text-center">
                         <button
-                          // Hover/focus open only; close requires explicit
-                          // click on the X. onMouseLeave/onBlur close caused
-                          // a layout-shift loop on bottom-row buttons: panel
-                          // mounts → page grows → cursor no longer over the
-                          // button → close → page shrinks → cursor over
-                          // button again → re-open → blink.
-                          onMouseEnter={() => setDrill({ ticker: t, horizon: h, model: row.model_id, interval: row.interval })}
-                          onFocus={() => setDrill({ ticker: t, horizon: h, model: row.model_id, interval: row.interval })}
-                          onClick={() => setDrill({ ticker: t, horizon: h, model: row.model_id, interval: row.interval })}
-                          className={`w-full px-2 py-3 rounded-xl text-xs transition-all duration-200 hover:-translate-y-[1px] ${colorCls}`}
-                          aria-label={`${t} +${h} ${row.interval} hit ${fmtPct(row.hit_rate, 0)} mape ${fmtPct(row.mape)} n=${row.sample_count}`}
+                          onClick={() => toggleDrill(key)}
+                          className={[
+                            'w-full px-2 py-3 rounded-xl text-xs transition-all duration-200 hover:-translate-y-[1px]',
+                            colorCls,
+                            isSelected ? 'ring-2 ring-primary ring-offset-1' : '',
+                          ].join(' ')}
+                          aria-label={`${t} +${h} ${row.interval} hit ${fmtPct(row.hit_rate, 0)} mape ${fmtPct(row.mape)} n=${row.sample_count}${isSelected ? ' selected' : ''}`}
+                          aria-pressed={isSelected}
                         >
                           {insufficient ? (
                             <>
                               <div className="font-bold">—</div>
-                              <div className="opacity-60 text-[10px]">n={row.sample_count}</div>
+                              <div className="opacity-60 text-xs">n={row.sample_count}</div>
                             </>
                           ) : (
                             <>
                               <div className="font-bold leading-tight">
                                 {fmtPct(row.hit_rate, 0)}<span className="opacity-50"> / </span>{fmtPct(row.mape, 1)}
                               </div>
-                              <div className="opacity-60 text-[10px] mt-0.5">n={row.sample_count}</div>
+                              <div className="opacity-60 text-xs mt-0.5">n={row.sample_count}</div>
                             </>
                           )}
                         </button>
@@ -227,20 +252,62 @@ export function Accuracy() {
         </div>
       )}
 
-      {drill && <DrillPanel {...drill} onClose={() => setDrill(null)} />}
+      {drills.length > 0 && (
+        <>
+          <BaselineLegend />
+          <div className="space-y-3">
+            {drills.map((d) => {
+              const id = drillId(d)
+              return <DrillPanel key={id} {...d} onClose={() => removeDrill(id)} />
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }
 
-// Inline detail panel — appears below the matrix on hover/focus instead of a
-// click-to-open modal. Same content as before; faster to read at a glance.
+/**
+ * Baseline legend — explains what "Baseline" column means in each drill
+ * panel below. Renders between the grid + the panel stack so the reader
+ * sees the definition right before the data that uses it.
+ */
+function BaselineLegend() {
+  return (
+    <div className="rounded-2xl bg-background shadow-inset-sm p-3 text-xs text-muted-foreground space-y-1">
+      <div className="font-medium text-foreground">Reading the panels below</div>
+      <ul className="space-y-0.5 pl-4 list-disc marker:text-muted-foreground/60">
+        <li>
+          <span className="font-medium text-foreground">Predicted</span> — Kronos' forecast for the target date's close,
+          made N days/hours earlier on <span className="font-mono">Made on</span>.
+        </li>
+        <li>
+          <span className="font-medium text-foreground">Actual</span> — what the close actually printed at the target.
+        </li>
+        <li>
+          <span className="font-medium text-foreground">Baseline</span> — close on <span className="font-mono">Made on</span> (T0),
+          the price Kronos knew when it made the call. Used as the anchor for direction:
+          a prediction is "directionally correct" when{' '}
+          <span className="font-mono">sign(Predicted − Baseline) = sign(Actual − Baseline)</span> — i.e. the model bet up and it went up, or bet down and it went down.
+        </li>
+        <li>
+          <span className="font-medium text-foreground">Err %</span> — signed % gap between Predicted and Actual (green = under-shoot, red = over-shoot).
+        </li>
+        <li>
+          <span className="font-medium text-foreground">Dir</span> — ✓ if direction matched, ✗ if not.
+        </li>
+      </ul>
+    </div>
+  )
+}
+
+// Inline detail panel — one per selected grid cell. Stacks vertically below
+// the legend so the operator can compare multiple (ticker, horizon) breakdowns
+// side-by-side. Click the X (or the originating grid button again) to dismiss.
 function DrillPanel({ ticker, horizon, model, interval, onClose }: { ticker: string; horizon: number; model: string; interval: string; onClose: () => void }) {
   const pair = useAccuracyPair({ ticker, horizon_offset: horizon, model_id: model, limit: 100 })
   return (
-    <div
-      className="rounded-3xl bg-background shadow-extruded p-4 space-y-3"
-      onMouseEnter={(e) => e.stopPropagation()}
-    >
+    <div className="rounded-3xl bg-background shadow-extruded p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-display text-base font-bold">{ticker} @ +{horizon}{interval === '1h' ? 'h' : 'd'} · {model} · {interval}</h3>
         <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
@@ -254,13 +321,13 @@ function DrillPanel({ ticker, horizon, model, interval, onClose }: { ticker: str
           <table className="w-full text-xs">
             <thead>
               <tr>
-                <th className="text-left px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Made on</th>
-                <th className="text-left px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Target</th>
-                <th className="text-right px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Predicted</th>
-                <th className="text-right px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Actual</th>
-                <th className="text-right px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Baseline</th>
-                <th className="text-right px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Err %</th>
-                <th className="text-center px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Dir</th>
+                <th className="text-left px-2 py-2 text-xs font-semibold text-muted-foreground">Made on</th>
+                <th className="text-left px-2 py-2 text-xs font-semibold text-muted-foreground">Target</th>
+                <th className="text-right px-2 py-2 text-xs font-semibold text-muted-foreground">Predicted</th>
+                <th className="text-right px-2 py-2 text-xs font-semibold text-muted-foreground">Actual</th>
+                <th className="text-right px-2 py-2 text-xs font-semibold text-muted-foreground">Baseline</th>
+                <th className="text-right px-2 py-2 text-xs font-semibold text-muted-foreground">Err %</th>
+                <th className="text-center px-2 py-2 text-xs font-semibold text-muted-foreground">Dir</th>
               </tr>
             </thead>
             <tbody>

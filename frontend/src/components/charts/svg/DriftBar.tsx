@@ -1,5 +1,11 @@
 /**
- * DriftBar — unified scalar-to-bar widget for drift_score (0..1).
+ * DriftBar — Tier-1 SVG primitive. Unified scalar-to-bar widget for
+ * drift_score (0..1).
+ *
+ * Moved here 2026-05-17 from `components/common/DriftBar.tsx` as part of
+ * Phase 6 of the charts-plotly migration — Tier-1 primitives now live in
+ * `components/charts/svg/` so the two-tier infra is colocated. Behavior
+ * unchanged.
  *
  * Replaces three drifted implementations:
  *   - components/today/RxStrip.tsx (w-12)
@@ -21,7 +27,7 @@ import { useMemo } from 'react'
 export type DriftBarSize = 'sm' | 'md' | 'lg'
 
 const SIZE_TO_CLASSES: Record<DriftBarSize, { bar: string; label: string }> = {
-  sm: { bar: 'h-1.5 w-12', label: 'text-[10px]' },
+  sm: { bar: 'h-1.5 w-12', label: 'text-xs' },
   md: { bar: 'h-1.5 w-16', label: 'text-xs' },
   lg: { bar: 'h-2 w-24', label: 'text-sm' },
 }

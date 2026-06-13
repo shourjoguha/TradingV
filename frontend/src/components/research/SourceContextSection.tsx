@@ -23,12 +23,12 @@ export function SourceContextSection({ items }: Props) {
   if (!items.length) return null
 
   return (
-    <div className="space-y-1.5">
-      <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+    <div className="space-y-2">
+      <div className="text-xs font-mono text-muted-foreground flex items-center gap-1.5">
         <BookOpen className="h-3 w-3" />
         Source context ({items.length})
       </div>
-      <Accordion type="multiple" className="space-y-1.5">
+      <Accordion type="multiple" className="space-y-2">
         {items.map((item, i) => (
           <AccordionItem
             key={`${item.path}-${i}`}
@@ -39,7 +39,7 @@ export function SourceContextSection({ items }: Props) {
                 <span className="text-xs text-foreground/90 truncate" title={item.title || item.path}>
                   {item.title || item.path}
                 </span>
-                <Badge variant="outline" className="text-[10px] font-mono ml-auto shrink-0">
+                <Badge variant="outline" className="text-xs font-mono ml-auto shrink-0">
                   {item.applies_to.length} ev
                 </Badge>
               </div>
@@ -55,7 +55,7 @@ export function SourceContextSection({ items }: Props) {
                   </ReactMarkdown>
                 </div>
                 {item.applies_to.length > 0 && (
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                  <div className="text-xs font-mono text-muted-foreground">
                     applies to {item.applies_to.length} evidence path
                     {item.applies_to.length === 1 ? '' : 's'}
                   </div>

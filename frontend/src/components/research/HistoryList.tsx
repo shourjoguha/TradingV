@@ -41,7 +41,7 @@ export function HistoryList({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mr-1">
+        <div className="text-xs font-mono text-muted-foreground mr-1">
           Status
         </div>
         {FILTERS.map((f) => (
@@ -49,7 +49,7 @@ export function HistoryList({
             key={f.id}
             type="button"
             onClick={() => setFilter(f.id)}
-            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet rounded-full"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full"
           >
             <Badge
               variant={filter === f.id ? 'default' : 'outline'}
@@ -78,7 +78,7 @@ export function HistoryList({
                 <AccordionTrigger className="pr-12">
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-mono text-muted-foreground">
+                      <span className="text-xs font-mono text-muted-foreground">
                         {date}
                       </span>
                       <Badge
@@ -89,7 +89,7 @@ export function HistoryList({
                               ? 'destructive'
                               : 'outline'
                         }
-                        className="text-[10px]"
+                        className="text-xs"
                       >
                         {item.status}
                       </Badge>
@@ -97,7 +97,7 @@ export function HistoryList({
                         <Badge
                           key={h}
                           variant="outline"
-                          className="text-[10px] font-mono"
+                          className="text-xs font-mono"
                         >
                           {h}
                         </Badge>

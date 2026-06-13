@@ -53,7 +53,7 @@ export function SidecarTile({
 }) {
   return (
     <div className={`rounded-2xl bg-background shadow-inset-sm p-4 ${className}`}>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+      <div className="text-xs text-muted-foreground mb-2">
         {label}
       </div>
       {children}

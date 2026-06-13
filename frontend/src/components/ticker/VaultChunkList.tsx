@@ -32,7 +32,7 @@ export function VaultChunkList({ symbol, k = 6 }: Props) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-violet" />
+          <BookOpen className="h-4 w-4 text-primary" />
           Vault chunks
         </CardTitle>
       </CardHeader>
@@ -72,7 +72,7 @@ function ChunkRow({ hit }: { hit: VaultSearchHit }) {
         </div>
         <Badge
           variant="outline"
-          className="text-[10px] shrink-0 tabular-nums"
+          className="text-xs shrink-0 tabular-nums"
           title={`similarity ${hit.similarity.toFixed(2)} · decay ${hit.decay_weight.toFixed(2)}`}
         >
           {hit.score.toFixed(2)}
@@ -80,7 +80,7 @@ function ChunkRow({ hit }: { hit: VaultSearchHit }) {
       </div>
 
       <div
-        className="text-[10px] font-mono text-muted-foreground truncate"
+        className="text-xs font-mono text-muted-foreground truncate"
         title={hit.path}
       >
         {folder || hit.path}
@@ -100,7 +100,7 @@ function ChunkRow({ hit }: { hit: VaultSearchHit }) {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="text-[10px] font-medium text-violet hover:underline inline-flex items-center gap-1"
+          className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1"
         >
           {open ? (
             <>

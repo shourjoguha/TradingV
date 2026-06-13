@@ -147,7 +147,7 @@ export function ScreenshotUploadModal({
             <div className="flex items-center justify-between">
               <Label htmlFor="ticker">Ticker</Label>
               {autoFilledTicker && autoFilledTicker === ticker.toUpperCase() && (
-                <span className="inline-flex items-center gap-1 text-[10px] text-violet">
+                <span className="inline-flex items-center gap-1 text-xs text-primary">
                   <Sparkles className="h-3 w-3" />
                   auto-detected from chart
                 </span>
@@ -167,7 +167,7 @@ export function ScreenshotUploadModal({
             />
             {hintCandidates.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Also seen in chart:
                 </span>
                 {hintCandidates.map((c) => (
@@ -175,7 +175,7 @@ export function ScreenshotUploadModal({
                     key={c.ticker}
                     type="button"
                     onClick={() => setTicker(c.ticker)}
-                    className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-mono hover:bg-accent transition-colors"
+                    className="rounded-full bg-secondary px-2 py-0.5 text-xs font-mono hover:bg-accent transition-colors"
                   >
                     {c.ticker}
                   </button>

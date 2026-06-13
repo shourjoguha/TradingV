@@ -34,10 +34,10 @@ export function HypothesisRow({ symbol }: Props) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <FlaskConical className="h-4 w-4 text-violet" />
+          <FlaskConical className="h-4 w-4 text-primary" />
           Theses on {symbol}
         </CardTitle>
-        <Link to="/theses" className="text-xs text-muted-foreground hover:text-violet">
+        <Link to="/theses" className="text-xs text-muted-foreground hover:text-primary">
           All theses
         </Link>
       </CardHeader>
@@ -58,7 +58,7 @@ export function HypothesisRow({ symbol }: Props) {
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-sm font-medium truncate">{h.slug}</div>
-                  <Badge variant="outline" className="text-[10px] shrink-0">
+                  <Badge variant="outline" className="text-xs shrink-0">
                     {h.status}
                   </Badge>
                 </div>

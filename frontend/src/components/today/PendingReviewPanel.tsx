@@ -49,17 +49,17 @@ export function PendingReviewPanel() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-violet" />
+          <Sparkles className="h-4 w-4 text-primary" />
           Pending review · top {items.length} of {totalPending}
         </CardTitle>
         <Link
           to="/research?status=pending"
-          className="text-xs text-muted-foreground hover:text-violet"
+          className="text-xs text-muted-foreground hover:text-primary"
         >
           Open queue
         </Link>
       </CardHeader>
-      <CardContent className="space-y-1.5">
+      <CardContent className="space-y-2">
         {items.map((q) => {
           const isExpanded = expandedId === q.id
           const isWorking =
@@ -88,17 +88,17 @@ export function PendingReviewPanel() {
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{q.query}</div>
                   {hypSlug && (
-                    <div className="text-[10px] font-mono text-muted-foreground truncate">
+                    <div className="text-xs font-mono text-muted-foreground truncate">
                       {hypSlug}
                     </div>
                   )}
                 </div>
                 {q.score != null && (
-                  <Badge variant="outline" className="text-[10px] shrink-0">
+                  <Badge variant="outline" className="text-xs shrink-0">
                     score {q.score.toFixed(1)}
                   </Badge>
                 )}
-                <Badge variant="outline" className="text-[10px] shrink-0">
+                <Badge variant="outline" className="text-xs shrink-0">
                   {new Date(q.asked_at).toLocaleDateString()}
                 </Badge>
               </button>
@@ -129,7 +129,7 @@ export function PendingReviewPanel() {
                     </Button>
                     <Link
                       to={`/research?id=${q.id}`}
-                      className="ml-auto text-xs text-muted-foreground hover:text-violet flex items-center gap-1"
+                      className="ml-auto text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
                     >
                       Open detail <ArrowRight className="h-3 w-3" />
                     </Link>
@@ -142,7 +142,7 @@ export function PendingReviewPanel() {
         {backlogCount > 0 && (
           <Link
             to="/research?status=pending"
-            className="block text-xs text-muted-foreground hover:text-violet pt-1"
+            className="block text-xs text-muted-foreground hover:text-primary pt-1"
           >
             See full queue ({backlogCount} more in backlog) →
           </Link>

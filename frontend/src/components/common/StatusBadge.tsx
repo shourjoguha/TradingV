@@ -12,7 +12,7 @@
  *   resolved positive     → success solid            — done well
  *   resolved neutral      → muted    (gray)          — skipped / cancelled
  *   resolved negative     → danger   (coral)         — broke / invalidated
- *   system-touched        → violet outline           — auto-revived / auto-promoted
+ *   system-touched        → primary outline           — auto-revived / auto-promoted
  *   snoozed / deferred    → blue                     — operator chose to wait
  *   flag — aging          → amber outline
  *   flag — forced         → coral outline
@@ -46,7 +46,7 @@ const TONE_CLASSES: Record<string, string> = {
   dangerOutline:  'border-red-600 text-red-700 bg-red-500/10',
   muted:          'bg-muted text-muted-foreground border-transparent',
   info:           'bg-blue-500/15 text-blue-700 border-blue-500/30',
-  systemOutline:  'border-violet/40 text-violet bg-transparent',
+  systemOutline:  'border-primary/40 text-primary bg-transparent',
 }
 
 interface StatusMap {
@@ -121,7 +121,7 @@ export function StatusBadge({
     return <Badge variant="outline" className={TONE_CLASSES.muted}>{value}</Badge>
   }
   const Icon = map.icon
-  const sizeClass = size === 'xs' ? 'text-[10px] py-0 px-2' : 'text-xs'
+  const sizeClass = size === 'xs' ? 'text-xs py-0 px-2' : 'text-xs'
   return (
     <Badge
       variant="outline"

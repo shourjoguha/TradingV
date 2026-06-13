@@ -26,12 +26,12 @@ export function PredictionStrip({ symbol }: Props) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <LineChartIcon className="h-4 w-4 text-violet" />
+          <LineChartIcon className="h-4 w-4 text-primary" />
           Recent predictions (h+1)
         </CardTitle>
         <Link
           to={`/predictions/target?ticker=${symbol}`}
-          className="text-xs text-muted-foreground hover:text-violet flex items-center gap-1"
+          className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
         >
           By target <ArrowRight className="h-3 w-3" />
         </Link>
@@ -44,7 +44,7 @@ export function PredictionStrip({ symbol }: Props) {
             No accuracy rows yet for {symbol} at h+1. Run an analysis to seed.
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {data.rows.slice(0, 5).map((r) => (
               <div
                 key={r.prediction_id}
@@ -59,7 +59,7 @@ export function PredictionStrip({ symbol }: Props) {
                 </span>
                 <Badge
                   variant="outline"
-                  className={`text-[10px] ${
+                  className={`text-xs ${
                     Math.abs(r.error_pct) < 0.02
                       ? 'bg-success-bg text-success-fg'
                       : Math.abs(r.error_pct) < 0.05

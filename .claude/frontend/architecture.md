@@ -38,8 +38,7 @@ frontend/
       use-backend.ts      # useSyncExternalStore selector
       use-api.ts          # all queries/mutations w/ shape adapters
     components/
-      Layout.tsx          # sidebar + topbar w/ BackendToggle
-      BackendToggle.tsx   # laptop/railway radio + health dot
+      Layout.tsx          # icon-rail + drawer-on-click + topbar (single-backend, no toggle)
       ui/                 # shadcn primitives (handwritten)
     pages/                # 8 pages — see pages.md
   vite.config.ts          # dev proxy: /v1 + /health → localhost:8000

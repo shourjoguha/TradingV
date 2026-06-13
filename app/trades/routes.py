@@ -25,6 +25,10 @@ class TradeCreate(BaseModel):
     # rx v1.x.1-b: optional link to the recommendation that prompted the
     # trade. Powers the position_thesis_match signal in /rx-finance.
     related_rec_id: Optional[str] = None
+    # retrieval-depth Phase 4 (B4): did the linked rec PREDICT this trade
+    # (operator decided independently) or CAUSE it? Only meaningful with
+    # related_rec_id. 'influenced' trades are excluded from predictive-lift.
+    rec_influence_kind: Optional[str] = None
 
 
 class TradeUpdate(BaseModel):

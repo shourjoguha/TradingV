@@ -4,7 +4,7 @@
 
 ## Currently shipped
 
-`badge`, `button`, `calendar`, `card`, `date-picker`, `dialog`, `input`, `label`, `multi-select`, `popover`, `select`, `skeleton`, `sonner` (Toaster), `switch`, `table`, `textarea`, `toggle`, `toggle-group`. Also `BackendToggle` (composite, in `components/`).
+`badge`, `button`, `calendar`, `card`, `date-picker`, `dialog`, `input`, `label`, `multi-select`, `popover`, `select`, `skeleton`, `sonner` (Toaster), `switch`, `table`, `textarea`, `toggle`, `toggle-group`. (Previously also `BackendToggle` — removed 2026-05-17 per [ADR 018](../decisions/018-railway-shutdown.md).)
 
 ### Floating surfaces — `popover`, `calendar`, `date-picker`, `multi-select`
 
@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils'
 ### Visual physics
 
 Every interactive primitive maps to one of two states:
-- **Extruded** — element raised off the page, dual shadows (light top-left, dark bottom-right). Used for resting state of buttons, cards, badges, and the BackendToggle dot's well.
+- **Extruded** — element raised off the page, dual shadows (light top-left, dark bottom-right). Used for resting state of buttons, cards, badges, and the icon-rail.
 - **Inset** — element pressed into the page, shadows reversed inward. Used for inputs, tables (container), tab containers, sidebar nav active state, and pressed buttons.
 
 Hover lifts buttons + cards 1px and deepens the shadow. Active presses 0.5px and flips to inset. Focus shows a 2px violet ring offset by 2px on the page background.
@@ -68,6 +68,76 @@ CSS vars in `src/index.css` `:root`. **Dark mode dropped** — no `.dark` block,
 - Don't add bare `border` utilities expecting them to render — they're transparent globally.
 - Don't use the Tailwind default font weights for body text. Headlines = `font-display font-bold` or `font-extrabold`; body = no font class needed (DM Sans default).
 
+## Type scale (2026-05-17 audit)
+
+Operator complaint: surfaces felt "spacious yet crammed" — generous padding around small, dense text. Council recast type to a single canonical scale.
+
+| Tier | Tailwind | Pixels / line-height | Use |
+|---|---|---|---|
+| display | `text-2xl` / `leading-tight` | 24 / 1.15 | Page H1, hero stat numbers |
+| title   | `text-base` / `leading-snug`  | 16 / 1.30 | CardTitle (one canonical size), panel headers |
+| body    | `text-sm` / `leading-normal`  | 14 / 1.55 | All readable copy: descriptions, list items, table cells |
+| meta    | `text-xs` / `leading-snug`    | 12 / 1.40 | Timestamps, badges, secondary labels, table headers |
+
+**Two hard rules**:
+1. **No `text-[10px]`.** If it doesn't deserve 12px, it doesn't deserve to render — move to tooltip. (157 violations cleaned 2026-05-17.)
+2. **No `uppercase tracking-wider` on labels under 14px.** Sacrifices ~30% legibility for "style." (88 violations cleaned 2026-05-17.)
+
+**Spacing rhythm** (4-unit ladder): `space-y-{1, 2, 3, 4, 6}`. Don't use `1.5` or `5` — snap to neighbours. CardHeader/Content/Footer padding is `p-4 md:p-5`; only override to `p-6` on hero/single-card surfaces.
+
+## Tooltip discipline
+
+Use `<InfoBubble term="…">` (glossary) or `<InfoBubble content={…} label="…">` (ad-hoc) for any always-on copy that *explains* a thing rather than *shows new information*. Codified after the 2026-05-17 density audits removed CardDescriptions from Today's 4-up cards + Macro panel headers + Theses/Research/Macro/TheStreet page subtitles (~150px reclaimed across the Think section).
+
+**`PageHeader` default**: `description` prop now renders as a hover (i)-icon, NOT an always-on subtitle. Pass `descriptionInline` only when the prose itself is operator-actionable.
+
+The trim rule:
+- If a sentence explains *why* a thing exists → tooltip
+- If a sentence explains *what* the number is → tooltip
+- If a sentence is a section's tagline that adds no new info ("Hypotheses tracking the regime + names") → tooltip
+- Body copy is reserved for what the operator hasn't seen yet
+
+## Color taxonomy (2026-05-17 council)
+
+Operator wanted more color in a previously-grey UI; council (UX strategist + visual designer + motion designer) agreed: **color is a finite cognitive resource — spend it on data, not chrome**. Three families of tokens, each with its own rules.
+
+### Family 0 — Primary (recast 2026-05-17)
+
+`bg-primary` / `text-primary` / `border-primary` / `ring-primary` — **graphite ink `#2E3D52`**. Replaces the vibrant violet `#6C63FF` that the previous council picked (operator walked back from it). Use for active-focus signals only: active nav, CTA buttons, focus rings, K-logo, active tab text, primary links. Hover/active pair: `bg-primary-light` (#4A5C73, lighter), `bg-primary-active` (#1C2838, darker). **Never** use as a card background; reserve for ink-on-clay marks. The bare `violet` Tailwind alias has been removed — any reference is a regression.
+
+### Family 1 — Semantic (existing)
+
+`bg-success` / `bg-danger` / `bg-warning` + `-fg` / `-bg` variants. Encode **direction of state**: up / down / caution. Use for P&L sign, drift-tier thresholds (<.40 / <.70 / ≥.70), status badges (active / at-risk / invalidated, open / snoozed / acted / dismissed), rule-firing bands. **Don't repurpose** for anything not direction-of-state.
+
+### Family 2 — Identity (new)
+
+`bg-identity-{inflation,growth,liquidity,stress,narrative,ambient}` — each maps to a *kind of content*, orthogonal to direction-of-state.
+
+| Token | Hex | Where |
+|---|---|---|
+| `identity-inflation` | `#C58A3D` (burnt ochre) | Macro/Inflation panel header bar |
+| `identity-growth`    | `#3F7A6E` (forest-teal) | Macro/Growth panel header bar · also closed-trade *win* row 3px left-bar |
+| `identity-liquidity` | `#4A6FA5` (slate-blue)  | Macro/Liquidity + Yield-curve panel header bars · rate-axis sparkline strokes |
+| `identity-stress`    | `#B0533C` (brick)       | Macro/Stress panel header bar · also invalidated-thesis indicator + closed-trade *loss* row 3px left-bar |
+| `identity-narrative` | `#7A5AA8` (plum)        | Theses cards (6px top-bar) · Research answer chrome (2px left rail) · TV-Context per-source dot |
+| `identity-ambient`   | `#5C7A8C` (steel)       | Sparkline gridlines · Today's "What I'm curious about" card icon |
+
+Use as 4px left-bars · dots · badge fills · sparkline strokes — **never as card backgrounds**. Card bodies stay clay.
+
+### Family 3 — Motion (new — fires + decays)
+
+`bg-wash-{success,snooze,dismiss}` — used only inside Tailwind `animate-disposition-wash-*` keyframes; not standalone backgrounds. K-logo ring uses `animate-attention-pulse` (defined in `tailwind.config.js` → `keyframes`). All washes/pulses have low chroma so they feel like light, not paint.
+
+### The three rules (codified — break these, expect a review reject)
+
+1. **Max 1 color-encoded dimension per row.** If two dimensions both deserve color (e.g. status AND time on Theses), use *one as edge-tint* and *one as fill-icon* — never two chips side by side.
+2. **No new hex without a named identity entry.** Hex is implementation; tokens are intent. Add to this file + `tailwind.config.js` together.
+3. **Color enters only when something committed / crossed / cleared.** Never on hover, never on focus, never as decoration. Hover stays a shadow lift; focus stays a violet ring; section nav stays grey-with-violet-active.
+
+### Stays grey (do not paint)
+
+Card bodies · page background · sidebar rail · table zebra · inputs · popovers · calendars · dialogs · skeletons · tab containers · sparkline plot areas · Research Q&A bodies · Admin · Docs · button hovers · focus rings · Predictions chart chrome.
+
 ## Compositions (canonical patterns) — read this BEFORE rolling a new chip / tab control
 
 Multiple drift incidents have come from rolling a new chip/tab variant with raw `<button>` + Tailwind classes. Pick the right pattern from below.
@@ -76,7 +146,10 @@ Multiple drift incidents have come from rolling a new chip/tab variant with raw 
 
 Used when the choice changes the URL path (e.g. `/predictions/horizon` ↔ `/predictions/target`). Route-driven so deep links work.
 
-Reference: `frontend/src/pages/Macro.tsx`, `Predictions.tsx`, `Admin.tsx`, `WatchlistConsolidated.tsx`, `TheStreet.tsx`, `Motion.tsx`.
+**Use the `TabbedShell` primitive** for new pages — `components/common/TabbedShell.tsx` (added 2026-05-17) wraps this pattern + ARIA + URL routing + lazy-mount in one component. Pass `tabs: [{id, label, render}]` + `basePath`. Detail short-circuit via `isDetail` + `detail` props.
+
+Reference (using primitive): `Motion.tsx`, `ThesesShell.tsx`, `Predictions.tsx`.
+Reference (hand-rolled, retained due to cross-tab shared state): `Macro.tsx` (has `since` filter), `Admin.tsx` (has `:jobId` detail param), `TheStreet.tsx`, `WatchlistConsolidated.tsx`.
 
 ```tsx
 <div
@@ -166,8 +239,39 @@ import { Badge } from '@/components/ui/badge'
 
 `clsx` + `tailwind-merge`. Use whenever combining classes, especially conditional. Lives in `lib/utils.ts`.
 
+## `components/common/*` primitives (above `ui/*` shadcn primitives)
+
+Composition-layer primitives that solve cross-page concerns. Use these instead of hand-rolling.
+
+| Primitive | File | Use when |
+|---|---|---|
+| `DriftBar` | `common/DriftBar.tsx` | Rendering a 0..1 scalar (drift score) as a colored bar + tabular-nums label. Sizes `sm / md / lg`. Aria meter built-in. |
+| `StatusBadge` | `common/StatusBadge.tsx` | Status pill across rec / hypothesis / trade / opportunity / position / flag. Use `kind` + `value`; never hand-roll the color combo. |
+| `TabbedShell` | `common/TabbedShell.tsx` | Page-tab segmented control (Pattern A above) + URL routing + ARIA. See Pattern A for migration list. |
+| `PageHeader` | `common/PageHeader.tsx` | Page H1 w/ violet anchor bar + icon slot + actions slot. Default mode (3xl extrabold) vs `tight` mode (2xl). |
+| `PageWithSidecar` + `SidecarTile` | `common/DetailSidecar.tsx` | Two-column page shell (main + right rail at xl breakpoint, stacked below). Use to populate former empty grey clay below list pages. |
+| `LazyRoute` | `common/LazyRoute.tsx` | Wraps `lazy()`-ed page in Suspense + Skeleton fallback. Replaces inline `<Suspense fallback={<Skeleton …/>}>...</Suspense>` per-route. |
+| `RecCard` (rx-specific) | `components/rx/RecRow.tsx` | Mobile-stacked rec card variant; rendered at `<md` viewports paired with the desktop table at `≥md`. |
+| `useUrlState` | `hooks/use-url-state.ts` | Sync filter/sort state to URL so back-button + deep-link work. Opt-in per page. |
+
+Added 2026-05-17 in the UX rework — decisions log at `.claude/decisions/ux-rework-2026-05-17/`.
+
+## Charts
+
+Three-tier chart infra (SVG primitives / Plotly Tier-2 / ChartBuilder Tier-3) lives at `components/charts/`. Full reference — decision table, theme contract, ChartBuilder usage, plotly-bundle policy, migration history — moved to its own page: **[charts.md](charts.md)**.
+
+Quick rules:
+- Tier 1 SVG for cell-density use (`Sparkline`, `DriftBar`, `MiniCandleCompare`)
+- Tier 2 Plotly for expanded views (`LineChart`, `CandlestickChart`, `Heatmap`, `PolarRadial`, `BumpChart`) — lazy-load the consuming page
+- Tier 3 `ChartBuilder` for operator-composable multi-pane charts w/ URL state
+- All colors from `components/charts/theme/palette.ts` — never hardcode hex in chart code
+
 ## Don't
 
 - Don't import from `lucide-react` deep paths. Use top-level: `import { Foo } from 'lucide-react'`.
 - Don't write inline `<style>` — Tailwind only.
 - Don't add a new primitive without a use case in a page. Code dies in `ui/` fastest.
+- Don't hand-roll a page tab strip — use `TabbedShell`.
+- Don't hand-roll a status pill — use `StatusBadge`.
+- Don't hardcode chart colors. Pull from `components/charts/theme/palette.ts`.
+- Don't use Tier 2 (Plotly) in dense lists / table cells. Per-cell Plotly balloons DOM + memory; use a Tier 1 SVG primitive instead.

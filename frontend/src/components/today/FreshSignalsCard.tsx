@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Target, ArrowRight, Sparkle } from 'lucide-react'
 import { useOpportunities } from '../../hooks/use-api'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { InfoBubble } from '../common'
 
 const LAST_VISIT_KEY = 'today.last_visited_at'
 
@@ -44,14 +45,14 @@ export function FreshSignalsCard() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Target className="h-4 w-4 text-violet" />
+        <CardTitle className="flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
           What it might pursue
+          <InfoBubble
+            label="What this means"
+            content="Rule-based signals weighted by historical hit-rate. Decision support — operator chooses what to act on."
+          />
         </CardTitle>
-        <CardDescription className="text-xs">
-          Rule-based signals weighted by historical hit-rate. Decision
-          support — operator chooses what to act on.
-        </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
         {isLoading ? (
@@ -62,7 +63,7 @@ export function FreshSignalsCard() {
             the next scheduled run.
           </p>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <div className="flex items-baseline gap-2 text-sm">
               <span className="font-display text-lg font-semibold">{items.length}</span>
               <span className="text-xs text-muted-foreground">
@@ -70,7 +71,7 @@ export function FreshSignalsCard() {
                 {fresh.length > 0 && (
                   <>
                     {' '}·{' '}
-                    <span className="inline-flex items-center gap-0.5 text-violet">
+                    <span className="inline-flex items-center gap-0.5 text-primary">
                       <Sparkle className="h-3 w-3" />
                       {fresh.length} new
                     </span>
@@ -95,7 +96,7 @@ export function FreshSignalsCard() {
             )}
             <Link
               to="/motion/opportunities"
-              className="inline-flex items-center gap-1 text-xs text-violet hover:text-violet/80"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80"
             >
               Open signals <ArrowRight className="h-3 w-3" />
             </Link>

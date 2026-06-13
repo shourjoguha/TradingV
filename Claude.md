@@ -20,9 +20,9 @@ Personal trading-decision-support system for **one operator**. FastAPI backend r
 ## Entry points
 
 - App: `app.main:app`
-- Local: `uvicorn app.main:app --reload` (venv activated, env set)
-- Deploy: Railway via Dockerfile + `tailscale-entrypoint.sh`. `railway.toml` declares the Dockerfile builder; the entrypoint runs Tailscale, then chains `alembic upgrade head && uvicorn ...` from the Dockerfile CMD. `Procfile` is unused on Railway. See [.claude/railway-deployment.md](.claude/guides/railway-deployment.md).
-- **Vault-indexer (Phase 2/3 knowledge layer)**: `uvicorn tools.vault_indexer.app:app --port 8001` with `VAULT_PATH=$HOME/Documents/knowledge-vault`. **Multi-domain vault**: the same vault now hosts a fitness indexer on `:8002` with its own cache. The finance indexer (`:8001`) **MUST** launch with `EXCLUDE_FOLDERS=Videos/fitness,Topics/fitness,Newsletters/fitness,Books/fitness` or `/search` surfaces fitness chunks. `run-dev.sh` injects this default. Full multi-domain rules in [`tools/vault_indexer/MULTI_DOMAIN_BRIEFING.md`](tools/vault_indexer/MULTI_DOMAIN_BRIEFING.md). Required for `/v1/research/ask`. **The cache at `<vault>/.indexer/cache.db` persists across restarts** — laptop reboots don't trigger re-embedding. Full operator runbook in [`use_me_guide.md`](use_me_guide.md) §1.5.
+- Local: `uvicorn app.main:app --reload` (venv activated, env set) — **the only live deployment target since 2026-05-17.**
+- Deploy: ~~Railway~~ permanently shut down 2026-05-17. See [ADR 018](.claude/decisions/018-railway-shutdown.md). Dockerfile + `tailscale-entrypoint.sh` + `railway.toml` retained in repo for possible re-deploy; [railway-deployment.md](.claude/guides/railway-deployment.md) preserved as historical reference. Active deploy notes live in [laptop-setup.md](.claude/guides/laptop-setup.md).
+- **Vault-indexer (Phase 2/3 knowledge layer)**: three sibling instances on `:8001` (finance), `:8002` (fitness), `:8003` (nutrition), all reading `VAULT_PATH=$HOME/Documents/knowledge-vault`. **Scope is registry-driven**: each instance launches with `DOMAIN=<slug>` and the indexer derives include/exclude prefixes from `<vault>/_domains.yaml`. No more hand-set `EXCLUDE_FOLDERS` — adding a new domain = one entry in the registry. Per-instance caches: `cache-finance.db`, `cache-fitness.db`, `cache-nutrition.db` (each `~/Documents/knowledge-vault/.indexer/cache-<domain>.db`). Caches survive restarts; laptop reboots don't trigger re-embedding. Full multi-domain rules in [`tools/vault_indexer/MULTI_DOMAIN_BRIEFING.md`](tools/vault_indexer/MULTI_DOMAIN_BRIEFING.md). Required for `/v1/research/ask`. Operator runbook in [`use_me_guide.md`](use_me_guide.md) §1.5.
 
 ## `.claude/` — folder-first reference
 
@@ -55,14 +55,11 @@ When in doubt, [.claude/guides/architecture.md](.claude/guides/architecture.md) 
 
 **Video-vision deps** (optional; Apple Silicon recommended): `brew install tesseract` for the OCR layer. The `mlx-whisper` + `mlx-vlm` Python wheels come via `requirements.txt`; they're no-op on non-Apple-Silicon (adapter falls back to torch). First L3 ingest tick auto-downloads ~1.5GB of model weights (Whisper-MLX + Qwen2-VL-2B-4bit) to `~/.cache/huggingface/`. See [.claude/modules/video_vision.md](.claude/modules/video_vision.md).
 
-For the **laptop (primary) backend** with dockerized Postgres on 5439 + peer sync to Railway, see [.claude/laptop-setup.md](.claude/guides/laptop-setup.md).
+For the **laptop (primary) backend** with dockerized Postgres on 5439, see [.claude/laptop-setup.md](.claude/guides/laptop-setup.md). Peer-sync to Railway is dormant since 2026-05-17 ([ADR 018](.claude/decisions/018-railway-shutdown.md)).
 
-## Setup (Railway)
+## ~~Setup (Railway)~~ — removed
 
-1. New project → add Postgres plugin → deploy repo. Builder: Dockerfile (declared in `railway.toml`).
-2. Set `API_KEY` env var. `DATABASE_URL`/`PORT` are auto-injected.
-3. Alembic runs at container start (entrypoint chains `alembic upgrade head && uvicorn ...`).
-4. Optional: `TS_AUTHKEY` for Tailscale tunnel back to laptop, `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` for push alerts (both no-op when unset). Full env list in [.claude/railway-deployment.md](.claude/guides/railway-deployment.md).
+Railway shut down 2026-05-17. The Dockerfile + `tailscale-entrypoint.sh` + `railway.toml` are retained in-repo for possible re-deploy; see [ADR 018](.claude/decisions/018-railway-shutdown.md) and [railway-deployment.md](.claude/guides/railway-deployment.md) for historical context.
 
 ## Demo-branch verifiability discipline
 

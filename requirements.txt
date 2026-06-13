@@ -38,6 +38,11 @@ mlx-vlm
 
 # Kronos runtime (always installed; KRONOS_ENABLED toggles use, not install).
 torch>=2.0.0
-huggingface_hub==0.33.1
+# huggingface_hub pinned to a 0.x release that exposes the BucketNotFoundError
+# symbol still imported by datasets/hf_file_system. Transformers >=5 forces
+# huggingface_hub >=1.5 which removes that symbol → datasets crashes →
+# nutrition/fitness indexers 500 on /reload + /search. Keep this pair locked.
+huggingface_hub>=0.33.1,<1.0
+transformers<5
 einops==0.8.1
 safetensors==0.6.2

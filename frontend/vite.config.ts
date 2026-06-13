@@ -4,6 +4,11 @@ import path from 'node:path'
 
 export default defineConfig({
   plugins: [react()],
+  // Plotly.js + transitive `has-hover` reference Node's `global`. Map to
+  // `globalThis` so the bundle runs in the browser.
+  define: {
+    global: 'globalThis',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

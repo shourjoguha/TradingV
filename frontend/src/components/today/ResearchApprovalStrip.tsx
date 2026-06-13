@@ -27,7 +27,7 @@ export function ResearchApprovalStrip() {
       <Card>
         <CardHeader className="py-3">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-violet" />
+            <Sparkles className="h-4 w-4 text-primary" />
             Pending Research
           </CardTitle>
         </CardHeader>
@@ -45,10 +45,10 @@ export function ResearchApprovalStrip() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-violet" />
+          <Sparkles className="h-4 w-4 text-primary" />
           Pending Research ({items.length})
         </CardTitle>
-        <Link to="/research" className="text-xs text-muted-foreground hover:text-violet">
+        <Link to="/research" className="text-xs text-muted-foreground hover:text-primary">
           Open
         </Link>
       </CardHeader>
@@ -73,7 +73,7 @@ export function ResearchApprovalStrip() {
                     </div>
                   )}
                 </div>
-                <Badge variant="outline" className="shrink-0 text-[10px]">
+                <Badge variant="outline" className="shrink-0 text-xs">
                   {new Date(q.asked_at).toLocaleDateString()}
                 </Badge>
               </div>
@@ -97,7 +97,7 @@ export function ResearchApprovalStrip() {
                 </Button>
                 <Link
                   to={`/research?id=${q.id}`}
-                  className="ml-auto text-xs text-muted-foreground hover:text-violet flex items-center gap-1"
+                  className="ml-auto text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
                 >
                   Detail <ArrowRight className="h-3 w-3" />
                 </Link>

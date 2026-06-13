@@ -39,10 +39,17 @@ Types `import.meta.env` for the four `VITE_*` vars. Required because `tsc --noEm
 
 ## Adding a new backend
 
+> **Status (2026-05-17):** Single-backend app. Railway permanently shut down
+> ([ADR 018](../decisions/018-railway-shutdown.md)); `BackendToggle.tsx`
+> deleted. `BackendId = 'laptop'` is a single-member union retained so the
+> ~80 `backendId` cache-key plumbing call sites in `hooks/use-api.ts` keep
+> compiling. Steps below are preserved for the case of re-introducing a
+> second backend.
+
 1. Add entry to `BACKENDS` map in `backend-store.ts`.
-2. Add `BackendId` union member in `lib/types.ts`.
+2. Widen `BackendId` union member in `lib/types.ts`.
 3. Add env vars to `.env.example` + `.env.local`.
-4. Add `<SelectItem>` row to `BackendToggle.tsx` (auto-renders from `BACKENDS` already — no UI change needed).
+4. Re-introduce a switcher component in the topbar (was `BackendToggle.tsx`).
 
 ## Don't
 

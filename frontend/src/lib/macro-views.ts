@@ -14,11 +14,28 @@ export type RegimeRow =
   // Spread — minuend − subtrahend (computed on backend via /v1/macro/spread).
   | { id: string; label: string; minuend: string; subtrahend: string; term?: string }
 
+/**
+ * Macro-panel identity (2026-05-17 color taxonomy). Each panel maps to one
+ * of the six `identity-*` Tailwind tokens; rendered as a 4px left-bar on
+ * the CardHeader to give the operator a pre-attentive regime classifier.
+ * Yield-curve + Liquidity share `liquidity` because both encode rate-axis
+ * context; Inflation regime shares `inflation` for the same reason.
+ */
+export type PanelIdentity =
+  | 'inflation'
+  | 'growth'
+  | 'liquidity'
+  | 'stress'
+  | 'narrative'
+  | 'ambient'
+
 export interface RegimePanel {
   title: string
   blurb: string
   /** Glossary term key for the panel-level InfoBubble (i) circle. */
   term?: string
+  /** Identity color family — drives the header left-bar tint. */
+  identity: PanelIdentity
   rows: RegimeRow[]
 }
 
@@ -27,6 +44,7 @@ export const REGIME_PANELS: RegimePanel[] = [
     title: 'Inflation',
     blurb: 'Hard-asset vs paper-asset preference. Reflation vs recession.',
     term: 'inflation_axis',
+    identity: 'inflation',
     rows: [
       { id: 'gold-spy',    label: 'Gold / SPX',     numerator: 'GC=F', denominator: 'SPY', term: 'r_gold_spx' },
       { id: 'copper-gold', label: 'Copper / Gold',  numerator: 'HG=F', denominator: 'GC=F', term: 'r_copper_gold' },
@@ -37,6 +55,7 @@ export const REGIME_PANELS: RegimePanel[] = [
     title: 'Growth',
     blurb: 'Breadth + risk appetite. Concentration vs participation.',
     term: 'growth_axis',
+    identity: 'growth',
     rows: [
       { id: 'rsp-spy', label: 'Equal-wt / Cap-wt', numerator: 'RSP', denominator: 'SPY', term: 'r_rsp_spy' },
       { id: 'iwm-spy', label: 'Small / Large',     numerator: 'IWM', denominator: 'SPY', term: 'r_iwm_spy' },
@@ -47,6 +66,7 @@ export const REGIME_PANELS: RegimePanel[] = [
     title: 'Liquidity',
     blurb: 'Fed posture + curve shape + financial-conditions stress.',
     term: 'liquidity_axis',
+    identity: 'liquidity',
     rows: [
       { id: 'walcl',  label: 'Fed BS (WALCL)',    symbol: 'WALCL',   source: 'fred',     term: 'r_walcl' },
       { id: 't10yie', label: '10Y inflation exp', symbol: 'T10YIE',  source: 'fred',     term: 'r_t10yie' },
@@ -58,6 +78,7 @@ export const REGIME_PANELS: RegimePanel[] = [
     title: 'Stress',
     blurb: 'Credit-risk preference + bond-vs-equity bid + dollar regime + equity panic.',
     term: 'stress_axis',
+    identity: 'stress',
     rows: [
       { id: 'hyg-lqd', label: 'HY / IG credit',   numerator: 'HYG', denominator: 'LQD',   term: 'r_hyg_lqd' },
       { id: 'tlt-spy', label: 'Bonds / Equities', numerator: 'TLT', denominator: 'SPY',   term: 'r_tlt_spy' },
@@ -70,6 +91,7 @@ export const REGIME_PANELS: RegimePanel[] = [
     title: 'Inflation regime',
     blurb: 'Stagflation / inflation-cycle tracking. Real yields, breakevens, producer-vs-consumer prices, broad commodities.',
     term: 'inflation_regime_axis',
+    identity: 'inflation',
     rows: [
       { id: 'dfii10',  label: 'Real 10Y yield',     symbol: 'DFII10',  source: 'fred',                   term: 'r_dfii10' },
       { id: 't5yie',   label: '5Y breakevens',      symbol: 'T5YIE',   source: 'fred',                   term: 'r_t5yie' },
@@ -85,6 +107,7 @@ export const REGIME_PANELS: RegimePanel[] = [
     title: 'Yield curve',
     blurb: 'US Treasury curve shape + recession-signal spreads. 30Y "all-important 5%" + 2s10s + 10y-3m (NY Fed model).',
     term: 'yield_curve_axis',
+    identity: 'liquidity',
     rows: [
       { id: 'wgs2y',     label: '2Y Treasury',     symbol: 'WGS2YR',  source: 'fred', term: 'r_wgs2y' },
       { id: 'wgs10y-yc', label: '10Y Treasury',    symbol: 'WGS10YR', source: 'fred', term: 'r_wgs10y' },
@@ -96,17 +119,76 @@ export const REGIME_PANELS: RegimePanel[] = [
 ]
 
 // 9-cell sector strip: each cell = sector ETF / SPY
-export const SECTOR_ETFS: Array<{ symbol: string; label: string }> = [
-  { symbol: 'XLK', label: 'Tech' },
-  { symbol: 'XLF', label: 'Financials' },
-  { symbol: 'XLE', label: 'Energy' },
-  { symbol: 'XLV', label: 'Health' },
-  { symbol: 'XLI', label: 'Industrials' },
-  { symbol: 'XLP', label: 'Staples' },
-  { symbol: 'XLY', label: 'Discretionary' },
-  { symbol: 'XLU', label: 'Utilities' },
-  { symbol: 'XLB', label: 'Materials' },
+// `defensive` flag drives the "defensive crowding" cue on the RS Leadership
+// Ladder (Sectors sub-tab): when 2+ defensives crowd the top-3 RS rank, the
+// page receives a subtle stress-tinted background — operator's native
+// "defensives rotating in" signal made visible. See
+// `lib/sector-strength.ts:defensiveCrowding`.
+export interface SectorEtf {
+  symbol: string
+  label: string
+  /** Defensive sectors per Fidelity/SSGA business-cycle taxonomy. */
+  defensive: boolean
+}
+
+export const SECTOR_ETFS: SectorEtf[] = [
+  { symbol: 'XLK', label: 'Tech',          defensive: false },
+  { symbol: 'XLF', label: 'Financials',    defensive: false },
+  { symbol: 'XLE', label: 'Energy',        defensive: false },
+  { symbol: 'XLV', label: 'Health',        defensive: true  },
+  { symbol: 'XLI', label: 'Industrials',   defensive: false },
+  { symbol: 'XLP', label: 'Staples',       defensive: true  },
+  { symbol: 'XLY', label: 'Discretionary', defensive: false },
+  { symbol: 'XLU', label: 'Utilities',     defensive: true  },
+  { symbol: 'XLB', label: 'Materials',     defensive: false },
 ]
+
+/**
+ * Per-sector identity color for the ladder's 4px left-bar. Maps to the
+ * shipped `identity-*` Tailwind palette (2026-05-17 color taxonomy) by
+ * intent — defensives borrow ambient/narrative steel-plum tones, cyclicals
+ * borrow inflation/growth/stress, etc. Keeps the ladder's 9 cards visually
+ * distinct without inventing a 10th palette family.
+ */
+export const SECTOR_IDENTITY_BG: Record<string, string> = {
+  XLK: 'bg-identity-liquidity',  // Tech — slate-blue, rate-sensitive growth
+  XLF: 'bg-identity-narrative',  // Financials — plum, story-driven
+  XLE: 'bg-identity-inflation',  // Energy — ochre, hard-asset
+  XLV: 'bg-identity-growth',     // Health — forest-teal, defensive-growth
+  XLI: 'bg-identity-stress',     // Industrials — brick, cyclical
+  XLP: 'bg-identity-ambient',    // Staples — steel, ambient defense
+  XLY: 'bg-identity-stress',     // Discretionary — brick (paired w/ Industrials, both pro-cyclical)
+  XLU: 'bg-identity-ambient',    // Utilities — steel, ambient defense
+  XLB: 'bg-identity-inflation',  // Materials — ochre, hard-asset
+}
+
+/**
+ * Hex-literal counterpart to `SECTOR_IDENTITY_BG` for SVG fill / stroke
+ * (Tailwind class strings don't work inside `<svg>`). Kept in sync — if
+ * you change one, change both. Values come from the
+ * `colors.identity.*` block in `tailwind.config.js`.
+ */
+export const SECTOR_IDENTITY_HEX: Record<string, string> = {
+  XLK: '#4A6FA5',  // identity-liquidity
+  XLF: '#7A5AA8',  // identity-narrative
+  XLE: '#C58A3D',  // identity-inflation
+  XLV: '#3F7A6E',  // identity-growth
+  XLI: '#B0533C',  // identity-stress
+  XLP: '#5C7A8C',  // identity-ambient
+  XLY: '#B0533C',  // identity-stress
+  XLU: '#5C7A8C',  // identity-ambient
+  XLB: '#C58A3D',  // identity-inflation
+}
+
+// RS Leadership Ladder math constants (Sectors sub-tab, 2026-05-17).
+// 252 ≈ 1 trading year for the indexing base; 126 ≈ 6 months for z-score
+// shape; 14 trading days ≈ 3 calendar weeks for short-term momentum.
+// Conventional lookbacks — operator can sanity-check by eye.
+export const RS_LOOKBACK_BASE = 252
+export const RS_ZSCORE_WINDOW = 126
+export const RS_MOMENTUM_WINDOW = 14
+/** Below this absolute momentum value, the chevron renders neutral (→). */
+export const RS_MOMENTUM_THRESHOLD = 0.005
 
 // Default zoom for both sparklines and focused charts.
 export const DEFAULT_SINCE_YEARS = 5

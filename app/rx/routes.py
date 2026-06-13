@@ -17,10 +17,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.auth import verify_api_key, verify_rx_ingest_token
-from app.rx import service
-from app.rx.models import Recommendation
+from app.rx import deep_service, service
+from app.rx.models import Recommendation, RxDeepResult
 from app.rx.service import _FORCED_DECISION_SNOOZE_COUNT
 from app.rx.schemas import (
+    DeepResultCreate,
+    DeepResultList,
+    DeepResultRead,
     DispositionWrite,
     RecCreate,
     RecList,
@@ -64,6 +67,7 @@ def _to_read(row: Recommendation) -> RecRead:
         >= _FORCED_DECISION_SNOOZE_COUNT,
         attention_score=row.attention_score,
         attention_breakdown=row.attention_breakdown,
+        citations_status=service._citations_status(row.source_refs),
     )
 
 
@@ -87,6 +91,7 @@ async def create_rec(
             drift_breakdown=payload.drift_breakdown,
             confidence_breakdown=payload.confidence_breakdown,
             created_at=payload.created_at,
+            linked_hypothesis_ids=payload.linked_hypothesis_ids,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -159,6 +164,67 @@ async def snooze_rec(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return _to_read(row)
+
+
+def _deep_to_read(row: RxDeepResult) -> DeepResultRead:
+    return DeepResultRead(
+        id=row.id,
+        owner_user_id=row.owner_user_id,
+        rec_id=row.rec_id,
+        query_hash=row.query_hash,
+        kind=row.kind,
+        payload=row.payload,
+        created_at=row.created_at,
+    )
+
+
+@router.post("/deep", response_model=DeepResultRead, status_code=201)
+async def create_deep_result(
+    payload: DeepResultCreate,
+    _token: str = Depends(verify_rx_ingest_token),
+) -> DeepResultRead:
+    """Ingest out-of-band enrichment computed in a Claude Code session.
+
+    Same ingest-token auth as POST /recs: a compromised read key can never
+    write enrichment, and the ingest token can never read/disposition recs.
+    """
+    try:
+        row = await deep_service.create(
+            kind=payload.kind,
+            rec_id=payload.rec_id,
+            query_hash=payload.query_hash,
+            payload=payload.payload,
+            created_at=payload.created_at,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return _deep_to_read(row)
+
+
+@router.get("/deep", response_model=DeepResultList)
+async def list_deep_results(
+    rec_id: str | None = None,
+    query_hash: str | None = None,
+    kind: str | None = None,
+    limit: int = 100,
+    _api_key: str = Depends(verify_api_key),
+) -> DeepResultList:
+    """List enrichment rows for a rec or query. Read auth = API key.
+
+    Requires at least one of rec_id / query_hash so a caller can't scan the
+    whole table.
+    """
+    if not rec_id and not query_hash:
+        raise HTTPException(
+            status_code=400, detail="one of rec_id or query_hash is required"
+        )
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=400, detail="limit must be in [1,500]")
+    rows = await deep_service.list_for(
+        rec_id=rec_id, query_hash=query_hash, kind=kind, limit=limit
+    )
+    items = [_deep_to_read(r) for r in rows]
+    return DeepResultList(items=items, count=len(items))
 
 
 @router.get("/recs/{rec_id}/links", response_model=RxLinks)

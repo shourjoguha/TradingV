@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { Badge } from '../ui/badge'
+import { InfoBubble } from '../common'
 import { useResearchSkills } from '../../hooks/use-api'
 import type { ResearchSkillInfo } from '../../lib/types'
 
@@ -13,12 +14,6 @@ interface Props {
 
 function flattenDescription(s: string): string {
   return s.replace(/\s*\n\s*/g, ' ').trim()
-}
-
-function firstSentence(s: string): string {
-  const flat = flattenDescription(s)
-  const m = flat.match(/^(.{0,200}?[.!?])(\s|$)/)
-  return m ? m[1] : flat.slice(0, 200)
 }
 
 export function SkillPicker({ selected, onChange }: Props) {
@@ -59,15 +54,30 @@ export function SkillPicker({ selected, onChange }: Props) {
 
   return (
     <div className="space-y-2" data-testid="skill-picker">
-      <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+      <div className="text-xs font-mono text-muted-foreground inline-flex items-center gap-1.5">
         Skill
+        {active && (
+          <InfoBubble
+            label={active.title}
+            content={
+              <>
+                <div>{flattenDescription(active.description)}</div>
+                {active.tool === null && (
+                  <div className="text-warning-fg mt-1">
+                    Verdict-only — won't propose hypothesis updates.
+                  </div>
+                )}
+              </>
+            }
+          />
+        )}
       </div>
 
       {/* Desktop: filter-chip pattern matching HistoryList + AskInput hypothesis
           scope. Mobile fallback to native select when there are many skills. */}
       <div className={useNativeSelect ? 'block sm:hidden' : 'hidden'}>
         <select
-          className="w-full rounded-2xl shadow-inset-sm bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet"
+          className="w-full rounded-2xl shadow-inset-sm bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           value={selected ?? ''}
           onChange={(e) => onChange(e.target.value || null)}
         >
@@ -94,7 +104,7 @@ export function SkillPicker({ selected, onChange }: Props) {
               type="button"
               onClick={() => onChange(s.slug)}
               title={flattenDescription(s.description)}
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet rounded-full"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full"
             >
               <Badge
                 variant={isActive ? 'default' : 'outline'}
@@ -107,21 +117,9 @@ export function SkillPicker({ selected, onChange }: Props) {
         })}
       </div>
 
-      {active && (
-        <div className="space-y-1">
-          <div className="text-xs text-muted-foreground">
-            {firstSentence(active.description)}
-          </div>
-          {active.tool === null && (
-            <div
-              className="text-[11px] text-warning-fg"
-              data-testid="skill-picker-verdict-only"
-            >
-              Verdict-only — won't propose hypothesis updates.
-            </div>
-          )}
-        </div>
-      )}
+      {/* 2026-05-17 density audit: long description + verdict-only
+          warning moved into the (i)-icon tooltip on the "Skill" label.
+          Was previously ~5 lines of always-on prose under the chips. */}
     </div>
   )
 }

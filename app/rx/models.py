@@ -80,6 +80,13 @@ class Recommendation(Base):
     attention_breakdown: Mapped[Optional[Any]] = mapped_column(
         JSON(), nullable=True
     )
+    # retrieval-depth Phase 4 (D2 fix): explicit hypothesis linkage — the
+    # list of hypothesis ids this rec acts on, set at compose time. PRIMARY
+    # linkage; the substring heuristic in links_for_rec is now only a
+    # fallback suggestion. Nullable + additive (legacy rows = None).
+    linked_hypothesis_ids: Mapped[Optional[Any]] = mapped_column(
+        JSON(), nullable=True
+    )
 
     __table_args__ = (
         CheckConstraint(
@@ -112,5 +119,50 @@ class Recommendation(Base):
         Index(
             "ix_recommendations_owner_user_id",
             "owner_user_id",
+        ),
+    )
+
+
+class RxDeepResult(Base):
+    """Out-of-band enrichment computed in a Claude Code session and POSTed
+    back so the always-on app can surface it without making LLM/API calls
+    itself.
+
+    The cost seam (retrieval-depth-and-debiasing-program, Phase 0): heavy /
+    judgment work — deep multi-hop retrieval, source-contradiction analysis,
+    off-vault disconfirmation — runs interactively in Claude Code (no API
+    key, subscription-billed), then lands here via POST /v1/rx/deep with the
+    ingest token. The app reads it via GET /v1/rx/deep.
+
+    Keyed by EITHER ``rec_id`` (attach to an existing recommendation) OR
+    ``query_hash`` (a deep retrieval run not yet tied to a rec). At least one
+    is required; both may be set. ``rec_id`` is intentionally NOT a FK — a
+    deep run can precede the rec it informs, and we never want enrichment to
+    block on referential integrity.
+    """
+
+    __tablename__ = "rx_deep_results"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    owner_user_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    rec_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    query_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    payload: Mapped[Any] = mapped_column(JSON(), nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "kind IN ('deep_retrieval','contradiction','disconfirmation')",
+            name="ck_rx_deep_results_kind",
+        ),
+        Index("ix_rx_deep_results_rec_id", "rec_id"),
+        Index("ix_rx_deep_results_query_hash", "query_hash"),
+        Index(
+            "ix_rx_deep_results_created",
+            "created_at",
+            postgresql_ops={"created_at": "DESC"},
         ),
     )

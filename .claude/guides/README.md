@@ -8,7 +8,7 @@ infra, or process.
 
 | Guide | When to read |
 |---|---|
-| [architecture.md](architecture.md) | Top-of-stack system map. Read first when onboarding. Module list, daily-forecast pipeline, dual-backend topology, in-process schedulers. |
+| [architecture.md](architecture.md) | Top-of-stack system map. Read first when onboarding. Module list, daily-forecast pipeline, in-process schedulers. (Dual-backend topology section is historical — Railway shut down 2026-05-17, see [ADR 018](../decisions/018-railway-shutdown.md).) |
 | [principles.md](principles.md) | Load-bearing decisions + active trade-offs + implicit assumptions. **Read before any architectural change.** |
 | [glossary.md](glossary.md) | Terms used across docs and code (regime, drift, hit-rate, invalidator, etc.). |
 | [recipes.md](recipes.md) | Cookbook: "how do I add an endpoint", "how do I wire a new lifespan loop", "how do I connect a new provider". |

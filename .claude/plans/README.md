@@ -26,6 +26,9 @@ before we built it" and the retro is "what actually happened."
 | [phase-3.7-research-ui-single-turn.md](phase-3.7-research-ui-single-turn.md) | Research UI v1 | shipped |
 | [phase-3.8-research-ui-threading.md](phase-3.8-research-ui-threading.md) | Research threading | deferred |
 | [video-channel-auto-ingest.md](video-channel-auto-ingest.md) | YouTube channel auto-ingest | shipped |
+| [chart-modularity-handover.md](chart-modularity-handover.md) | Pre-plan: chart-modularity audit + stress-test checklist | meta |
+| [charts-plotly-migration.md](charts-plotly-migration.md) | Charts infra reorg → Plotly (Phases 0-6) — full reference: [frontend/charts.md](../frontend/charts.md) | shipped |
+| [charts-enrichment.md](charts-enrichment.md) | BumpChart + correlation drill-in + Tier 3 ChartBuilder (Phases A-E) | shipped |
 
 ## Pre-plans / brainstorms
 

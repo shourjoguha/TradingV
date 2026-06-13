@@ -4,12 +4,12 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 // Neumorphic button. Default = extruded surface matching page; primary
-// = accent-violet pillow with white text. Hover lifts 1px + deepens
+// = accent-primary pillow with white text. Hover lifts 1px + deepens
 // shadow; active presses 0.5px + flips to inset.
 const buttonVariants = cva(
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl text-sm font-medium ' +
     'transition-all duration-200 ease-out ' +
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
     'disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
@@ -19,8 +19,8 @@ const buttonVariants = cva(
           'hover:-translate-y-[1px] hover:shadow-extruded ' +
           'active:translate-y-[0.5px] active:shadow-inset-sm',
         primary:
-          'bg-violet text-white shadow-extruded-sm ' +
-          'hover:-translate-y-[1px] hover:bg-violet-light hover:shadow-extruded ' +
+          'bg-primary text-white shadow-extruded-sm ' +
+          'hover:-translate-y-[1px] hover:bg-primary-light hover:shadow-extruded ' +
           'active:translate-y-[0.5px] active:shadow-inset-sm',
         destructive:
           'bg-danger text-white shadow-extruded-sm ' +
@@ -28,16 +28,16 @@ const buttonVariants = cva(
           'active:translate-y-[0.5px] active:shadow-inset-sm',
         outline:
           'bg-background text-foreground shadow-extruded-sm ' +
-          'hover:-translate-y-[1px] hover:shadow-extruded hover:text-violet ' +
+          'hover:-translate-y-[1px] hover:shadow-extruded hover:text-primary ' +
           'active:translate-y-[0.5px] active:shadow-inset-sm',
         secondary:
           'bg-background text-muted-foreground shadow-extruded-sm ' +
           'hover:text-foreground hover:shadow-extruded ' +
           'active:shadow-inset-sm',
         ghost:
-          'bg-transparent text-muted-foreground hover:text-violet ' +
+          'bg-transparent text-muted-foreground hover:text-primary ' +
           'hover:shadow-inset-sm active:shadow-inset',
-        link: 'text-violet underline-offset-4 hover:underline',
+        link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-10 px-5 py-2',

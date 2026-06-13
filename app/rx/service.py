@@ -44,11 +44,26 @@ async def create(
     drift_breakdown: Optional[object] = None,
     confidence_breakdown: Optional[object] = None,
     created_at: Optional[_dt.datetime] = None,
+    linked_hypothesis_ids: Optional[list] = None,
 ) -> Recommendation:
     """Insert a recommendation. `owner_user_id` is server-side from env."""
     if domain != "finance":
         # Belt + suspenders. DB CHECK also rejects.
         raise ValueError("domain must be 'finance'")
+    # Phase 2 (retrieval-depth): citation verification. Annotate each
+    # source_ref with whether its quote actually appears in the cited chunk.
+    # Deterministic, no LLM. Wrapped so a verifier bug can never block ingest
+    # (a crash degrades to unannotated refs; a genuine mismatch is recorded).
+    verified_refs = source_refs
+    try:
+        from app.rx import citation_check
+        verified_refs = citation_check.annotate_source_refs(source_refs)
+    except Exception as exc:  # noqa: BLE001
+        import logging as _log
+        _log.getLogger(__name__).warning(
+            "rx.create: citation verification failed: %s", exc
+        )
+
     row = Recommendation(
         owner_user_id=SETTINGS.RX_OPERATOR_UUID,
         domain=domain,
@@ -59,10 +74,11 @@ async def create(
         body_md=body_md,
         rx_md_path=rx_md_path,
         facts_json=facts_json,
-        source_refs=source_refs,
+        source_refs=verified_refs,
         signals_fired=signals_fired,
         drift_breakdown=drift_breakdown,
         confidence_breakdown=confidence_breakdown,
+        linked_hypothesis_ids=linked_hypothesis_ids,
         snooze_count=0,
     )
     if created_at is not None:
@@ -214,10 +230,22 @@ def _list_item_from_row(row: Recommendation, now: _dt.datetime) -> dict:
         "forced_decision": (row.snooze_count or 0)
         >= _FORCED_DECISION_SNOOZE_COUNT,
         "aging": age_days > _AGING_THRESHOLD_DAYS,
-        # Phase 2: operator-attention axis (nullable on legacy rows).
+        # Phase 2 (tv-context): operator-attention axis (nullable on legacy).
         "attention_score": row.attention_score,
         "attention_breakdown": row.attention_breakdown,
+        # Phase 2 (retrieval-depth): citation verification status, derived
+        # from the (possibly annotated) source_refs. Cheap + pure.
+        "citations_status": _citations_status(row.source_refs),
     }
+
+
+def _citations_status(source_refs: object) -> str:
+    """Rec-level citation verification status (best-effort, never raises)."""
+    try:
+        from app.rx import citation_check
+        return citation_check.status_from_refs(source_refs)
+    except Exception:  # noqa: BLE001
+        return "no_quotes"
 
 
 # Status ordering for the list view: open first, snoozed next, then
@@ -311,12 +339,37 @@ async def links_for_rec(rec_id: str) -> dict:
             haystack_parts.append(rec.body_md.lower())
         haystack = " ".join(haystack_parts)
 
+        # Phase 4 (D2 fix): EXPLICIT linkage is primary. If the rec was
+        # composed with `linked_hypothesis_ids`, those are the real links —
+        # tagged `match_type="explicit"`. The substring heuristic below is
+        # demoted to a fallback SUGGESTION (`match_type="substring_fallback"`)
+        # and is suppressed entirely for any hypothesis already linked
+        # explicitly, so a "NVDA" substring can't double-count or mislabel a
+        # hypothesis the operator never intended.
+        explicit_ids = set(rec.linked_hypothesis_ids or [])
+        hyp_hits = []
+        if explicit_ids:
+            explicit_hyps = list(
+                await session.scalars(
+                    select(Hypothesis).where(Hypothesis.id.in_(explicit_ids))
+                )
+            )
+            for h in explicit_hyps:
+                hyp_hits.append({
+                    "id": h.id,
+                    "slug": h.slug,
+                    "title": h.title,
+                    "status": h.status,
+                    "match_type": "explicit",
+                })
+
         # Hypothesis substring match — pull all hypotheses (bounded N for a
         # single user) and filter in Python. Avoids the cross-DB ILIKE
-        # quirk and lets us enforce min-length-3 cheaply.
+        # quirk and lets us enforce min-length-3 cheaply. Demoted to fallback.
         hyps = list(await session.scalars(select(Hypothesis)))
-        hyp_hits = []
         for h in hyps:
+            if h.id in explicit_ids:
+                continue  # already surfaced as explicit; don't double-count
             t = (h.title or "").lower()
             if len(t) >= 3 and t in haystack:
                 hyp_hits.append({
@@ -324,6 +377,7 @@ async def links_for_rec(rec_id: str) -> dict:
                     "slug": h.slug,
                     "title": h.title,
                     "status": h.status,
+                    "match_type": "substring_fallback",
                 })
 
         # Trade matches — explicit FK OR ticker-substring (uppercased).

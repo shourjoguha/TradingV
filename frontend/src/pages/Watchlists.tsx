@@ -88,6 +88,11 @@ export function Watchlists() {
           description="Create your first list — group tickers by thesis (e.g. 'Costa-mentioned', 'AI-resilient SaaS', 'Reshoring plays')."
         />
       ) : (
+        // Board picker chips — sized to match the Opportunities tab
+        // controls (px-4 py-2 text-sm font-medium rounded-xl) so the
+        // Decide section's two adjacent control vocabularies read
+        // consistent. Was previously px-3 py-1.5 text-xs — too dainty
+        // for the most-clicked nav in Decide.
         <div className="flex flex-wrap gap-2">
           {items.map((b) => {
             const selected = b.id === activeId
@@ -97,14 +102,14 @@ export function Watchlists() {
                 type="button"
                 onClick={() => setSelectedId(b.id)}
                 className={[
-                  'px-3 py-1.5 rounded-xl text-xs transition-all',
+                  'px-4 py-2 rounded-xl text-sm font-medium transition-all',
                   selected
-                    ? 'bg-card text-foreground shadow-extruded-sm font-medium'
+                    ? 'bg-card text-foreground shadow-extruded-sm'
                     : 'bg-background text-muted-foreground shadow-inset-sm hover:text-foreground',
                 ].join(' ')}
               >
                 {b.name}
-                <span className="ml-2 font-mono text-[10px] opacity-60">
+                <span className="ml-2 font-mono text-xs opacity-60 tabular-nums">
                   {b.ticker_count}
                 </span>
               </button>
@@ -147,7 +152,7 @@ function NewBoardButton() {
           <DialogTitle>New watchlist</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>Name</Label>
             <Input
               autoFocus
@@ -156,7 +161,7 @@ function NewBoardButton() {
               placeholder="e.g. Costa-mentioned"
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>Description (optional)</Label>
             <Input
               value={description}
@@ -328,7 +333,7 @@ function BoardDetailView({
                     <span className="font-mono font-semibold text-sm">{t.ticker}</span>
                     <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     {t.notes && (
-                      <span className="text-[10px] text-muted-foreground truncate ml-2">
+                      <span className="text-xs text-muted-foreground truncate ml-2">
                         — {t.notes}
                       </span>
                     )}
@@ -352,7 +357,7 @@ function BoardDetailView({
                           })
                         }}
                       >
-                        <SelectTrigger className="h-7 w-[42px] px-2 text-[10px]">
+                        <SelectTrigger className="h-7 w-[42px] px-2 text-xs">
                           <ArrowRight className="h-3 w-3" />
                         </SelectTrigger>
                         <SelectContent>

@@ -272,6 +272,34 @@ async def graph_search_endpoint(
     )
 
 
+@app.get("/deep_search")
+async def deep_search_endpoint(
+    q: str = Query(..., min_length=1),
+    k: int = Query(50, ge=1, le=200),
+    max_hops: int = Query(4, ge=1, le=6),
+    seed_count: int = Query(8, ge=1, le=20),
+    beam_width: int = Query(12, ge=1, le=40),
+    prune_threshold: float = Query(0.30, ge=0.0, le=1.0),
+    target_k: int = Query(50, ge=1, le=200),
+    disable_early_stop: bool = Query(True),
+):
+    """Filter-late deep retrieval (retrieval-depth Phase 1).
+
+    Wider/deeper than /graph_search and returns the FULL evaluated candidate
+    set: ``results`` (retained, each with hop + decay-as-feature + retain
+    reason) PLUS ``pruned`` (evaluated-but-rejected, each with a drop reason).
+    Nothing is filtered out before the judgment layer sees it — that's the
+    point. Meant to be called on-demand from a Claude Code session
+    (``/rx-deep-retrieve``), not on the always-on fast path.
+    """
+    return _graph_search.deep_search(
+        _con(), q,
+        k=k, max_hops=max_hops, seed_count=seed_count, beam_width=beam_width,
+        prune_threshold=prune_threshold, target_k=target_k,
+        disable_early_stop=disable_early_stop,
+    )
+
+
 @app.post("/folder-context")
 async def folder_context_endpoint(payload: dict = Body(...)):
     """Given a list of evidence vault paths, return the operator-authored

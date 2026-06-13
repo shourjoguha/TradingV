@@ -25,7 +25,7 @@ export function ProcessesTab() {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                <tr className="border-b text-xs font-mono text-muted-foreground">
                   <th className="py-2 pr-3">Loop</th>
                   <th className="py-2 pr-3">State</th>
                   <th className="py-2 pr-3">Last tick</th>

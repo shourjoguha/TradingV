@@ -1,4 +1,7 @@
-export type BackendId = 'laptop' | 'railway'
+// Railway permanently shut down (2026-05-17). Type kept as a single-member
+// union so the ~80 `backendId` cache-key plumbing call sites in use-api.ts
+// continue compiling without a wholesale refactor.
+export type BackendId = 'laptop'
 
 export interface AccuracyGridRow {
   ticker: string
@@ -96,6 +99,7 @@ export interface QueueStats {
 export interface Trade {
   id: string
   opportunity_id: string | null
+  related_rec_id: string | null
   ticker: string
   side: 'buy' | 'sell'
   qty: number

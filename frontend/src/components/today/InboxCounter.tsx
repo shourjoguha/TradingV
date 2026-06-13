@@ -40,8 +40,8 @@ function Counter({ icon: Icon, label, count, to }: CounterProps) {
       <span className="text-sm">{label}</span>
       <Badge
         variant="outline"
-        className={`tabular-nums text-[10px] ${
-          muted ? 'text-muted-foreground' : 'text-violet border-violet/40'
+        className={`tabular-nums text-xs ${
+          muted ? 'text-muted-foreground' : 'text-primary border-primary/40'
         }`}
       >
         {count}
@@ -77,7 +77,7 @@ export function InboxCounter() {
           <span>Inbox</span>
           <Badge
             variant="outline"
-            className="tabular-nums text-[10px] text-violet border-violet/40"
+            className="tabular-nums text-xs text-primary border-primary/40"
           >
             {total}
           </Badge>

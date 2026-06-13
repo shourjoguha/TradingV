@@ -49,7 +49,7 @@ export function DatePicker({
             // part of the same form palette.
             'flex h-10 w-full items-center justify-between rounded-2xl bg-background px-4 py-2 text-sm font-mono text-foreground',
             'shadow-inset-sm transition-shadow duration-200 ease-out',
-            'focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-violet focus:ring-offset-2 focus:ring-offset-background',
+            'focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background',
             !selected && 'text-muted-foreground',
             className,
           )}

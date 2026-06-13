@@ -106,11 +106,13 @@ backups/          local snapshots + ROLLBACK.md (gitignored except docs)
 
 Comparison endpoints (`/v1/predictions/by-target`, `/v1/predictions/by-horizon`) read from `prediction_points` + `ohlcv_bars` and join in-process.
 
-## Dual-backend topology
+## ~~Dual-backend topology~~ — single backend since 2026-05-17
 
-Two identical FastAPI instances (laptop primary on LAN, Railway replica always-on). Frontend picks which runs a given job; after completion, the runner pushes its touched tickers AND a full job snapshot to the peer via `POST /v1/tickers` + `POST /v1/analysis/import` so both DBs retain history. OHLCV is refetched per job, not synced. Details: [sync.md](../modules/sync.md).
+> **Status:** Railway permanently shut down per [ADR 018](../decisions/018-railway-shutdown.md). Frontend has no backend toggle; `BackendId = 'laptop'` is a single-member union. `app/sync/` module retained dormant — no peer URL is set, so sync-outbox rows accumulate but never push. Section below preserved as historical reference.
 
-**Bidirectional sync is live**. Phase B1+B2 added a Tailscale tunnel from Railway back to the laptop, so jobs originating on either side replicate to the other (`kind='ticker'` + `kind='result'` outbox rows). Either backend can run a job; both DBs end up with the result. See [backlog.md](../status/backlog.md) "Reverse-direction sync" RESOLVED.
+~~Two identical FastAPI instances (laptop primary on LAN, Railway replica always-on).~~ Frontend used to pick which ran a given job; after completion, the runner pushed its touched tickers AND a full job snapshot to the peer via `POST /v1/tickers` + `POST /v1/analysis/import` so both DBs retained history. OHLCV was refetched per job, not synced. Details: [sync.md](../modules/sync.md).
+
+~~**Bidirectional sync is live**.~~ Phase B1+B2 added a Tailscale tunnel from Railway back to the laptop. As of 2026-05-17 the Railway side is offline; only the outbox-write code path runs and the rows are inert.
 
 ## Storage split: Postgres vs Redis
 Postgres = durable state. Redis (deferred) = ephemeral queues.

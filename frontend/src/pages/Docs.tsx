@@ -8,7 +8,7 @@ export function Docs() {
   const doc = getDoc(slug)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-heading font-semibold tracking-tight">

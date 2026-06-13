@@ -44,7 +44,7 @@ export function FreshSignalsStrip({ limit = 5 }: { limit?: number }) {
       <Card>
         <CardHeader className="py-3">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Target className="h-4 w-4 text-violet" />
+            <Target className="h-4 w-4 text-primary" />
             Fresh Signals
           </CardTitle>
         </CardHeader>
@@ -61,7 +61,7 @@ export function FreshSignalsStrip({ limit = 5 }: { limit?: number }) {
       <Card>
         <CardHeader className="py-3">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Target className="h-4 w-4 text-violet" />
+            <Target className="h-4 w-4 text-primary" />
             Fresh Signals
           </CardTitle>
         </CardHeader>
@@ -87,22 +87,22 @@ export function FreshSignalsStrip({ limit = 5 }: { limit?: number }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Target className="h-4 w-4 text-violet" />
+          <Target className="h-4 w-4 text-primary" />
           Fresh Signals
           {freshCount > 0 && (
-            <Badge variant="outline" className="ml-1 text-[10px]">
+            <Badge variant="outline" className="ml-1 text-xs">
               {freshCount} new
             </Badge>
           )}
         </CardTitle>
         <Link
           to="/motion/opportunities"
-          className="text-xs text-muted-foreground hover:text-violet"
+          className="text-xs text-muted-foreground hover:text-primary"
         >
           View all
         </Link>
       </CardHeader>
-      <CardContent className="space-y-1.5">
+      <CardContent className="space-y-2">
         {display.map((o) => {
           const isFresh = new Date(o.generated_at).getTime() > lastVisitMs
           return (
@@ -112,11 +112,11 @@ export function FreshSignalsStrip({ limit = 5 }: { limit?: number }) {
               className="flex items-center justify-between gap-3 rounded-2xl shadow-inset-sm bg-background px-3 py-2 hover:shadow-extruded-sm transition-all"
             >
               <div className="flex items-baseline gap-2 min-w-0 flex-1">
-                {isFresh && <Sparkle className="h-3 w-3 text-violet shrink-0" />}
+                {isFresh && <Sparkle className="h-3 w-3 text-primary shrink-0" />}
                 <span className="text-sm font-mono font-semibold shrink-0">{o.ticker}</span>
                 <Badge
                   variant="outline"
-                  className={`text-[10px] shrink-0 ${
+                  className={`text-xs shrink-0 ${
                     o.kind === 'buy'
                       ? 'bg-success-bg text-success-fg'
                       : 'bg-danger-bg text-danger-fg'
@@ -132,7 +132,7 @@ export function FreshSignalsStrip({ limit = 5 }: { limit?: number }) {
                   {o.predicted_move_pct >= 0 ? '+' : ''}
                   {(o.predicted_move_pct * 100).toFixed(2)}%
                 </span>
-                <span className="text-[10px] text-muted-foreground truncate min-w-0 flex-1">
+                <span className="text-xs text-muted-foreground truncate min-w-0 flex-1">
                   {o.rule_label || o.rule_id}
                 </span>
               </div>

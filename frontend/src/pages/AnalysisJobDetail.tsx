@@ -27,7 +27,7 @@ export function AnalysisJobDetail() {
   const { data: job, isLoading } = useAnalysisJob(jobId || '')
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-[200px]" />
         <Card>
           <CardContent className="h-[200px] flex items-center justify-center">
@@ -48,7 +48,7 @@ export function AnalysisJobDetail() {
     )
   }
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/analysis">
@@ -144,7 +144,7 @@ export function AnalysisJobDetail() {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Configuration</CardTitle>

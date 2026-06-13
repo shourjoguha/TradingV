@@ -14,6 +14,7 @@ import uuid
 
 from sqlalchemy import (
     JSON,
+    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
@@ -49,6 +50,13 @@ class Trade(Base):
         ForeignKey("recommendations.id", ondelete="SET NULL"),
         nullable=True,
     )
+    # retrieval-depth Phase 4 (B4 attribution split): did the linked rec
+    # PREDICT this trade (operator decided independently) or CAUSE it?
+    # 'influenced' trades are excluded from predictive-lift so a rec can't
+    # earn credit for a move it caused. NULL = unclassified/legacy.
+    rec_influence_kind: Mapped[str | None] = mapped_column(
+        String(24), nullable=True
+    )
     ticker: Mapped[str] = mapped_column(String(50), nullable=False)
     side: Mapped[str] = mapped_column(String(8), nullable=False)  # 'buy' | 'sell'
     qty: Mapped[float] = mapped_column(Float(), nullable=False)
@@ -77,4 +85,9 @@ class Trade(Base):
         Index("ix_trades_ticker", "ticker"),
         Index("ix_trades_entry_at", "entry_at"),
         Index("ix_trades_opportunity", "opportunity_id"),
+        CheckConstraint(
+            "rec_influence_kind IS NULL OR "
+            "rec_influence_kind IN ('preceded_independent','influenced')",
+            name="ck_trades_rec_influence_kind",
+        ),
     )

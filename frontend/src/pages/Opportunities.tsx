@@ -53,7 +53,7 @@ export function Opportunities() {
   const items = opps.data?.items ?? []
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h2 className="font-display text-2xl font-bold tracking-tight">Opportunities</h2>
         <p className="text-sm text-muted-foreground">
@@ -67,8 +67,8 @@ export function Opportunities() {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
-              tab === t.id ? 'bg-background shadow-extruded-sm text-violet' : 'text-muted-foreground hover:text-foreground'
-            } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet`}
+              tab === t.id ? 'bg-background shadow-extruded-sm text-primary' : 'text-muted-foreground hover:text-foreground'
+            } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary`}
           >
             {t.label}
           </button>
@@ -93,14 +93,14 @@ export function Opportunities() {
           <table className="w-full text-sm">
             <thead>
               <tr>
-                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ticker</th>
-                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kind</th>
-                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Rule</th>
-                <th className="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Move</th>
-                <th className="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Conf</th>
-                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Generated</th>
-                <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Expires</th>
-                {tab === 'open' && <th className="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
+                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Ticker</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Kind</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Rule</th>
+                <th className="text-right px-3 py-2 text-xs font-semibold text-muted-foreground">Move</th>
+                <th className="text-right px-3 py-2 text-xs font-semibold text-muted-foreground">Conf</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Generated</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Expires</th>
+                {tab === 'open' && <th className="text-right px-3 py-2 text-xs font-semibold text-muted-foreground">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -155,7 +155,7 @@ export function Opportunities() {
               autoFocus
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full bg-background rounded-2xl shadow-inset-sm p-3 text-sm h-24 placeholder:text-[#A0AEC0] focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-violet"
+              className="w-full bg-background rounded-2xl shadow-inset-sm p-3 text-sm h-24 placeholder:text-[#A0AEC0] focus:outline-none focus:shadow-inset focus:ring-2 focus:ring-primary"
               placeholder="Reason (optional)..."
             />
             <div className="flex justify-end gap-2">

@@ -11,6 +11,7 @@ Single-page React SPA under `frontend/`. Talks to the FastAPI backend on `:8000`
 | `hooks/use-api.ts` shape adapters + new Phase 1-5 hooks | [hooks.md](hooks.md) |
 | `pages/*` purpose + endpoint map (13 routes incl. `/docs`, `/macro`) | [pages.md](pages.md) |
 | `components/ui/*` (shadcn primitives) | [ui-components.md](ui-components.md) |
+| `components/charts/*` — three-tier infra (SVG / Plotly / ChartBuilder), theme tokens, bundle policy, ChartBuilder usage, migration history | [charts.md](charts.md) |
 | `npm run dev`, env, deploy notes, Vite proxy, Cloudflare Pages port | [dev-workflow.md](dev-workflow.md) |
 
 Read only what you need. Each file < 1 screen. The original build brief lives at `/Users/shourjosmac/.claude/plans/use-claude-design-to-lovely-babbage.md` — frozen reference for the big picture.

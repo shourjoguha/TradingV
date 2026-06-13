@@ -24,12 +24,19 @@ const KIND_ICONS: Record<TVContextKind, typeof Bell> = {
   event: Calendar,
 }
 
+/**
+ * Provenance color per source (2026-05-17 color taxonomy). Distinct
+ * per-kind hue gives the operator a pre-attentive "where did this come
+ * from?" channel on the timeline. Migrated from raw Tailwind utilities
+ * (text-amber-500 etc.) to on-palette tokens so the colors compose w/
+ * the rest of the matte-bold scheme.
+ */
 const KIND_COLORS: Record<TVContextKind, string> = {
-  webhook: 'text-amber-500',
-  screenshot: 'text-violet',
-  note: 'text-emerald-500',
-  idea: 'text-sky-500',
-  event: 'text-rose-500',
+  webhook: 'text-warning-fg',          // alert-like
+  screenshot: 'text-primary',           // operator capture → primary action color
+  note: 'text-success-fg',             // hand-typed observation
+  idea: 'text-identity-liquidity',     // generative (slate-blue, was sky-500)
+  event: 'text-danger-fg',             // time-bound triggering
 }
 
 interface ContextItemCardProps {
@@ -80,16 +87,16 @@ export function ContextItemCard({ item }: ContextItemCardProps) {
               <span className="font-mono text-sm font-medium">
                 {item.ticker ?? '—'}
               </span>
-              <Badge variant="secondary" className="text-[10px] uppercase">
+              <Badge variant="secondary" className="text-xs uppercase">
                 {item.kind}
               </Badge>
               {dedupeCount > 1 && (
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-xs">
                   ×{dedupeCount}
                 </Badge>
               )}
               {item.status !== 'active' && (
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-xs">
                   {item.status}
                 </Badge>
               )}
