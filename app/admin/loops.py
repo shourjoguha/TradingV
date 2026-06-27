@@ -79,6 +79,20 @@ LOOPS: dict[str, LoopMeta] = {
         cost_sensitive=False,
         default_enabled=True,
     ),
+    "agents": LoopMeta(
+        loop_id="agents",
+        title="Agents lane (TradingAgents)",
+        description=(
+            "Daily multi-agent BUY/SELL/HOLD decisions over the watchlist, "
+            "side-by-side with Kronos. LLM calls. Default OFF; opt in via "
+            "AGENTS_ENABLED + requirements-agents.txt."
+        ),
+        default_cadence_seconds=DAY,
+        supports_abort=True,
+        confirm_modal_required=True,
+        cost_sensitive=True,
+        default_enabled=False,  # opt-in via AGENTS_ENABLED
+    ),
     "hyp_tick": LoopMeta(
         loop_id="hyp_tick",
         title="Hypothesis tick",

@@ -15,6 +15,19 @@ class Settings(BaseSettings):
     # startup. Requires the extras in requirements-kronos.txt to be
     # installed on the host (torch, huggingface_hub, etc).
     KRONOS_ENABLED: bool = False
+
+    # Agents lane (TradingAgents) — runs SIDE BY SIDE with Kronos, never
+    # replacing it. When true, the stub engine is swapped for the real
+    # multi-agent engine at startup (requires requirements-agents.txt) and a
+    # daily decision loop runs over the watchlist. Default False: ships dark.
+    AGENTS_ENABLED: bool = False
+    # Daily agents loop cadence (seconds) and post-boot warmup.
+    AGENTS_SLEEP_SECONDS: int = 86400
+    AGENTS_WARMUP_SECONDS: int = 1800
+    # Optional LLM overrides for the agents engine. Empty => reuse CLAUDE_MODEL.
+    AGENTS_LLM_PROVIDER: str = "anthropic"
+    AGENTS_DEEP_MODEL: str = ""
+    AGENTS_QUICK_MODEL: str = ""
     # Dual-backend deployment:
     # - INSTANCE_NAME is informational ("laptop" | "railway"), surfaced in
     #   /health + logs so we know which replica responded.
