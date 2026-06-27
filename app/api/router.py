@@ -28,6 +28,7 @@ from app.ticker_review.routes import router as ticker_review_router
 from app.rx.routes import router as rx_router
 from app.content.routes import router as content_router
 from app.agents.routes import router as agents_router
+from app.api_list.routes import router as api_list_router
 
 api_router = APIRouter()
 # Legacy (unversioned) — keep for existing TradingView webhook URL.
@@ -63,4 +64,5 @@ v1_router.include_router(ticker_review_router)
 v1_router.include_router(rx_router)
 v1_router.include_router(content_router)
 v1_router.include_router(agents_router)
+v1_router.include_router(api_list_router)
 api_router.include_router(v1_router)

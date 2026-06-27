@@ -78,6 +78,17 @@ async def lifespan(_app: FastAPI):
 
             activate_agents()
 
+        # Additive OHLCV provider: Alpha Vantage appended AFTER yfinance so
+        # yfinance stays primary. No-op unless explicitly enabled + keyed.
+        if SETTINGS.ALPHAVANTAGE_PROVIDER_ENABLED and SETTINGS.ALPHAVANTAGE_API_KEY:
+            from app.market_data import registry as _md_registry
+            from app.market_data.providers.alphavantage_provider import (
+                AlphaVantageProvider,
+            )
+
+            _md_registry.register(AlphaVantageProvider())
+            logger.info("market_data: Alpha Vantage provider registered (backup to yfinance)")
+
         import asyncio
 
         # Tests set DISABLE_LIFESPAN_BACKGROUND_TASKS=1 in conftest. Skipping

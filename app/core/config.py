@@ -28,6 +28,16 @@ class Settings(BaseSettings):
     AGENTS_LLM_PROVIDER: str = "anthropic"
     AGENTS_DEEP_MODEL: str = ""
     AGENTS_QUICK_MODEL: str = ""
+
+    # Data-source API keys (all optional; a provider/feed self-disables when
+    # its key is empty). Surfaced via GET /v1/api-list as `configured` flags.
+    ALPHAVANTAGE_API_KEY: str = ""
+    FINNHUB_API_KEY: str = ""
+    REDDIT_CLIENT_ID: str = ""
+    REDDIT_CLIENT_SECRET: str = ""
+    # When true, register the Alpha Vantage OHLCV provider at boot (appended
+    # after yfinance, which stays primary). No-op unless a key is also set.
+    ALPHAVANTAGE_PROVIDER_ENABLED: bool = False
     # Dual-backend deployment:
     # - INSTANCE_NAME is informational ("laptop" | "railway"), surfaced in
     #   /health + logs so we know which replica responded.
