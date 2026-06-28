@@ -334,6 +334,16 @@ class Config:
             env_min_tokens or lexical_entry.get("min_tokens") or 2
         )
 
+        # ---- On-demand idle shutdown ----
+        # When > 0, the app self-exits after this many seconds with no in-flight
+        # request and no activity (see app.lifespan idle watcher). Used by the
+        # socket-activated on-demand indexers (fitness/nutrition/learning) so
+        # launchd relaunches them on the next connection. 0 (default) = disabled
+        # → persistent, used by the finance indexer.
+        self.idle_shutdown_seconds: int = int(
+            os.environ.get("IDLE_SHUTDOWN_SECONDS", "0")
+        )
+
     def is_evergreen_path(self, rel_path: str) -> Optional[bool]:
         """Return ``True`` if ``rel_path`` matches any configured evergreen
         glob, ``False`` if globs are configured and none match, and ``None``

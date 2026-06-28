@@ -51,11 +51,20 @@ kill_port() {
     fi
 }
 
+indexer_healthy() {
+    curl -fsS -o /dev/null "http://127.0.0.1:8001/health" 2>/dev/null
+}
+
 stop_all() {
     log "stopping dev stack"
     kill_port 3000   # frontend
     kill_port 8000   # backend
-    kill_port 8001   # vault indexer
+    # The finance indexer (:8001) is launchd-managed and persistent. Only kill
+    # it if THIS run spawned it (launchd's was absent). Default: leave it alone
+    # so Ctrl-C / `stop` don't churn-respawn the shared indexer.
+    if [ "${INDEXER_EXTERNAL:-1}" -ne 1 ]; then
+        kill_port 8001
+    fi
     rm -f "${PID_FILE}"
 }
 
@@ -136,8 +145,9 @@ if [ "${SKIP_PG}" -eq 0 ]; then
     fi
 fi
 
-# Free any stale ports from a previous run before we relaunch.
-kill_port 8001
+# Free any stale ports from a previous run before we relaunch. NOTE: :8001 is
+# intentionally NOT swept — it's the launchd-managed finance indexer; the
+# indexer step below detects and reuses it instead of killing/relaunching.
 kill_port 8000
 kill_port 3000
 
@@ -167,17 +177,27 @@ log "$(c_cyan "running")  alembic upgrade head"
 # See tools/vault_indexer/MULTI_DOMAIN_BRIEFING.md for the full registry rules.
 INDEXER_DB_PATH="${INDEXER_DB_PATH:-${VAULT_PATH}/.indexer/cache-finance.db}"
 
-log "$(c_cyan "starting")  vault-indexer on :8001 (vault=${VAULT_PATH}, domain=finance, db=${INDEXER_DB_PATH})"
-(
-    cd "${REPO_DIR}"
-    VAULT_PATH="${VAULT_PATH}" \
-    DOMAIN=finance \
-    INDEXER_DB_PATH="${INDEXER_DB_PATH}" \
-    "${VENV_PY}" -m uvicorn \
-        tools.vault_indexer.app:app --port 8001 --host 127.0.0.1 \
-        > "${LOG_DIR}/indexer.log" 2>&1
-) &
-INDEXER_PID=$!
+# The finance indexer is normally already up under launchd (KeepAlive). Reuse
+# it rather than double-spawning (which fights for :8001 and logs
+# "address already in use"). Only start our own if :8001 is unhealthy.
+if indexer_healthy; then
+    log "$(c_green "ok")        reusing launchd finance indexer on :8001"
+    INDEXER_PID=""
+    INDEXER_EXTERNAL=1
+else
+    log "$(c_cyan "starting")  vault-indexer on :8001 (vault=${VAULT_PATH}, domain=finance, db=${INDEXER_DB_PATH})"
+    (
+        cd "${REPO_DIR}"
+        VAULT_PATH="${VAULT_PATH}" \
+        DOMAIN=finance \
+        INDEXER_DB_PATH="${INDEXER_DB_PATH}" \
+        "${VENV_PY}" -m uvicorn \
+            tools.vault_indexer.app:app --port 8001 --host 127.0.0.1 \
+            > "${LOG_DIR}/indexer.log" 2>&1
+    ) &
+    INDEXER_PID=$!
+    INDEXER_EXTERNAL=0
+fi
 
 # ----- 3. Backend (port 8000) -----------------------------------------------
 
@@ -255,7 +275,10 @@ while true; do
     for pair in "indexer:${INDEXER_PID}" "backend:${BACKEND_PID}" "frontend:${FRONTEND_PID}"; do
         name="${pair%%:*}"
         pid="${pair##*:}"
-        if [ -n "${pid}" ] && kill -0 "${pid}" 2>/dev/null; then
+        # Empty pid = service is external (launchd-managed finance indexer that
+        # we reused). Not ours to monitor — skip without flagging it "exited".
+        [ -z "${pid}" ] && continue
+        if kill -0 "${pid}" 2>/dev/null; then
             alive_count=$((alive_count + 1))
         else
             # Don't spam the same warning repeatedly.

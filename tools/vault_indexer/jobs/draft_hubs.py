@@ -116,7 +116,8 @@ def _slug(s: str) -> str:
 def _fetch_chunks(indexer_base: str, query: str, k: int) -> list[dict]:
     qs = urllib.parse.urlencode({"q": query, "k": k})
     req = urllib.request.Request(f"{indexer_base.rstrip('/')}/search?{qs}")
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    # 60s: first /search after socket-activation bears the embedding-model load.
+    with urllib.request.urlopen(req, timeout=60) as resp:
         data = json.loads(resp.read().decode("utf-8", errors="replace"))
     return data.get("results") or []
 
@@ -258,9 +259,12 @@ def main() -> int:
               file=sys.stderr)
         return 0
 
-    # Indexer reachability probe.
+    # Indexer reachability probe. Timeout is generous: the on-demand indexers
+    # (fitness/nutrition/learning) are socket-activated and cold-start (~8s for
+    # model load) on the first connection, so a short timeout would spuriously
+    # report them unreachable.
     try:
-        urllib.request.urlopen(f"{args.indexer.rstrip('/')}/health", timeout=5)
+        urllib.request.urlopen(f"{args.indexer.rstrip('/')}/health", timeout=30)
     except Exception as e:                                      # noqa: BLE001
         print(f"indexer {args.indexer} unreachable ({e}) — exiting.", file=sys.stderr)
         return 0
