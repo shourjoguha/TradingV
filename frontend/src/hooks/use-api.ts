@@ -1313,6 +1313,22 @@ export function useTVContextByTicker(
   })
 }
 
+// Recent TV-context items across all tickers (active only). Powers the Today
+// Inbox counter — no per-ticker fan-out needed.
+export function useTVContextRecent(opts?: { limit?: number }) {
+  const { backendId } = useBackend()
+  return useQuery({
+    queryKey: ['tv-context-recent', backendId, opts?.limit],
+    queryFn: () => {
+      const s = new URLSearchParams()
+      if (opts?.limit) s.set('limit', String(opts.limit))
+      const qs = s.toString() ? `?${s}` : ''
+      return apiFetch<TVContextItem[]>(`/v1/tv-context/recent${qs}`, { backendId })
+    },
+    staleTime: 15_000,
+  })
+}
+
 export function useTVContextByTrade(tradeId: string | null | undefined) {
   const { backendId } = useBackend()
   return useQuery({

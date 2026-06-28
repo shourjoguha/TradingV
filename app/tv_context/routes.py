@@ -224,6 +224,17 @@ async def post_screenshot(
         return IngestResult(item=_to_out(item))
 
 
+@router.get("/recent", response_model=List[TVContextItemOut])
+async def get_recent(
+    limit: int = Query(50, ge=1, le=500),
+    _api_key: str = Depends(verify_api_key),
+):
+    """Recent active TV-context items across all tickers, newest first."""
+    async with _db.SessionLocal() as session:
+        rows = await _svc.list_recent(session=session, limit=limit)
+        return [_to_out(r) for r in rows]
+
+
 @router.get("/by-ticker/{ticker}", response_model=List[TVContextItemOut])
 async def get_by_ticker(
     ticker: str,

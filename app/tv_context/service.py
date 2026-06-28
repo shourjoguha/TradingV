@@ -416,6 +416,29 @@ async def list_by_ticker(
     return list(result.scalars().all())
 
 
+async def list_recent(
+    *,
+    session: AsyncSession,
+    since: datetime.datetime | None = None,
+    kinds: Iterable[str] | None = None,
+    limit: int = 50,
+) -> list[TVContextItem]:
+    """Recent active items across ALL tickers, newest first. Mirrors
+    ``recent_for_ticker`` without the ticker filter (powers the Today inbox)."""
+    stmt = (
+        select(TVContextItem)
+        .where(TVContextItem.status == STATUS_ACTIVE)
+        .order_by(TVContextItem.captured_at.desc())
+        .limit(limit)
+    )
+    if since is not None:
+        stmt = stmt.where(TVContextItem.captured_at >= since)
+    if kinds:
+        stmt = stmt.where(TVContextItem.kind.in_(list(kinds)))
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def get_by_id(
     *, session: AsyncSession, item_id: str
 ) -> TVContextItem | None:
