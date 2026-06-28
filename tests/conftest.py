@@ -48,6 +48,7 @@ from app.earnings import models as _earnings_models  # noqa: F401, E402
 from app.ticker_review import models as _ticker_review_models  # noqa: F401, E402
 from app.rx import models as _rx_models  # noqa: F401, E402
 from app.content import models as _content_models  # noqa: F401, E402
+from app.agents import models as _agents_models  # noqa: F401, E402
 
 
 @pytest_asyncio.fixture

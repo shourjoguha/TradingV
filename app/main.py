@@ -36,6 +36,7 @@ from app.earnings import models as _earnings_models  # noqa: F401
 from app.ticker_review import models as _ticker_review_models  # noqa: F401
 from app.rx import models as _rx_models  # noqa: F401
 from app.content import models as _content_models  # noqa: F401
+from app.agents import models as _agents_models  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -69,6 +70,24 @@ async def lifespan(_app: FastAPI):
             from app.kronos.real_adapter import activate as activate_kronos
 
             activate_kronos()
+
+        # Agents lane (TradingAgents) — swap the stub engine for the real one.
+        # Side-by-side with Kronos; ships dark unless AGENTS_ENABLED.
+        if SETTINGS.AGENTS_ENABLED:
+            from app.agents.real_engine import activate as activate_agents
+
+            activate_agents()
+
+        # Additive OHLCV provider: Alpha Vantage appended AFTER yfinance so
+        # yfinance stays primary. No-op unless explicitly enabled + keyed.
+        if SETTINGS.ALPHAVANTAGE_PROVIDER_ENABLED and SETTINGS.ALPHAVANTAGE_API_KEY:
+            from app.market_data import registry as _md_registry
+            from app.market_data.providers.alphavantage_provider import (
+                AlphaVantageProvider,
+            )
+
+            _md_registry.register(AlphaVantageProvider())
+            logger.info("market_data: Alpha Vantage provider registered (backup to yfinance)")
 
         import asyncio
 
@@ -161,6 +180,7 @@ async def lifespan(_app: FastAPI):
         digest_task = None
         market_data_task = None
         opps_task = None
+        agents_task = None
         macro_task = None
         hyp_task = None
         research_task = None
@@ -178,6 +198,7 @@ async def lifespan(_app: FastAPI):
         digest_stop = asyncio.Event()
         market_data_stop = asyncio.Event()
         opps_stop = asyncio.Event()
+        agents_stop = asyncio.Event()
         macro_stop = asyncio.Event()
         hyp_stop = asyncio.Event()
         research_stop = asyncio.Event()
@@ -268,6 +289,41 @@ async def lifespan(_app: FastAPI):
                         continue
 
             opps_task = asyncio.create_task(_opps_loop(), name="opportunities-tick")
+
+            # Daily Agents-lane decisions — TradingAgents multi-agent engine
+            # over the watchlist roster. Side-by-side with Kronos; gated by
+            # AGENTS_ENABLED (default off, so this never runs unless the
+            # operator opts in + installs requirements-agents.txt). Warmup
+            # defers the first tick so it doesn't collide with the opps/macro
+            # ticks at boot.
+            if SETTINGS.AGENTS_ENABLED:
+                from app.agents import service as _agents_service
+
+                async def _agents_loop() -> None:
+                    interval = SETTINGS.AGENTS_SLEEP_SECONDS
+                    warmup = SETTINGS.AGENTS_WARMUP_SECONDS
+                    try:
+                        await asyncio.wait_for(agents_stop.wait(), timeout=warmup)
+                        if agents_stop.is_set():
+                            return
+                    except asyncio.TimeoutError:
+                        pass
+                    while True:
+                        try:
+                            stats = await _agents_service.run_for_watchlist()
+                            logger.info("agents tick: %s", stats)
+                        except asyncio.CancelledError:
+                            raise
+                        except Exception as e:  # noqa: BLE001
+                            logger.warning("agents tick failed: %s", e)
+                        try:
+                            await asyncio.wait_for(agents_stop.wait(), timeout=interval)
+                            if agents_stop.is_set():
+                                return
+                        except asyncio.TimeoutError:
+                            continue
+
+                agents_task = asyncio.create_task(_agents_loop(), name="agents-tick")
 
             # Daily macro signal-layer ingestion — yfinance + FRED. Phase M-1
             # of the Macro Workbench. Idempotent upserts; first tick fires
@@ -674,6 +730,16 @@ async def lifespan(_app: FastAPI):
                 "opps", stop_event=opps_stop, task=opps_task,
                 fire_now=_fire_opps,
             )
+            from app.agents import service as _agents_svc
+
+            async def _fire_agents() -> None:
+                async with _admin_lifespan.tick_status("agents"):
+                    await _agents_svc.run_for_watchlist()
+
+            _admin_lifespan.register_handle(
+                "agents", stop_event=agents_stop, task=agents_task,
+                fire_now=_fire_agents, enabled=SETTINGS.AGENTS_ENABLED,
+            )
             _admin_lifespan.register_handle(
                 "hyp_tick", stop_event=hyp_stop, task=hyp_task,
                 fire_now=_fire_hyp,
@@ -771,6 +837,7 @@ async def lifespan(_app: FastAPI):
             (digest_stop, digest_task),
             (market_data_stop, market_data_task),
             (opps_stop, opps_task),
+            (agents_stop, agents_task),
             (queue_stop, queue_task),
             (macro_stop, macro_task),
             (hyp_stop, hyp_task),

@@ -1,0 +1,12 @@
+# Agents lane (TradingAgents) — heavy optional deps. Kept OUT of the base
+# requirements.txt; AGENTS_ENABLED toggles USE, this file toggles INSTALL
+# (mirrors requirements-kronos.txt).
+#
+# TradingAgents (TauricResearch, Apache-2.0) is distributed via git, not PyPI.
+# Pin to a commit/tag in your deploy for reproducibility.
+git+https://github.com/TauricResearch/TradingAgents.git
+
+# LangGraph orchestration + the Anthropic binding so the agents bill against
+# the same Claude config the research lane uses (CLAUDE_MODEL).
+langgraph>=0.2
+langchain-anthropic>=0.2
