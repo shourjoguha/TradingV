@@ -52,6 +52,7 @@ VIDEO_DOORS: dict[str, dict] = {
     "learning":  {"queue": "Videos/learning/_ingest_queue.md",  "video": "Videos/learning",  "article": "Newsletters/learning",  "port": 8004, "horizon": 36},
 }
 RELOAD_TIMEOUT = 300.0
+DOCKER_READY_TIMEOUT = 120  # Docker Desktop cold start can take 30-60s+
 
 
 def _load_env_file(path: Path) -> dict[str, str]:
@@ -135,11 +136,53 @@ def _ingest_video_door(door: str, cfg: dict, env: dict[str, str]) -> None:
     _run(cmd, env)
 
 
-def _ensure_postgres(env: dict[str, str]) -> bool:
-    """Bring up Postgres if down. Returns True iff WE started it."""
+def _docker_ready(env: dict[str, str]) -> bool:
+    """True iff the Docker daemon answers `docker info`.
+
+    The reliable readiness check: `pgrep Docker` is unreliable because Docker
+    Desktop runs helper processes, not a process literally named "Docker".
+    """
+    try:
+        return subprocess.run(
+            ["docker", "info"], cwd=str(REPO_DIR), env=env,
+            capture_output=True, timeout=15,
+        ).returncode == 0
+    except Exception:                                       # noqa: BLE001
+        return False
+
+
+def _ensure_docker(env: dict[str, str]) -> bool:
+    """Ensure the Docker daemon is up. Returns True iff WE started it.
+
+    When down, launches Docker Desktop headless (`open -ga Docker`) and polls
+    until the daemon answers. Raises if it never comes ready.
+    """
+    if _docker_ready(env):
+        logger.info("docker daemon already up — reusing (won't quit it)")
+        return False
+    logger.info("docker daemon down — launching Docker Desktop")
+    _run(["open", "-ga", "Docker"], env)
+    for _ in range(DOCKER_READY_TIMEOUT):
+        if _docker_ready(env):
+            logger.info("docker daemon ready")
+            return True
+        time.sleep(1)
+    raise RuntimeError(
+        f"Docker Desktop did not become ready within {DOCKER_READY_TIMEOUT}s"
+    )
+
+
+def _ensure_postgres(env: dict[str, str]) -> tuple[bool, bool]:
+    """Ensure Postgres is up for the finance door.
+
+    Returns ``(started_pg, started_docker)`` — each True iff WE started it, so
+    teardown stops only what it started. When :5439 is already open, Docker is
+    necessarily already up too, so both are False (pure reuse).
+    """
     if _port_open(PG_HOST, PG_PORT):
         logger.info("postgres already up on :%d — reusing (won't stop it)", PG_PORT)
-        return False
+        return False, False
+    started_docker = _ensure_docker(env)  # daemon must be ready before compose
     logger.info("postgres down — starting via docker compose")
     _run(["docker", "compose", "-f", str(COMPOSE_FILE), "up", "-d"], env)
     for _ in range(30):
@@ -149,10 +192,10 @@ def _ensure_postgres(env: dict[str, str]) -> bool:
         )
         if chk.returncode == 0:
             logger.info("postgres healthy")
-            return True
+            return True, started_docker
         time.sleep(1)
     logger.warning("postgres did not report healthy within 30s; proceeding anyway")
-    return True
+    return True, started_docker
 
 
 def _ingest_finance(env: dict[str, str]) -> None:
@@ -182,6 +225,7 @@ def main(argv: list[str] | None = None) -> int:
     env = _subprocess_env()
     selected = [d.strip() for d in args.doors.split(",") if d.strip()]
     started_pg = False
+    started_docker = False
     activated_ports: set[int] = set()
 
     try:
@@ -206,8 +250,13 @@ def main(argv: list[str] | None = None) -> int:
             if args.dry_run:
                 logger.info("finance: would run EDGAR watchlist ingest")
             else:
-                started_pg = _ensure_postgres(env)
-                _ingest_finance(env)
+                # Bring-up failures (Docker won't start, etc.) skip finance but
+                # must not abort the run (video doors already done) or teardown.
+                try:
+                    started_pg, started_docker = _ensure_postgres(env)
+                    _ingest_finance(env)
+                except Exception as e:                      # noqa: BLE001
+                    logger.warning("finance door failed — skipping: %s", e)
 
         return 0
     finally:
@@ -218,6 +267,9 @@ def main(argv: list[str] | None = None) -> int:
         if started_pg:
             logger.info("teardown: stopping postgres (we started it)")
             _run(["docker", "compose", "-f", str(COMPOSE_FILE), "stop"], env)
+        if started_docker:
+            logger.info("teardown: quitting Docker Desktop (we started it)")
+            _run(["osascript", "-e", 'quit app "Docker"'], env)
 
 
 if __name__ == "__main__":
