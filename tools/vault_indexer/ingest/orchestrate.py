@@ -151,38 +151,37 @@ def _docker_ready(env: dict[str, str]) -> bool:
         return False
 
 
-def _ensure_docker(env: dict[str, str]) -> bool:
-    """Ensure the Docker daemon is up. Returns True iff WE started it.
+def _ensure_postgres(env: dict[str, str], state: dict) -> None:
+    """Ensure Postgres is up for the finance door, recording what WE started.
 
-    When down, launches Docker Desktop headless (`open -ga Docker`) and polls
-    until the daemon answers. Raises if it never comes ready.
-    """
-    if _docker_ready(env):
-        logger.info("docker daemon already up — reusing (won't quit it)")
-        return False
-    logger.info("docker daemon down — launching Docker Desktop")
-    _run(["open", "-ga", "Docker"], env)
-    for _ in range(DOCKER_READY_TIMEOUT):
-        if _docker_ready(env):
-            logger.info("docker daemon ready")
-            return True
-        time.sleep(1)
-    raise RuntimeError(
-        f"Docker Desktop did not become ready within {DOCKER_READY_TIMEOUT}s"
-    )
-
-
-def _ensure_postgres(env: dict[str, str]) -> tuple[bool, bool]:
-    """Ensure Postgres is up for the finance door.
-
-    Returns ``(started_pg, started_docker)`` — each True iff WE started it, so
-    teardown stops only what it started. When :5439 is already open, Docker is
-    necessarily already up too, so both are False (pure reuse).
+    Sets ``state['started_docker']`` / ``state['started_pg']`` to True the
+    moment we commit to starting each service — BEFORE the blocking
+    readiness wait — so teardown still quits/stops a service even if its wait
+    times out or raises (no leak on a slow Docker cold start). When :5439 is
+    already open, Docker is necessarily up too: pure reuse, nothing recorded.
     """
     if _port_open(PG_HOST, PG_PORT):
         logger.info("postgres already up on :%d — reusing (won't stop it)", PG_PORT)
-        return False, False
-    started_docker = _ensure_docker(env)  # daemon must be ready before compose
+        return
+
+    # Docker daemon must be ready before `compose up`.
+    if _docker_ready(env):
+        logger.info("docker daemon already up — reusing (won't quit it)")
+    else:
+        state["started_docker"] = True  # record intent before the blocking wait
+        logger.info("docker daemon down — launching Docker Desktop")
+        _run(["open", "-ga", "Docker"], env)
+        for _ in range(DOCKER_READY_TIMEOUT):
+            if _docker_ready(env):
+                logger.info("docker daemon ready")
+                break
+            time.sleep(1)
+        else:
+            raise RuntimeError(
+                f"Docker Desktop did not become ready within {DOCKER_READY_TIMEOUT}s"
+            )
+
+    state["started_pg"] = True  # record intent before compose
     logger.info("postgres down — starting via docker compose")
     _run(["docker", "compose", "-f", str(COMPOSE_FILE), "up", "-d"], env)
     for _ in range(30):
@@ -192,7 +191,7 @@ def _ensure_postgres(env: dict[str, str]) -> tuple[bool, bool]:
         )
         if chk.returncode == 0:
             logger.info("postgres healthy")
-            return True, started_docker
+            return
         time.sleep(1)
     logger.warning("postgres did not report healthy within 30s; proceeding anyway")
     return True, started_docker
@@ -224,8 +223,7 @@ def main(argv: list[str] | None = None) -> int:
 
     env = _subprocess_env()
     selected = [d.strip() for d in args.doors.split(",") if d.strip()]
-    started_pg = False
-    started_docker = False
+    svc = {"started_pg": False, "started_docker": False}
     activated_ports: set[int] = set()
 
     try:
@@ -253,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
                 # Bring-up failures (Docker won't start, etc.) skip finance but
                 # must not abort the run (video doors already done) or teardown.
                 try:
-                    started_pg, started_docker = _ensure_postgres(env)
+                    _ensure_postgres(env, svc)
                     _ingest_finance(env)
                 except Exception as e:                      # noqa: BLE001
                     logger.warning("finance door failed — skipping: %s", e)
@@ -264,10 +262,10 @@ def main(argv: list[str] | None = None) -> int:
             for port in sorted(activated_ports):
                 logger.info("teardown: POST :%d/shutdown", port)
                 _post(f"http://127.0.0.1:{port}/shutdown", timeout=10)
-        if started_pg:
+        if svc["started_pg"]:
             logger.info("teardown: stopping postgres (we started it)")
             _run(["docker", "compose", "-f", str(COMPOSE_FILE), "stop"], env)
-        if started_docker:
+        if svc["started_docker"]:
             logger.info("teardown: quitting Docker Desktop (we started it)")
             _run(["osascript", "-e", 'quit app "Docker"'], env)
 
