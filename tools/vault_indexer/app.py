@@ -12,11 +12,14 @@ Endpoints:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Body, FastAPI, HTTPException, Query
+from fastapi import Body, FastAPI, HTTPException, Query, Request
 
 from . import cache as _cache
 from . import graph_compute as _graph_compute
@@ -44,6 +47,35 @@ def _con():
     if _CON is None:
         _CON = _cache.init(CONFIG.db_path, CONFIG.embedding_dim)
     return _CON
+
+
+# ---- On-demand idle shutdown ----
+# Updated by the activity middleware; read by the idle watcher started in
+# lifespan. Only active when CONFIG.idle_shutdown_seconds > 0 (the
+# socket-activated on-demand indexers). The finance indexer leaves it at 0.
+_last_activity: float = time.monotonic()
+_in_flight: int = 0
+
+
+async def _idle_watcher(timeout: int) -> None:
+    """Self-exit after `timeout`s with no in-flight request and no activity.
+
+    launchd relaunches the indexer on the next connection (socket activation),
+    so a hard `os._exit` is the clean teardown. The in-flight guard prevents
+    exiting mid-`/reload` (embedding can outlast the idle window).
+    """
+    global _last_activity
+    poll = min(30, max(1, timeout // 2))
+    while True:
+        await asyncio.sleep(poll)
+        if _in_flight > 0:
+            continue
+        if time.monotonic() - _last_activity >= timeout:
+            logger.info(
+                "idle %ds with no requests — exiting for on-demand relaunch",
+                timeout,
+            )
+            os._exit(0)
 
 
 @asynccontextmanager
@@ -82,10 +114,55 @@ async def lifespan(_app: FastAPI):
         CONFIG.vault_path, CONFIG.db_path, CONFIG.embedding_model,
         CONFIG.decay_mode, "on" if CONFIG.lexical_enabled else "off",
     )
-    yield
+    idle_task: asyncio.Task | None = None
+    if CONFIG.idle_shutdown_seconds > 0:
+        logger.info(
+            "idle-shutdown armed — exit after %ds idle",
+            CONFIG.idle_shutdown_seconds,
+        )
+        idle_task = asyncio.create_task(
+            _idle_watcher(CONFIG.idle_shutdown_seconds), name="idle-watcher"
+        )
+    try:
+        yield
+    finally:
+        if idle_task is not None:
+            idle_task.cancel()
 
 
 app = FastAPI(lifespan=lifespan, title="vault-indexer")
+
+
+@app.middleware("http")
+async def _track_activity(request: Request, call_next):
+    """Bump idle-watcher activity + in-flight counter around every request."""
+    global _last_activity, _in_flight
+    _in_flight += 1
+    _last_activity = time.monotonic()
+    try:
+        return await call_next(request)
+    finally:
+        _in_flight -= 1
+        _last_activity = time.monotonic()
+
+
+@app.post("/shutdown")
+async def shutdown():
+    """Deterministic teardown hook for the ingest orchestrator.
+
+    Schedules a near-immediate process exit so launchd relaunches the indexer
+    on the next connection. No-op-safe: on a persistent (finance) indexer the
+    process simply restarts under KeepAlive — but the orchestrator only calls
+    this against the on-demand domains it activated.
+    """
+    logger.info("shutdown requested — exiting for on-demand relaunch")
+
+    async def _bye() -> None:
+        await asyncio.sleep(0.1)  # let the 200 flush first
+        os._exit(0)
+
+    asyncio.create_task(_bye())
+    return {"status": "exiting"}
 
 
 @app.get("/health")

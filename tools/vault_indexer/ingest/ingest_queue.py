@@ -437,7 +437,7 @@ def _insert_into_done_section(lines: list[str], to_append: list[str]) -> list[st
     return [*lines, *new_section]
 
 
-def _ping_reload(reload_url: str, timeout: float = 30.0) -> Optional[str]:
+def _ping_reload(reload_url: str, timeout: float = 300.0) -> Optional[str]:
     req = urllib.request.Request(reload_url, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -459,6 +459,10 @@ def main() -> int:
                          "Required only if the queue contains non-YouTube URLs.")
     ap.add_argument("--reload-url", default=None,
                     help="If set, POST here after batch to refresh the indexer cache.")
+    ap.add_argument("--reload-timeout", type=float, default=300.0,
+                    help="Seconds to wait on the reload POST. Default 300 — the "
+                         "on-demand indexer may cold-start (model load) when "
+                         "socket-activated by this ping.")
     ap.add_argument("--default-horizon", type=int, default=12)
     ap.add_argument("--default-model", default="small",
                     choices=("tiny", "base", "small", "medium", "large", "large-v3"))
@@ -567,7 +571,7 @@ def main() -> int:
             )
 
         if ingested and args.reload_url:
-            result = _ping_reload(args.reload_url)
+            result = _ping_reload(args.reload_url, timeout=args.reload_timeout)
             print(f"reload: {result}")
 
         had_failures = bool(failure_comments) or bool(quarantine_appends)
