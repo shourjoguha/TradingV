@@ -99,8 +99,33 @@ async def run_for_watchlist(
     return stats
 
 
+async def attach_review(decision_id: str, review: dict) -> dict:
+    """Persist a structured buy-review (see :mod:`app.agents.review`) onto an
+    existing decision's ``meta`` JSON, under ``meta["review"]``.
+
+    Kept separate from :func:`run_for_ticker` so the LLM-backed augmentation is
+    an explicit, opt-in step the review CLI orchestrates — the daily lane loop
+    stays cheap (stance + rationale only).
+    """
+    async with _db.SessionLocal() as session:
+        row = await session.get(AgentDecisionRow, decision_id)
+        if row is None:
+            raise ValueError(f"no agent_decision with id {decision_id!r}")
+        # JSON columns aren't mutation-tracked; reassign a fresh dict.
+        meta = dict(row.meta or {})
+        meta["review"] = review
+        row.meta = meta
+        await session.commit()
+        await session.refresh(row)
+        return _serialize(row, include_meta=True)
+
+
 async def list_decisions(
-    *, ticker: Optional[str] = None, stance: Optional[str] = None, limit: int = 100
+    *,
+    ticker: Optional[str] = None,
+    stance: Optional[str] = None,
+    limit: int = 100,
+    include_meta: bool = False,
 ) -> list[dict]:
     async with _db.SessionLocal() as session:
         stmt = (
@@ -113,11 +138,11 @@ async def list_decisions(
         if stance:
             stmt = stmt.where(AgentDecisionRow.stance == stance.upper())
         rows = (await session.execute(stmt)).scalars().all()
-        return [_serialize(r) for r in rows]
+        return [_serialize(r, include_meta=include_meta) for r in rows]
 
 
-def _serialize(r: AgentDecisionRow) -> dict:
-    return {
+def _serialize(r: AgentDecisionRow, *, include_meta: bool = False) -> dict:
+    out = {
         "id": r.id,
         "ticker": r.ticker,
         "made_on": r.made_on.isoformat() if r.made_on else None,
@@ -129,3 +154,7 @@ def _serialize(r: AgentDecisionRow) -> dict:
         "transcript_ref": r.transcript_ref,
         "created_at": r.created_at.isoformat() if r.created_at else None,
     }
+    if include_meta:
+        out["meta"] = r.meta or None
+        out["review"] = (r.meta or {}).get("review")
+    return out

@@ -1,0 +1,240 @@
+{
+  "generated_at": "2026-07-10T17:51:00.507931+00:00",
+  "made_on": "2026-07-10",
+  "engine": "stub",
+  "stats": {
+    "scanned": 6,
+    "ok": 6,
+    "failed": 0
+  },
+  "decisions": [
+    {
+      "created": true,
+      "id": "b018a318-d011-4202-98e2-1ad2d504972c",
+      "ticker": "MSFT",
+      "made_on": "2026-07-10",
+      "engine": "tradingagents",
+      "engine_version": "stub",
+      "stance": "HOLD",
+      "confidence": 0.5,
+      "rationale_md": "_stub decision for MSFT_",
+      "transcript_ref": null,
+      "created_at": "2026-07-10T17:51:00",
+      "meta": {
+        "stub": true,
+        "review": {
+          "horizon": "6-12mo",
+          "buy_level": "fair",
+          "downside_pct": -18.0,
+          "downside_case": "_stub decision for MSFT_",
+          "upside_pct": 18.0,
+          "upside_case": null,
+          "key_risks": [],
+          "catalysts": [],
+          "source": "heuristic"
+        }
+      },
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "fair",
+        "downside_pct": -18.0,
+        "downside_case": "_stub decision for MSFT_",
+        "upside_pct": 18.0,
+        "upside_case": null,
+        "key_risks": [],
+        "catalysts": [],
+        "source": "heuristic"
+      }
+    },
+    {
+      "created": true,
+      "id": "41cae605-278d-49e5-8f67-270dad241b05",
+      "ticker": "PYPL",
+      "made_on": "2026-07-10",
+      "engine": "tradingagents",
+      "engine_version": "stub",
+      "stance": "SELL",
+      "confidence": 0.5,
+      "rationale_md": "_stub decision for PYPL_",
+      "transcript_ref": null,
+      "created_at": "2026-07-10T17:51:00",
+      "meta": {
+        "stub": true,
+        "review": {
+          "horizon": "6-12mo",
+          "buy_level": "rich",
+          "downside_pct": -25.0,
+          "downside_case": "_stub decision for PYPL_",
+          "upside_pct": 10.0,
+          "upside_case": null,
+          "key_risks": [],
+          "catalysts": [],
+          "source": "heuristic"
+        }
+      },
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "rich",
+        "downside_pct": -25.0,
+        "downside_case": "_stub decision for PYPL_",
+        "upside_pct": 10.0,
+        "upside_case": null,
+        "key_risks": [],
+        "catalysts": [],
+        "source": "heuristic"
+      }
+    },
+    {
+      "created": true,
+      "id": "3d1f9c80-8b52-4d6e-bb66-3ea32e165959",
+      "ticker": "NFLX",
+      "made_on": "2026-07-10",
+      "engine": "tradingagents",
+      "engine_version": "stub",
+      "stance": "BUY",
+      "confidence": 0.5,
+      "rationale_md": "_stub decision for NFLX_",
+      "transcript_ref": null,
+      "created_at": "2026-07-10T17:51:00",
+      "meta": {
+        "stub": true,
+        "review": {
+          "horizon": "6-12mo",
+          "buy_level": "attractive",
+          "downside_pct": -15.0,
+          "downside_case": null,
+          "upside_pct": 25.0,
+          "upside_case": "_stub decision for NFLX_",
+          "key_risks": [],
+          "catalysts": [],
+          "source": "heuristic"
+        }
+      },
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "attractive",
+        "downside_pct": -15.0,
+        "downside_case": null,
+        "upside_pct": 25.0,
+        "upside_case": "_stub decision for NFLX_",
+        "key_risks": [],
+        "catalysts": [],
+        "source": "heuristic"
+      }
+    },
+    {
+      "created": true,
+      "id": "d8588f05-c193-4351-b42e-ea2b51988290",
+      "ticker": "NOW",
+      "made_on": "2026-07-10",
+      "engine": "tradingagents",
+      "engine_version": "stub",
+      "stance": "SELL",
+      "confidence": 0.5,
+      "rationale_md": "_stub decision for NOW_",
+      "transcript_ref": null,
+      "created_at": "2026-07-10T17:51:00",
+      "meta": {
+        "stub": true,
+        "review": {
+          "horizon": "6-12mo",
+          "buy_level": "rich",
+          "downside_pct": -25.0,
+          "downside_case": "_stub decision for NOW_",
+          "upside_pct": 10.0,
+          "upside_case": null,
+          "key_risks": [],
+          "catalysts": [],
+          "source": "heuristic"
+        }
+      },
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "rich",
+        "downside_pct": -25.0,
+        "downside_case": "_stub decision for NOW_",
+        "upside_pct": 10.0,
+        "upside_case": null,
+        "key_risks": [],
+        "catalysts": [],
+        "source": "heuristic"
+      }
+    },
+    {
+      "created": true,
+      "id": "23ee968c-5122-4c9f-bd42-bc888cb4a31a",
+      "ticker": "GOOGL",
+      "made_on": "2026-07-10",
+      "engine": "tradingagents",
+      "engine_version": "stub",
+      "stance": "SELL",
+      "confidence": 0.5,
+      "rationale_md": "_stub decision for GOOGL_",
+      "transcript_ref": null,
+      "created_at": "2026-07-10T17:51:00",
+      "meta": {
+        "stub": true,
+        "review": {
+          "horizon": "6-12mo",
+          "buy_level": "rich",
+          "downside_pct": -25.0,
+          "downside_case": "_stub decision for GOOGL_",
+          "upside_pct": 10.0,
+          "upside_case": null,
+          "key_risks": [],
+          "catalysts": [],
+          "source": "heuristic"
+        }
+      },
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "rich",
+        "downside_pct": -25.0,
+        "downside_case": "_stub decision for GOOGL_",
+        "upside_pct": 10.0,
+        "upside_case": null,
+        "key_risks": [],
+        "catalysts": [],
+        "source": "heuristic"
+      }
+    },
+    {
+      "created": true,
+      "id": "e5b379b9-64ec-4698-b5e3-5ac747001c65",
+      "ticker": "MSTR",
+      "made_on": "2026-07-10",
+      "engine": "tradingagents",
+      "engine_version": "stub",
+      "stance": "HOLD",
+      "confidence": 0.5,
+      "rationale_md": "_stub decision for MSTR_",
+      "transcript_ref": null,
+      "created_at": "2026-07-10T17:51:00",
+      "meta": {
+        "stub": true,
+        "review": {
+          "horizon": "6-12mo",
+          "buy_level": "fair",
+          "downside_pct": -18.0,
+          "downside_case": "_stub decision for MSTR_",
+          "upside_pct": 18.0,
+          "upside_case": null,
+          "key_risks": [],
+          "catalysts": [],
+          "source": "heuristic"
+        }
+      },
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "fair",
+        "downside_pct": -18.0,
+        "downside_case": "_stub decision for MSTR_",
+        "upside_pct": 18.0,
+        "upside_case": null,
+        "key_risks": [],
+        "catalysts": [],
+        "source": "heuristic"
+      }
+    }
+  ]
+}
