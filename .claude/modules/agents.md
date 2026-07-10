@@ -39,6 +39,32 @@ UNIQUE(ticker, made_on, engine_version)   -- idempotent daily re-run
 2. Set `AGENTS_ENABLED=true` (+ `CLAUDE_MODEL` / Anthropic key, optional `AGENTS_DEEP_MODEL` / `AGENTS_QUICK_MODEL`).
 3. `alembic upgrade head` (applies `0032`).
 
+## Operator review flow (any ticker list, no watchlist needed)
+
+The lane only exposed `run_for_ticker` + `POST /v1/agents/run`. `scripts/agents_review.py`
+is the reusable CLI on top of it: run the debate over an arbitrary ticker list, augment each
+decision into a structured **6–12mo downside/upside** (`app/agents/review.py`, stored on
+`agent_decisions.meta["review"]` — no schema change), and snapshot to JSON.
+`scripts/agents_report.py` renders that snapshot into a committed markdown report + a
+self-contained, theme-aware HTML dashboard (publishable as an Artifact).
+
+No docker required — the lane runs over SQLite too. See `.env.laptop.example`.
+
+```bash
+export DATABASE_URL="sqlite+aiosqlite:///./dev.db"    # or your Postgres URL
+pip install -r requirements.txt -r requirements-agents.txt
+export AGENTS_ENABLED=true ANTHROPIC_API_KEY=... FINNHUB_API_KEY=...
+alembic upgrade head
+python scripts/agents_review.py MSFT PYPL NFLX NOW GOOGL MSTR \
+    --out reports/agents-review-$(date +%F).json
+python scripts/agents_report.py --from reports/agents-review-$(date +%F).json \
+    --md reports/agents-review-$(date +%F).md --html reports/agents-review-$(date +%F).html
+```
+
+With the lane disabled the review CLI refuses to emit meaningless stub verdicts unless
+`DEBUG_STUB=1` (which produces deterministic synthetic decisions for pipeline testing only —
+the report banners them loudly as NOT real analysis).
+
 ## Tests
 
 `tests/test_agents.py` drives the stub end-to-end: engine info, run-without-engine → 422, idempotent upsert, watchlist run, and a guard that the lane writes nothing to the opportunities feed.
