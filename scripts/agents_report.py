@@ -87,25 +87,67 @@ def render_markdown(snapshot: dict) -> str:
         out.append("> ⚠️ **Preview from the deterministic stub engine — NOT real analysis.** "
                    "Numbers are pipeline sentinels. Enable the lane on the laptop "
                    "(`AGENTS_ENABLED=true` + `requirements-agents.txt`) for real verdicts.\n")
+    if engine == "web-research":
+        out.append("> ℹ️ **Live web-research read**, not the TradingAgents LLM lane: Sonnet workers "
+                   "pulled the data (WebSearch/WebFetch), Opus synthesized. Smart-money = gekko.app "
+                   "snapshot (dated). Research aid for one operator — **not investment advice.**\n")
     out.append(f"Engine: `{engine}` · Generated: {snapshot.get('generated_at', '—')} · "
                f"BUY {counts.get('BUY', 0)} · HOLD {counts.get('HOLD', 0)} · SELL {counts.get('SELL', 0)}\n")
 
-    # Summary table
-    out.append("| Ticker | Stance | Buy level | Downside (6–12mo) | Upside (6–12mo) |")
-    out.append("| :----- | :----- | :-------- | ----------------: | --------------: |")
-    for d in rows:
-        r = _review(d)
-        out.append(
-            f"| **{d.get('ticker', '?')}** | {(d.get('stance') or '—').upper()} "
-            f"| {r.get('buy_level', '—')} "
-            f"| {_fmt_pct(r.get('downside_pct'))} | {_fmt_pct(r.get('upside_pct'))} |"
-        )
+    macro = snapshot.get("macro")
+    if macro:
+        out.append(f"**Macro backdrop:** 10Y {macro.get('ust_10y_pct', '?')}% · "
+                   f"2Y {macro.get('ust_2y_pct', '?')}% · 2s10s {macro.get('curve_2s10s_bps', '?')}bps. "
+                   f"{macro.get('note', '')}\n")
+
+    # Summary table (richer when web-research facts are present)
+    has_facts = any(_review(d).get("facts") for d in rows)
+    if has_facts:
+        out.append("| Ticker | Stance | Buy level | Price | Analyst mean | Off 52w-high | "
+                   "Downside (6–12mo) | Upside (6–12mo) | Smart money |")
+        out.append("| :--- | :--- | :--- | ---: | ---: | ---: | ---: | ---: | :--- |")
+        for d in rows:
+            r = _review(d); f = r.get("facts") or {}; sm = r.get("smart_money") or {}
+            out.append(
+                f"| **{d.get('ticker', '?')}** | {(d.get('stance') or '—').upper()} "
+                f"| {r.get('buy_level', '—')} | {_fmt_usd(f.get('price'))} | {_fmt_usd(f.get('target_mean'))} "
+                f"| {_fmt_pct(f.get('off_52w_high_pct'))} "
+                f"| {_fmt_pct(r.get('downside_pct'))} | {_fmt_pct(r.get('upside_pct'))} "
+                f"| {sm.get('tier', '—')} |"
+            )
+    else:
+        out.append("| Ticker | Stance | Buy level | Downside (6–12mo) | Upside (6–12mo) |")
+        out.append("| :----- | :----- | :-------- | ----------------: | --------------: |")
+        for d in rows:
+            r = _review(d)
+            out.append(
+                f"| **{d.get('ticker', '?')}** | {(d.get('stance') or '—').upper()} "
+                f"| {r.get('buy_level', '—')} "
+                f"| {_fmt_pct(r.get('downside_pct'))} | {_fmt_pct(r.get('upside_pct'))} |"
+            )
     out.append("")
 
     for d in rows:
         r = _review(d)
+        f = r.get("facts") or {}
+        sm = r.get("smart_money") or {}
         out.append(f"## {d.get('ticker', '?')} — {(d.get('stance') or '—').upper()}\n")
         out.append(f"**Buy level:** {r.get('buy_level', '—')}  ·  **Horizon:** {r.get('horizon', '6-12mo')}\n")
+        if f:
+            bits = [f"Price {_fmt_usd(f.get('price'))}"]
+            if f.get("forward_pe") is not None:
+                bits.append(f"fwd P/E {f['forward_pe']}")
+            bits.append(f"analyst mean {_fmt_usd(f.get('target_mean'))} "
+                        f"(range {_fmt_usd(f.get('target_low'))}–{_fmt_usd(f.get('target_high'))}, "
+                        f"{f.get('analyst_rating', '—')})")
+            if f.get("off_52w_high_pct") is not None:
+                bits.append(f"{_fmt_pct(f['off_52w_high_pct'])} off 52w-high")
+            if f.get("next_earnings"):
+                bits.append(f"earnings {f['next_earnings']}")
+            out.append("**Facts:** " + " · ".join(bits) + "\n")
+        if sm:
+            out.append(f"**Smart money ({sm.get('as_of', '—')}):** {sm.get('tier', '—')} — "
+                       f"{sm.get('summary', '')}\n")
         out.append(f"- **Downside {_fmt_pct(r.get('downside_pct'))}** — "
                    f"{r.get('downside_case') or '_not quantified_'}")
         out.append(f"- **Upside {_fmt_pct(r.get('upside_pct'))}** — "
@@ -133,6 +175,15 @@ def _fmt_pct(v) -> str:
         return "—"
 
 
+def _fmt_usd(v) -> str:
+    if v is None:
+        return "—"
+    try:
+        return f"${float(v):,.2f}"
+    except (TypeError, ValueError):
+        return "—"
+
+
 # --------------------------------------------------------------------------- #
 # HTML dashboard
 # --------------------------------------------------------------------------- #
@@ -153,16 +204,34 @@ def render_html(snapshot: dict) -> str:
         counts[s] = counts.get(s, 0) + 1
 
     cards = "\n".join(_card_html(d, max_abs) for d in rows)
-    banner = (
-        '<div class="banner">Preview from the <strong>stub engine</strong> — '
-        'numbers are pipeline sentinels, not analysis. Enable the lane on the '
-        'laptop for real verdicts.</div>' if stub else ""
-    )
+    if stub:
+        banner = ('<div class="banner">Preview from the <strong>stub engine</strong> — '
+                  'numbers are pipeline sentinels, not analysis. Enable the lane on the '
+                  'laptop for real verdicts.</div>')
+    elif engine == "web-research":
+        banner = ('<div class="banner info">Live <strong>web-research</strong> read (Sonnet pulled '
+                  'data, Opus synthesized) — not the TradingAgents LLM lane. Smart-money = gekko.app '
+                  'snapshot. Research aid, <strong>not investment advice</strong>.</div>')
+    else:
+        banner = ""
+
+    macro = snapshot.get("macro") or {}
+    macro_html = ""
+    if macro:
+        macro_html = (
+            '<div class="macro">'
+            f'<span><b>10Y</b> {html.escape(str(macro.get("ust_10y_pct", "?")))}%</span>'
+            f'<span><b>2Y</b> {html.escape(str(macro.get("ust_2y_pct", "?")))}%</span>'
+            f'<span><b>2s10s</b> {html.escape(str(macro.get("curve_2s10s_bps", "?")))}bps</span>'
+            f'<span class="macro-note">{html.escape(str(macro.get("note", "")))}</span>'
+            '</div>'
+        )
     title = f"Agents buy review · {html.escape(str(made_on))}"
 
     return _HTML_SHELL.format(
         title=title,
         banner=banner,
+        macro=macro_html,
         made_on=html.escape(str(made_on)),
         engine=html.escape(str(engine)),
         generated=html.escape(str(snapshot.get("generated_at", "—"))),
@@ -204,12 +273,37 @@ def _card_html(d: dict, max_abs: float) -> str:
         lists += f'<div class="col"><h4>Catalysts</h4><ul>{cats}</ul></div>'
     lists_html = f'<div class="lists">{lists}</div>' if lists else ""
 
+    f = r.get("facts") or {}
+    facts_html = ""
+    if f:
+        off = f.get("off_52w_high_pct")
+        off_html = (f'<span class="off">{off:+.0f}% off high</span>'
+                    if isinstance(off, (int, float)) else "")
+        fpe = f.get("forward_pe")
+        fpe_html = f'<span class="pe">fwd P/E {html.escape(str(fpe))}</span>' if fpe else ""
+        facts_html = (
+            '<div class="facts">'
+            f'<span class="px">{_fmt_usd(f.get("price"))}</span>'
+            f'<span class="arrow">&rarr;</span>'
+            f'<span class="tgt">{_fmt_usd(f.get("target_mean"))} <em>mean tgt</em></span>'
+            f'{fpe_html}{off_html}'
+            '</div>'
+        )
+    sm = r.get("smart_money") or {}
+    sm_html = ""
+    if sm:
+        sm_html = (f'<div class="sm" title="gekko.app smart-money, {html.escape(str(sm.get("as_of","")))}">'
+                   f'<span class="sm-tag">Smart money</span> '
+                   f'<b>{html.escape(str(sm.get("tier","—")))}</b> · '
+                   f'{html.escape(str(sm.get("summary","")))}</div>')
+
     return f"""
       <article class="card">
         <header>
           <div class="tk">{ticker}</div>
           <span class="chip {stance_cls}">{stance}</span>
         </header>
+        {facts_html}
         <div class="rating">
           <span class="rating-label">Buy level</span>
           <span class="dots">{dots}</span>
@@ -233,6 +327,7 @@ def _card_html(d: dict, max_abs: float) -> str:
           <p><span class="dot-up"></span>{up_case}</p>
         </div>
         {lists_html}
+        {sm_html}
       </article>"""
 
 
@@ -292,6 +387,12 @@ _HTML_SHELL = """<!doctype html>
   .meta {{ color:var(--muted); font-size:14px; margin:0 0 20px; }}
   .banner {{ background:var(--down-soft); color:var(--ink); border:1px solid var(--down);
     border-radius:10px; padding:10px 14px; font-size:13.5px; margin:0 0 20px; }}
+  .banner.info {{ background:color-mix(in srgb,var(--gold) 12%,transparent); border-color:var(--gold); }}
+  .macro {{ display:flex; gap:16px; flex-wrap:wrap; align-items:baseline; background:var(--panel);
+    border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin:0 0 22px;
+    font-size:13px; color:var(--muted); box-shadow:var(--shadow); }}
+  .macro b {{ color:var(--ink); }}
+  .macro-note {{ flex:1 1 260px; min-width:200px; }}
   .counts {{ display:flex; gap:10px; flex-wrap:wrap; margin:0 0 26px; }}
   .count {{ background:var(--panel); border:1px solid var(--line); border-radius:10px;
     padding:8px 14px; font-size:13px; color:var(--muted); box-shadow:var(--shadow); }}
@@ -299,7 +400,20 @@ _HTML_SHELL = """<!doctype html>
   .grid {{ display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }}
   .card {{ background:var(--panel); border:1px solid var(--line); border-radius:14px;
     padding:18px 18px 16px; box-shadow:var(--shadow); }}
-  .card header {{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }}
+  .card header {{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }}
+  .facts {{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:12px;
+    font-size:13px; }}
+  .facts .px {{ font-weight:700; font-size:16px; }}
+  .facts .arrow {{ color:var(--muted); }}
+  .facts .tgt {{ font-weight:600; color:var(--up); }}
+  .facts .tgt em {{ font-style:normal; color:var(--muted); font-weight:500; font-size:11px; }}
+  .facts .pe,.facts .off {{ font-size:11px; color:var(--muted); border:1px solid var(--line);
+    border-radius:6px; padding:1px 6px; }}
+  .sm {{ margin-top:12px; padding-top:10px; border-top:1px solid var(--line); font-size:12px;
+    color:var(--muted); }}
+  .sm b {{ color:var(--ink); }}
+  .sm-tag {{ font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--gold);
+    font-weight:700; }}
   .tk {{ font-size:22px; font-weight:700; letter-spacing:-.01em; }}
   .chip {{ font-size:12px; font-weight:700; letter-spacing:.06em; padding:4px 11px;
     border-radius:999px; }}
@@ -348,6 +462,7 @@ _HTML_SHELL = """<!doctype html>
     <h1>Buy-level review</h1>
     <p class="meta">As of {made_on} · engine <code>{engine}</code> · generated {generated}</p>
     {banner}
+    {macro}
     <div class="counts">
       <span class="count"><b>{buy}</b>Buy</span>
       <span class="count"><b>{hold}</b>Hold</span>

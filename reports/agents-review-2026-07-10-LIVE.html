@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agents buy review · 2026-07-10</title>
+<style>
+  :root {
+    --ground:#f5f6f8; --panel:#ffffff; --ink:#191e26; --muted:#5f6a78;
+    --line:#e2e6ec; --gold:#b7893b;
+    --up:#2f9e6a; --up-soft:#d9f0e4; --down:#d05a44; --down-soft:#f6dcd5; --hold:#b7893b;
+    --shadow:0 1px 2px rgba(20,28,40,.06),0 8px 24px rgba(20,28,40,.06);
+  }
+  @media (prefers-color-scheme:dark) {
+    :root {
+      --ground:#0e1116; --panel:#161b22; --ink:#e7ecf3; --muted:#8b95a4;
+      --line:#242b34; --gold:#d4a94f;
+      --up:#43b585; --up-soft:#12352a; --down:#e0715a; --down-soft:#3a1f1a; --hold:#d4a94f;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#f5f6f8; --panel:#ffffff; --ink:#191e26; --muted:#5f6a78;
+    --line:#e2e6ec; --gold:#b7893b;
+    --up:#2f9e6a; --up-soft:#d9f0e4; --down:#d05a44; --down-soft:#f6dcd5; --hold:#b7893b;
+    --shadow:0 1px 2px rgba(20,28,40,.06),0 8px 24px rgba(20,28,40,.06);
+  }
+  :root[data-theme="dark"] {
+    --ground:#0e1116; --panel:#161b22; --ink:#e7ecf3; --muted:#8b95a4;
+    --line:#242b34; --gold:#d4a94f;
+    --up:#43b585; --up-soft:#12352a; --down:#e0715a; --down-soft:#3a1f1a; --hold:#d4a94f;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5; font-variant-numeric:tabular-nums;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:clamp(20px,4vw,44px); }
+  .eyebrow { letter-spacing:.14em; text-transform:uppercase; font-size:12px;
+    font-weight:600; color:var(--gold); margin:0 0 6px; }
+  h1 { font-size:clamp(26px,4vw,38px); margin:0 0 6px; letter-spacing:-.02em; text-wrap:balance; }
+  .meta { color:var(--muted); font-size:14px; margin:0 0 20px; }
+  .banner { background:var(--down-soft); color:var(--ink); border:1px solid var(--down);
+    border-radius:10px; padding:10px 14px; font-size:13.5px; margin:0 0 20px; }
+  .banner.info { background:color-mix(in srgb,var(--gold) 12%,transparent); border-color:var(--gold); }
+  .macro { display:flex; gap:16px; flex-wrap:wrap; align-items:baseline; background:var(--panel);
+    border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin:0 0 22px;
+    font-size:13px; color:var(--muted); box-shadow:var(--shadow); }
+  .macro b { color:var(--ink); }
+  .macro-note { flex:1 1 260px; min-width:200px; }
+  .counts { display:flex; gap:10px; flex-wrap:wrap; margin:0 0 26px; }
+  .count { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:8px 14px; font-size:13px; color:var(--muted); box-shadow:var(--shadow); }
+  .count b { color:var(--ink); font-size:17px; margin-right:5px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:18px 18px 16px; box-shadow:var(--shadow); }
+  .card header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .facts { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:12px;
+    font-size:13px; }
+  .facts .px { font-weight:700; font-size:16px; }
+  .facts .arrow { color:var(--muted); }
+  .facts .tgt { font-weight:600; color:var(--up); }
+  .facts .tgt em { font-style:normal; color:var(--muted); font-weight:500; font-size:11px; }
+  .facts .pe,.facts .off { font-size:11px; color:var(--muted); border:1px solid var(--line);
+    border-radius:6px; padding:1px 6px; }
+  .sm { margin-top:12px; padding-top:10px; border-top:1px solid var(--line); font-size:12px;
+    color:var(--muted); }
+  .sm b { color:var(--ink); }
+  .sm-tag { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--gold);
+    font-weight:700; }
+  .tk { font-size:22px; font-weight:700; letter-spacing:-.01em; }
+  .chip { font-size:12px; font-weight:700; letter-spacing:.06em; padding:4px 11px;
+    border-radius:999px; }
+  .chip.buy { background:var(--up-soft); color:var(--up); }
+  .chip.sell { background:var(--down-soft); color:var(--down); }
+  .chip.hold { background:color-mix(in srgb,var(--hold) 16%,transparent); color:var(--hold); }
+  .rating { display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:13px; }
+  .rating-label { color:var(--muted); }
+  .dots { display:inline-flex; gap:3px; }
+  .dots i { width:9px; height:9px; border-radius:2px; background:var(--line);
+    display:inline-block; }
+  .dots i.on { background:var(--gold); }
+  .rating-name { text-transform:capitalize; font-weight:600; }
+  .tag-heur { margin-left:auto; font-size:10.5px; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--muted); border:1px dashed var(--line); border-radius:6px; padding:1px 6px; }
+  .rr { margin:4px 0 14px; }
+  .rr-track { position:relative; height:12px; border-radius:6px; overflow:hidden;
+    background:color-mix(in srgb,var(--muted) 14%,transparent);
+    display:flex; }
+  .rr-down { position:absolute; right:50%; top:0; bottom:0; background:var(--down); border-radius:6px 0 0 6px; }
+  .rr-up { position:absolute; left:50%; top:0; bottom:0; background:var(--up); border-radius:0 6px 6px 0; }
+  .rr-zero { position:absolute; left:50%; top:-2px; bottom:-2px; width:2px;
+    background:var(--ink); opacity:.55; transform:translateX(-1px); }
+  .rr-nums { display:flex; justify-content:space-between; align-items:center; margin-top:6px;
+    font-size:13px; font-weight:600; }
+  .rr-nums .down { color:var(--down); }
+  .rr-nums .up { color:var(--up); }
+  .rr-cap { color:var(--muted); font-weight:500; font-size:11px; letter-spacing:.04em;
+    text-transform:uppercase; }
+  .cases p { margin:6px 0; font-size:13.5px; color:var(--ink); display:flex; gap:8px; align-items:baseline; }
+  .dot-down,.dot-up { width:8px; height:8px; border-radius:50%; flex:none; transform:translateY(1px); }
+  .dot-down { background:var(--down); }
+  .dot-up { background:var(--up); }
+  .lists { display:flex; gap:20px; flex-wrap:wrap; margin-top:12px; padding-top:12px;
+    border-top:1px solid var(--line); }
+  .lists h4 { margin:0 0 5px; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); font-weight:600; }
+  .lists ul { margin:0; padding-left:16px; font-size:13px; color:var(--ink); }
+  .lists li { margin:2px 0; }
+  footer { margin-top:30px; color:var(--muted); font-size:12.5px; text-align:center; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="eyebrow">TradingAgents · multi-agent desk</p>
+    <h1>Buy-level review</h1>
+    <p class="meta">As of 2026-07-10 · engine <code>web-research</code> · generated 2026-07-10T18:20:00+00:00</p>
+    <div class="banner info">Live <strong>web-research</strong> read (Sonnet pulled data, Opus synthesized) — not the TradingAgents LLM lane. Smart-money = gekko.app snapshot. Research aid, <strong>not investment advice</strong>.</div>
+    <div class="macro"><span><b>10Y</b> 4.54%</span><span><b>2Y</b> 4.14%</span><span><b>2s10s</b> 40bps</span><span class="macro-note">Rates still restrictive (~4.5% 10Y); modestly positive curve; VIX subdued. Long-duration growth multiples remain rate-sensitive. Broad H1-2026 growth/software drawdown is the backdrop.</span></div>
+    <div class="counts">
+      <span class="count"><b>4</b>Buy</span>
+      <span class="count"><b>2</b>Hold</span>
+      <span class="count"><b>0</b>Sell</span>
+    </div>
+    <div class="grid">
+      
+      <article class="card">
+        <header>
+          <div class="tk">GOOGL</div>
+          <span class="chip buy">BUY</span>
+        </header>
+        <div class="facts"><span class="px">$358.00</span><span class="arrow">&rarr;</span><span class="tgt">$430.00 <em>mean tgt</em></span><span class="pe">fwd P/E 25.5</span><span class="off">-12% off high</span></div>
+        <div class="rating">
+          <span class="rating-label">Buy level</span>
+          <span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class=""></i></span>
+          <span class="rating-name">attractive</span>
+          
+        </div>
+        <div class="rr">
+          <div class="rr-track">
+            <div class="rr-down" style="width:12.9%"></div>
+            <div class="rr-up" style="width:15.7%"></div>
+            <div class="rr-zero"></div>
+          </div>
+          <div class="rr-nums">
+            <span class="down">-18%</span>
+            <span class="rr-cap">6–12mo range</span>
+            <span class="up">+22%</span>
+          </div>
+        </div>
+        <div class="cases">
+          <p><span class="dot-down"></span>Adverse antitrust remedy or AI-search disruption + capex margin drag → ~$293.</p>
+          <p><span class="dot-up"></span>Cloud/Gemini momentum re-rates toward the $430 mean → ~$437.</p>
+        </div>
+        <div class="lists"><div class="col"><h4>Risks</h4><ul><li>Escalating antitrust/regulatory rulings (EU, Sweden, S. Korea)</li><li>$180-190B 2026 capex pressuring FCF</li><li>AI talent departures</li></ul></div><div class="col"><h4>Catalysts</h4><ul><li>Google Cloud +63% with ~$460B backlog</li><li>Search resilience via AI Overviews/Gemini</li><li>Buyback + dividend growth</li></ul></div></div>
+        <div class="sm" title="gekko.app smart-money, 2026-05-08"><span class="sm-tag">Smart money</span> <b>Tier 1 (highest of the six)</b> · Billionaires Tepper &amp; Gayner, 3 trailblazers, politician Cleo Fields</div>
+      </article>
+
+      <article class="card">
+        <header>
+          <div class="tk">MSFT</div>
+          <span class="chip buy">BUY</span>
+        </header>
+        <div class="facts"><span class="px">$384.10</span><span class="arrow">&rarr;</span><span class="tgt">$560.00 <em>mean tgt</em></span><span class="pe">fwd P/E 19.8</span><span class="off">-31% off high</span></div>
+        <div class="rating">
+          <span class="rating-label">Buy level</span>
+          <span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class=""></i></span>
+          <span class="rating-name">attractive</span>
+          
+        </div>
+        <div class="rr">
+          <div class="rr-track">
+            <div class="rr-down" style="width:12.9%"></div>
+            <div class="rr-up" style="width:27.1%"></div>
+            <div class="rr-zero"></div>
+          </div>
+          <div class="rr-nums">
+            <span class="down">-18%</span>
+            <span class="rr-cap">6–12mo range</span>
+            <span class="up">+38%</span>
+          </div>
+        </div>
+        <div class="cases">
+          <p><span class="dot-down"></span>AI-capex disappointment + Azure decel de-rates to ~16x → ~$315.</p>
+          <p><span class="dot-up"></span>Azure/AI momentum holds; re-rate toward the $560 mean target → ~$530.</p>
+        </div>
+        <div class="lists"><div class="col"><h4>Risks</h4><ul><li>Heavy AI capex with uncertain ROI timing</li><li>Q4 revenue guide slightly below consensus (decel flag)</li><li>Wide target dispersion ($400-$870) = high uncertainty</li></ul></div><div class="col"><h4>Catalysts</h4><ul><li>Azure/AI run-rate scaling (~$37B annualized)</li><li>Sell-side target hikes ($625-$650)</li><li>Microsoft Cloud +29% supporting margins</li></ul></div></div>
+        <div class="sm" title="gekko.app smart-money, 2026-05-08"><span class="sm-tag">Smart money</span> <b>Tier 2</b> · Billionaire Tepper + 10 trailblazer funds; 1 bullish options</div>
+      </article>
+
+      <article class="card">
+        <header>
+          <div class="tk">NFLX</div>
+          <span class="chip buy">BUY</span>
+        </header>
+        <div class="facts"><span class="px">$75.47</span><span class="arrow">&rarr;</span><span class="tgt">$113.68 <em>mean tgt</em></span><span class="pe">fwd P/E 20.6</span><span class="off">-42% off high</span></div>
+        <div class="rating">
+          <span class="rating-label">Buy level</span>
+          <span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class=""></i></span>
+          <span class="rating-name">attractive</span>
+          
+        </div>
+        <div class="rr">
+          <div class="rr-track">
+            <div class="rr-down" style="width:10.7%"></div>
+            <div class="rr-up" style="width:30.0%"></div>
+            <div class="rr-zero"></div>
+          </div>
+          <div class="rr-nums">
+            <span class="down">-15%</span>
+            <span class="rr-cap">6–12mo range</span>
+            <span class="up">+42%</span>
+          </div>
+        </div>
+        <div class="cases">
+          <p><span class="dot-down"></span>Content-cost margin compression + competition + transition overhang → ~$64.</p>
+          <p><span class="dot-up"></span>Ad-tier + pricing re-accelerate; re-rate toward the $114 mean → ~$107.</p>
+        </div>
+        <div class="lists"><div class="col"><h4>Risks</h4><ul><li>Reed Hastings chairman transition uncertainty</li><li>Rising content amortization (Q2 margin guided down)</li><li>Streaming competition post failed WBD/Roku pursuits</li></ul></div><div class="col"><h4>Catalysts</h4><ul><li>Ad-tier toward $3B run-rate (+70% YoY ad clients)</li><li>Double-digit revenue growth from members + pricing</li><li>~41% off high seen as undervalued into Q2</li></ul></div></div>
+        <div class="sm" title="gekko.app smart-money, 2026-05-08"><span class="sm-tag">Smart money</span> <b>Tier 2</b> · Billionaire Laffont + 4 trailblazers; 2 bullish options</div>
+      </article>
+
+      <article class="card">
+        <header>
+          <div class="tk">NOW</div>
+          <span class="chip buy">BUY</span>
+        </header>
+        <div class="facts"><span class="px">$109.42</span><span class="arrow">&rarr;</span><span class="tgt">$141.12 <em>mean tgt</em></span><span class="pe">fwd P/E 20.6</span><span class="off">-48% off high</span></div>
+        <div class="rating">
+          <span class="rating-label">Buy level</span>
+          <span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class=""></i></span>
+          <span class="rating-name">attractive</span>
+          
+        </div>
+        <div class="rr">
+          <div class="rr-track">
+            <div class="rr-down" style="width:17.9%"></div>
+            <div class="rr-up" style="width:28.6%"></div>
+            <div class="rr-zero"></div>
+          </div>
+          <div class="rr-nums">
+            <span class="down">-25%</span>
+            <span class="rr-cap">6–12mo range</span>
+            <span class="up">+40%</span>
+          </div>
+        </div>
+        <div class="cases">
+          <p><span class="dot-down"></span>SaaSpocalypse narrative deepens + growth decel + margin cuts → ~$82.</p>
+          <p><span class="dot-up"></span>AI (Now Assist) re-accelerates bookings; re-rate toward the $141 mean → ~$153.</p>
+        </div>
+        <div class="lists"><div class="col"><h4>Risks</h4><ul><li>Agentic-AI disintermediation of SaaS (&#x27;SaaSpocalypse&#x27;)</li><li>Margin/FCF cuts tied to Armis acquisition + AI infra costs</li><li>Q2 cRPO guide (~19.5% cc) steps down from ~21%</li></ul></div><div class="col"><h4>Catalysts</h4><ul><li>Now Assist ACV target raised to $1.5B; $1M+ customers +130% YoY</li><li>Large-deal momentum (630 customers &gt;$5M ACV)</li><li>PEG ~0.83 seen as overdone reset</li></ul></div></div>
+        <div class="sm" title="gekko.app smart-money, 2026-05-08"><span class="sm-tag">Smart money</span> <b>Tier 2</b> · 4 trailblazer funds (MIG, NZS, Octahedron); no billionaire</div>
+      </article>
+
+      <article class="card">
+        <header>
+          <div class="tk">MSTR</div>
+          <span class="chip hold">HOLD</span>
+        </header>
+        <div class="facts"><span class="px">$98.00</span><span class="arrow">&rarr;</span><span class="tgt">$322.50 <em>mean tgt</em></span><span class="off">-79% off high</span></div>
+        <div class="rating">
+          <span class="rating-label">Buy level</span>
+          <span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class=""></i><i class=""></i></span>
+          <span class="rating-name">fair</span>
+          
+        </div>
+        <div class="rr">
+          <div class="rr-track">
+            <div class="rr-down" style="width:32.1%"></div>
+            <div class="rr-up" style="width:50.0%"></div>
+            <div class="rr-zero"></div>
+          </div>
+          <div class="rr-nums">
+            <span class="down">-45%</span>
+            <span class="rr-cap">6–12mo range</span>
+            <span class="up">+70%</span>
+          </div>
+        </div>
+        <div class="cases">
+          <p><span class="dot-down"></span>BTC drops another 20-30% while leverage + mNAV compress and forced selling accelerates → ~$54.</p>
+          <p><span class="dot-up"></span>BTC recovers toward prior highs and the NAV premium re-expands → ~$165.</p>
+        </div>
+        <div class="lists"><div class="col"><h4>Risks</h4><ul><li>Leverage: ~$1.8B/yr fixed preferred/interest obligations funded partly by selling BTC (thesis reversal)</li><li>Trading near/below mNAV = collapsed premium, eroded confidence</li><li>Leveraged BTC drawdown hits equity disproportionately</li></ul></div><div class="col"><h4>Catalysts</h4><ul><li>BTC Monetization Program enabling buybacks</li><li>Bitcoin price recovery lifts NAV / narrows discount</li><li>Continued capital-markets access to fund accumulation</li></ul></div></div>
+        <div class="sm" title="gekko.app smart-money, 2026-05-08"><span class="sm-tag">Smart money</span> <b>2 channels</b> · Insider buy (CEO Phong Le) + heavy bullish options (conv 62-74)</div>
+      </article>
+
+      <article class="card">
+        <header>
+          <div class="tk">PYPL</div>
+          <span class="chip hold">HOLD</span>
+        </header>
+        <div class="facts"><span class="px">$46.04</span><span class="arrow">&rarr;</span><span class="tgt">$51.54 <em>mean tgt</em></span><span class="pe">fwd P/E 7.8</span><span class="off">-42% off high</span></div>
+        <div class="rating">
+          <span class="rating-label">Buy level</span>
+          <span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class=""></i><i class=""></i></span>
+          <span class="rating-name">fair</span>
+          
+        </div>
+        <div class="rr">
+          <div class="rr-track">
+            <div class="rr-down" style="width:21.4%"></div>
+            <div class="rr-up" style="width:17.1%"></div>
+            <div class="rr-zero"></div>
+          </div>
+          <div class="rr-nums">
+            <span class="down">-30%</span>
+            <span class="rr-cap">6–12mo range</span>
+            <span class="up">+24%</span>
+          </div>
+        </div>
+        <div class="cases">
+          <p><span class="dot-down"></span>Continued margin erosion + Venmo/TPV monetization stall; toward the $32 low.</p>
+          <p><span class="dot-up"></span>Stablecoin (PYUSD) + buybacks + a valuation re-rate toward the $57 area.</p>
+        </div>
+        <div class="lists"><div class="col"><h4>Risks</h4><ul><li>Sustained GAAP/non-GAAP operating-margin compression</li><li>Mixed-to-cautious analyst sentiment (Hold, some targets below price)</li><li>Competitive pressure on branded checkout / Venmo monetization</li></ul></div><div class="col"><h4>Catalysts</h4><ul><li>PYUSD stablecoin expansion (payment rails)</li><li>Adjusted FCF +25% YoY; guidance reaffirmed</li><li>Deep-value re-rating from ~7.8x forward P/E</li></ul></div></div>
+        <div class="sm" title="gekko.app smart-money, 2026-05-08"><span class="sm-tag">Smart money</span> <b>Tier 2</b> · Billionaire Laffont + 2 trailblazers; 1 bullish options</div>
+      </article>
+    </div>
+    <footer>Downside/upside are 6–12 month scenario estimates from the desk debate,
+      not price targets or advice.</footer>
+  </div>
+</body>
+</html>

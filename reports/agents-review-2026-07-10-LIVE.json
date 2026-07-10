@@ -1,0 +1,148 @@
+{
+  "generated_at": "2026-07-10T18:20:00+00:00",
+  "made_on": "2026-07-10",
+  "engine": "web-research",
+  "engine_note": "Live web-pulled data (WebSearch/WebFetch) synthesized by Opus, with Sonnet workers doing the per-ticker pulls. NOT the TradingAgents LLM lane (which requires the laptop). Smart-money layer = gekko.app snapshot dated 2026-05-08. Research aid for one operator; not investment advice.",
+  "macro": {
+    "ust_10y_pct": 4.54,
+    "ust_2y_pct": 4.14,
+    "curve_2s10s_bps": 40,
+    "note": "Rates still restrictive (~4.5% 10Y); modestly positive curve; VIX subdued. Long-duration growth multiples remain rate-sensitive. Broad H1-2026 growth/software drawdown is the backdrop."
+  },
+  "stats": {"scanned": 6, "ok": 6, "failed": 0},
+  "decisions": [
+    {
+      "ticker": "MSFT",
+      "made_on": "2026-07-10",
+      "engine": "web-research",
+      "engine_version": "web-research@2026-07-10",
+      "stance": "BUY",
+      "confidence": 0.72,
+      "rationale_md": "Microsoft at ~$384 has de-rated to a ~20x forward P/E after a ~31% pullback from its $555 high, even as Q3 FY26 delivered +18% revenue and Azure accelerating to +40%. The setup is unusually favorable: the *lowest* sell-side target ($400) sits above the current price, with a $560 mean (Strong Buy). The pullback is a sentiment de-rating on AI-capex-payoff doubts, not a fundamentals break. Smart-money (gekko 2026-05-08): Tepper + 10 trailblazer funds accumulating.",
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "attractive",
+        "downside_pct": -18.0,
+        "downside_case": "AI-capex disappointment + Azure decel de-rates to ~16x → ~$315.",
+        "upside_pct": 38.0,
+        "upside_case": "Azure/AI momentum holds; re-rate toward the $560 mean target → ~$530.",
+        "key_risks": ["Heavy AI capex with uncertain ROI timing", "Q4 revenue guide slightly below consensus (decel flag)", "Wide target dispersion ($400-$870) = high uncertainty"],
+        "catalysts": ["Azure/AI run-rate scaling (~$37B annualized)", "Sell-side target hikes ($625-$650)", "Microsoft Cloud +29% supporting margins"],
+        "source": "web-research",
+        "facts": {"price": 384.10, "forward_pe": 19.8, "target_low": 400, "target_mean": 560, "target_high": 870, "analyst_rating": "Strong Buy", "off_52w_high_pct": -30.8, "next_earnings": "2026-07-29"},
+        "smart_money": {"tier": "Tier 2", "summary": "Billionaire Tepper + 10 trailblazer funds; 1 bullish options", "as_of": "2026-05-08"}
+      }
+    },
+    {
+      "ticker": "GOOGL",
+      "made_on": "2026-07-10",
+      "engine": "web-research",
+      "engine_version": "web-research@2026-07-10",
+      "stance": "BUY",
+      "confidence": 0.70,
+      "rationale_md": "Alphabet at ~$358 is the relative fortress of the group — only ~12% off its high while the others are down 30-80%. Q1 26 beat with revenue +22%, Cloud +63% and a ~$460B backlog, Search resilient on Gemini. It carries the group's strongest smart-money signal (gekko Tier 1: Tepper + Gayner + trailblazers + a politician buy). It's the least *discounted* name (fwd P/E ~25.5), so upside is more modest, but it's the highest-quality, lowest-variance way to own AI.",
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "attractive",
+        "downside_pct": -18.0,
+        "downside_case": "Adverse antitrust remedy or AI-search disruption + capex margin drag → ~$293.",
+        "upside_pct": 22.0,
+        "upside_case": "Cloud/Gemini momentum re-rates toward the $430 mean → ~$437.",
+        "key_risks": ["Escalating antitrust/regulatory rulings (EU, Sweden, S. Korea)", "$180-190B 2026 capex pressuring FCF", "AI talent departures"],
+        "catalysts": ["Google Cloud +63% with ~$460B backlog", "Search resilience via AI Overviews/Gemini", "Buyback + dividend growth"],
+        "source": "web-research",
+        "facts": {"price": 358.00, "forward_pe": 25.5, "target_low": 340, "target_mean": 430, "target_high": 515, "analyst_rating": "Strong Buy", "off_52w_high_pct": -12.4, "next_earnings": "2026-07-22"},
+        "smart_money": {"tier": "Tier 1 (highest of the six)", "summary": "Billionaires Tepper & Gayner, 3 trailblazers, politician Cleo Fields", "as_of": "2026-05-08"}
+      }
+    },
+    {
+      "ticker": "NFLX",
+      "made_on": "2026-07-10",
+      "engine": "web-research",
+      "engine_version": "web-research@2026-07-10",
+      "stance": "BUY",
+      "confidence": 0.66,
+      "rationale_md": "Netflix (~$75 post-split) has fallen ~41% from its high on a reaffirmed-not-raised guide, a Hastings chairman transition, and content-cost worries — but the growth engine is intact: Q1 revenue +16%, ad-tier scaling to a ~$3B run-rate. Like MSFT, the *lowest* analyst target ($80) is above the current price, with a $114 mean (Buy) and PEG ~1.1. The de-rating looks sentiment-driven ahead of the Jul-16 print. Smart-money: gekko Tier 2 (Laffont + 4 trailblazers).",
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "attractive",
+        "downside_pct": -15.0,
+        "downside_case": "Content-cost margin compression + competition + transition overhang → ~$64.",
+        "upside_pct": 42.0,
+        "upside_case": "Ad-tier + pricing re-accelerate; re-rate toward the $114 mean → ~$107.",
+        "key_risks": ["Reed Hastings chairman transition uncertainty", "Rising content amortization (Q2 margin guided down)", "Streaming competition post failed WBD/Roku pursuits"],
+        "catalysts": ["Ad-tier toward $3B run-rate (+70% YoY ad clients)", "Double-digit revenue growth from members + pricing", "~41% off high seen as undervalued into Q2"],
+        "source": "web-research",
+        "facts": {"price": 75.47, "forward_pe": 20.6, "target_low": 80, "target_mean": 113.68, "target_high": 151.4, "analyst_rating": "Buy", "off_52w_high_pct": -41.5, "next_earnings": "2026-07-16"},
+        "smart_money": {"tier": "Tier 2", "summary": "Billionaire Laffont + 4 trailblazers; 2 bullish options", "as_of": "2026-05-08"}
+      }
+    },
+    {
+      "ticker": "NOW",
+      "made_on": "2026-07-10",
+      "engine": "web-research",
+      "engine_version": "web-research@2026-07-10",
+      "stance": "BUY",
+      "confidence": 0.58,
+      "rationale_md": "ServiceNow (~$109) is the most controversial: down ~48% as a valuation reset (fwd P/E ~60x → ~20x, PEG ~0.83) collided with the 'SaaSpocalypse' fear that agentic AI disintermediates workflow software. Fundamentals are still strong — subscription +22%, cRPO +22.5%, Now Assist ACV tracking to $1.5B. If the disintermediation fear is overdone, this is the deepest re-rating candidate; if it's right, growth keeps decelerating. Higher-variance BUY. Smart-money: gekko Tier 2 (4 trailblazers, no billionaire).",
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "attractive",
+        "downside_pct": -25.0,
+        "downside_case": "SaaSpocalypse narrative deepens + growth decel + margin cuts → ~$82.",
+        "upside_pct": 40.0,
+        "upside_case": "AI (Now Assist) re-accelerates bookings; re-rate toward the $141 mean → ~$153.",
+        "key_risks": ["Agentic-AI disintermediation of SaaS ('SaaSpocalypse')", "Margin/FCF cuts tied to Armis acquisition + AI infra costs", "Q2 cRPO guide (~19.5% cc) steps down from ~21%"],
+        "catalysts": ["Now Assist ACV target raised to $1.5B; $1M+ customers +130% YoY", "Large-deal momentum (630 customers >$5M ACV)", "PEG ~0.83 seen as overdone reset"],
+        "source": "web-research",
+        "facts": {"price": 109.42, "forward_pe": 20.6, "target_low": 85, "target_mean": 141.12, "target_high": 236, "analyst_rating": "Strong Buy", "off_52w_high_pct": -47.9, "next_earnings": "2026-07-22"},
+        "smart_money": {"tier": "Tier 2", "summary": "4 trailblazer funds (MIG, NZS, Octahedron); no billionaire", "as_of": "2026-05-08"}
+      }
+    },
+    {
+      "ticker": "PYPL",
+      "made_on": "2026-07-10",
+      "engine": "web-research",
+      "engine_version": "web-research@2026-07-10",
+      "stance": "HOLD",
+      "confidence": 0.55,
+      "rationale_md": "PayPal (~$46) is statistically cheap — fwd P/E ~7.8, PEG ~1.15, ~42% off its high — but cheap for a reason: Q1 showed +7% revenue and +11% TPV yet GAAP margins compressed and the new CEO guided to a GAAP EPS *decline*. Analysts are at Hold with a $51.5 mean (~+12%) and a $32 low (~-30%). It's a value-trap-vs-turnaround coin-flip without a clear near-term catalyst — HOLD until margin trajectory or a monetization catalyst inflects. Smart-money: gekko Tier 2 (Laffont + 2 trailblazers).",
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "fair",
+        "downside_pct": -30.0,
+        "downside_case": "Continued margin erosion + Venmo/TPV monetization stall; toward the $32 low.",
+        "upside_pct": 24.0,
+        "upside_case": "Stablecoin (PYUSD) + buybacks + a valuation re-rate toward the $57 area.",
+        "key_risks": ["Sustained GAAP/non-GAAP operating-margin compression", "Mixed-to-cautious analyst sentiment (Hold, some targets below price)", "Competitive pressure on branded checkout / Venmo monetization"],
+        "catalysts": ["PYUSD stablecoin expansion (payment rails)", "Adjusted FCF +25% YoY; guidance reaffirmed", "Deep-value re-rating from ~7.8x forward P/E"],
+        "source": "web-research",
+        "facts": {"price": 46.04, "forward_pe": 7.8, "target_low": 32, "target_mean": 51.54, "target_high": 65.8, "analyst_rating": "Hold", "off_52w_high_pct": -42.1, "next_earnings": "2026-07-28"},
+        "smart_money": {"tier": "Tier 2", "summary": "Billionaire Laffont + 2 trailblazers; 1 bullish options", "as_of": "2026-05-08"}
+      }
+    },
+    {
+      "ticker": "MSTR",
+      "made_on": "2026-07-10",
+      "engine": "web-research",
+      "engine_version": "web-research@2026-07-10",
+      "stance": "HOLD",
+      "confidence": 0.45,
+      "rationale_md": "Strategy/MicroStrategy (~$98, down ~79% from $457) is not a normal equity — it's a *leveraged Bitcoin proxy*. BTC has corrected to ~$64K, MSTR now trades near-to-below its BTC NAV (mNAV ~0.68-1.11x, i.e. the premium has collapsed), and — thesis reversal — it has begun *selling* BTC to fund ~$1.8B/yr of preferred dividends. Analyst targets ($185-$705) are wildly dispersed and entirely BTC-path-dependent. This is a high-variance, bimodal bet on Bitcoin plus balance-sheet leverage; sized and treated as such, HOLD. Smart-money: gekko insider buy (CEO Phong Le) + heavy bullish options flow.",
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "fair",
+        "downside_pct": -45.0,
+        "downside_case": "BTC drops another 20-30% while leverage + mNAV compress and forced selling accelerates → ~$54.",
+        "upside_pct": 70.0,
+        "upside_case": "BTC recovers toward prior highs and the NAV premium re-expands → ~$165.",
+        "key_risks": ["Leverage: ~$1.8B/yr fixed preferred/interest obligations funded partly by selling BTC (thesis reversal)", "Trading near/below mNAV = collapsed premium, eroded confidence", "Leveraged BTC drawdown hits equity disproportionately"],
+        "catalysts": ["BTC Monetization Program enabling buybacks", "Bitcoin price recovery lifts NAV / narrows discount", "Continued capital-markets access to fund accumulation"],
+        "source": "web-research",
+        "facts": {"price": 98.00, "forward_pe": null, "target_low": 185, "target_mean": 322.5, "target_high": 705, "analyst_rating": "Strong Buy (BTC-dependent, high dispersion)", "off_52w_high_pct": -78.6, "next_earnings": "2026-07-30", "btc_holdings": 843775, "btc_price": 64340}
+        ,
+        "smart_money": {"tier": "2 channels", "summary": "Insider buy (CEO Phong Le) + heavy bullish options (conv 62-74)", "as_of": "2026-05-08"}
+      }
+    }
+  ]
+}
