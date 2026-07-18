@@ -1,0 +1,103 @@
+{
+  "generated_at": "2026-07-10T19:05:00+00:00",
+  "made_on": "2026-07-10",
+  "engine": "web-research",
+  "engine_note": "Live web-pulled data (WebSearch/WebFetch) synthesized by Opus; Sonnet workers did the per-ticker pulls. NOT the TradingAgents LLM lane (needs the laptop). Smart-money layer = gekko.app snapshot dated 2026-05-08. Memory/semiconductor basket. Research aid for one operator; not investment advice.",
+  "macro": {
+    "ust_10y_pct": 4.54,
+    "ust_2y_pct": 4.14,
+    "curve_2s10s_bps": 40,
+    "note": "SECTOR is the story here: a 2026 AI-driven MEMORY SUPERCYCLE. DRAM revenue guided ~+51% YoY, NAND ~+45%, HBM ~+70%; DRAM contract prices rose ~90-95% QoQ in Q1 with more into Q2; capacity is reallocating to HBM and prices are expected elevated through 2027. The debate is durability vs cyclical peak — MU's ~$100B and SNDK's ~$42B long-term supply agreements are the bulls' evidence of a longer plateau. Rates ~4.5% are a secondary factor."
+  },
+  "stats": {"scanned": 4, "ok": 4, "failed": 0},
+  "decisions": [
+    {
+      "ticker": "MU",
+      "made_on": "2026-07-10",
+      "engine": "web-research",
+      "engine_version": "web-research@2026-07-10",
+      "stance": "BUY",
+      "confidence": 0.72,
+      "rationale_md": "Micron is the cleanest way to own the memory supercycle. Fiscal Q3 printed ~$25 EPS at ~85% gross margin with HBM **sold out**, a data-center run-rate over $100B, and — crucially — ~$100B of multi-year Strategic Customer Agreements that give rare visibility for a deep cyclical. At ~$853 it trades at a ~6x forward P/E. The catch is what that low multiple *means*: it's peak-cycle earnings, and the analyst target range ($361 low → $2,200 high, $1,489 mean) literally is the supercycle-vs-peak debate priced out. The contracted revenue tilts me constructive; the cyclicality keeps the downside band wide. Smart money (gekko 2026-05-08): **Tier 1** — Tepper + 8 trailblazer funds + a politician buy.",
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "attractive",
+        "downside_pct": -35.0,
+        "downside_case": "Memory cycle rolls / AI-capex pause; multiple compresses on peak earnings → ~$555 (still above the $361 extreme-bear target).",
+        "upside_pct": 50.0,
+        "upside_case": "HBM4 ramp + contracted revenue sustain the plateau; re-rate toward high-conviction targets → ~$1,280.",
+        "key_risks": ["Deep-cyclical: fwd P/E ~6 is on likely-peak earnings — a classic value-trap setup if the cycle turns", "Enormous target dispersion ($361-$2,200) = low agreement on durability", "HBM4 execution + hyperscaler customer concentration"],
+        "catalysts": ["HBM sold out; ~$100B contracted revenue visibility", "Q4 guide ~$50B revenue / ~$31 EPS / ~86% GM", "Tight DRAM/NAND supply supporting further price hikes"],
+        "source": "web-research",
+        "facts": {"price": 853.20, "forward_pe": 5.95, "target_low": 361, "target_mean": 1489.57, "target_high": 2200, "analyst_rating": "Strong Buy", "off_52w_high_pct": -32.0, "next_earnings": "2026-09-29"},
+        "smart_money": {"tier": "Tier 1", "summary": "Billionaire Tepper + 8 trailblazers + politician (Cleo Fields) + 1 bullish options", "as_of": "2026-05-08"}
+      }
+    },
+    {
+      "ticker": "AVGO",
+      "made_on": "2026-07-10",
+      "engine": "web-research",
+      "engine_version": "web-research@2026-07-10",
+      "stance": "BUY",
+      "confidence": 0.74,
+      "rationale_md": "Broadcom is the highest-quality, lowest-cyclicality name in this basket — and the odd one out: it doesn't make memory. Its engine is custom AI accelerators (XPU/ASIC) for hyperscalers plus AI networking and recurring VMware software. Q2 FY26 revenue +48% with AI-semi revenue +143% to $10.8B, guided to +200% in Q3, FY26 AI ~$56B and 2027 AI reiterated above $100B. At ~$374 it's a ~33x forward P/E but PEG ~0.53 on that growth, Strong Buy with a $513 mean (~+37%). It rides the same AI wave as the memory names without their price-cycle whiplash. Smart money: gekko **Tier 3** (Sundheim & Laffont + 5 trailblazers).",
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "attractive",
+        "downside_pct": -22.0,
+        "downside_case": "AI-capex disappointment or ASIC customer-concentration wobble de-rates the ~33x multiple → ~$292.",
+        "upside_pct": 37.0,
+        "upside_case": "Custom-silicon + networking ramp compounds; re-rate toward the $513 mean → ~$513.",
+        "key_risks": ["Rich TTM P/E (~62x) leaves little room for an AI-capex slowdown", "Custom-ASIC revenue concentrated in a few hyperscaler clients", "Down ~24% off high amid AI/semis volatility"],
+        "catalysts": ["AI-semi revenue +143% → guided +200% (Q3 ~$16B)", "FY26 AI ~$56B → 2027 >$100B trajectory", "VMware/software margin + recurring-revenue expansion"],
+        "source": "web-research",
+        "facts": {"price": 374.50, "forward_pe": 33.0, "target_low": 375, "target_mean": 513, "target_high": 630, "analyst_rating": "Strong Buy", "off_52w_high_pct": -24.3, "next_earnings": "2026-09-03"},
+        "smart_money": {"tier": "Tier 3", "summary": "Billionaires Sundheim & Laffont + 5 trailblazer funds", "as_of": "2026-05-08"}
+      }
+    },
+    {
+      "ticker": "SKHY",
+      "made_on": "2026-07-10",
+      "engine": "web-research",
+      "engine_version": "web-research@2026-07-10",
+      "stance": "HOLD",
+      "confidence": 0.50,
+      "rationale_md": "SK Hynix is a great franchise at an awkward entry point. It's the global **HBM leader** (~56% share) and NVIDIA's primary HBM supplier — the single best-positioned company in the AI-memory supercycle. But 'SKHY' is a **brand-new Nasdaq ADR that IPO'd today (Jul 10)** in a record $26.5B listing at $149; it spiked to ~$194 then fell back to ~$164 with violent post-IPO swings. Two things argue for patience, not chasing: the ADR trades at a ~22-38% premium to the Seoul shares that will be tested when two-way conversion opens **Jul 29**, and legacy fixed-price HBM contracts are capping near-term ASP upside (Q2 op-profit reportedly ~8% below consensus). ADR analyst targets look unreliable this early, so I anchor on the setup, not the tape. HOLD — own the franchise after the premium settles. Not in the gekko US snapshot (Korea-listed until today).",
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "fair",
+        "downside_pct": -25.0,
+        "downside_case": "ADR premium compresses toward Seoul shares around the Jul 29 conversion + memory volatility → ~$123.",
+        "upside_pct": 35.0,
+        "upside_case": "Legacy HBM contracts reprice toward spot + post-conversion index/passive inflows → ~$221.",
+        "key_risks": ["Day-one IPO: extreme volatility ($149 IPO → $194 → $164 in a week)", "ADR premium (~22-38%) may compress sharply around Jul 29 two-way conversion", "Fixed-price legacy HBM contracts cap near-term ASP upside vs spot"],
+        "catalysts": ["HBM leadership (~56% share); NVIDIA's primary supplier", "Legacy HBM contract renegotiation toward spot pricing", "Jul 29 conversion window → potential US index/passive inflows"],
+        "source": "web-research",
+        "facts": {"price": 164.00, "forward_pe": null, "target_low": null, "target_mean": null, "target_high": null, "analyst_rating": "Buy (fresh ADR — targets unreliable)", "off_52w_high_pct": -15.8, "next_earnings": "2026-07-22"},
+        "smart_money": {"tier": "n/a", "summary": "Not in the 2026-05-08 US 13F snapshot (Korea-listed until the Jul 10 ADR IPO)", "as_of": "2026-05-08"}
+      }
+    },
+    {
+      "ticker": "SNDK",
+      "made_on": "2026-07-10",
+      "engine": "web-research",
+      "engine_version": "web-research@2026-07-10",
+      "stance": "HOLD",
+      "confidence": 0.50,
+      "rationale_md": "SanDisk is the highest-torque, highest-variance name here. Since spinning out of Western Digital (Feb 2025) it has become a pure NAND/enterprise-SSD play, and the supercycle has been rocket fuel: fiscal Q3 revenue **+251% YoY** to ~$6B, gross margin 78%, ~$23 EPS, $42B of long-term supply agreements, guiding Q4 EPS to $30-33 — and the stock is up roughly **500% in 2026** (52-week range ~$40 → ~$2,354, now ~$1,355, already ~42% off that high). The ~11.7x forward P/E looks cheap, but NAND is the most volatile memory segment and this is one product on peak-cycle earnings. Torque both ways; treat it as a sized, high-risk position, not a core hold → HOLD. Not in the gekko US snapshot.",
+      "review": {
+        "horizon": "6-12mo",
+        "buy_level": "fair",
+        "downside_pct": -45.0,
+        "downside_case": "NAND pricing rolls over / supply catches up; single-product peak-earnings de-rate → ~$745.",
+        "upside_pct": 45.0,
+        "upside_case": "Supercycle persists + guidance raises at the Aug 5 print / Aug 13 investor day → ~$1,965.",
+        "key_risks": ["Up ~500% in 2026 — extreme momentum, ~42% already off the high, huge single-day swings", "NAND is the most cyclical memory segment; pure single-product exposure", "~56x trailing P/E prices in continued extraordinary growth"],
+        "catalysts": ["AI/hyperscaler enterprise-SSD demand tripling data-center mix", "$42B long-term supply agreements locking price/volume", "Aug 5 earnings + Aug 13 investor day could raise guidance again"],
+        "source": "web-research",
+        "facts": {"price": 1354.82, "forward_pe": 11.68, "target_low": 1000, "target_mean": 2144.14, "target_high": 3250, "analyst_rating": "Buy", "off_52w_high_pct": -42.5, "next_earnings": "2026-08-05"},
+        "smart_money": {"tier": "n/a", "summary": "Not in the 2026-05-08 US 13F snapshot (spun off from WDC Feb 2025)", "as_of": "2026-05-08"}
+      }
+    }
+  ]
+}
